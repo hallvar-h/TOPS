@@ -11,10 +11,12 @@ class PowerSystemModelLinearization:
         self.eps = 1e-10
         pass
 
-    def linearize(self, eq=None):
+    def linearize(self, eq=None, x0=np.array([])):
         if eq:
             self.eq = eq
-        self.a = utils.jacobian_num(lambda x: self.eq.ode_fun(0, x), self.eq.x0, eps=self.eps)
+
+        self.x0 = x0 if len(x0) > 0 else self.eq.x0
+        self.a = utils.jacobian_num(lambda x: self.eq.ode_fun(0, x), self.x0, eps=self.eps)
         self.n = self.a.shape[0]
         self.eigs, evs = np.linalg.eig(self.a)
         # self.lev = np.conj(evs).T
