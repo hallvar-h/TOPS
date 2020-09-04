@@ -1,5 +1,4 @@
 import numpy as np
-import dynpssimpy.dynamic as dps
 import dynpssimpy.plotting as dps_plt
 import dynpssimpy.utility_functions as utils
 import matplotlib.pyplot as plt
@@ -9,9 +8,9 @@ class PowerSystemModelLinearization:
     def __init__(self, eq):
         self.eq = eq
         self.eps = 1e-10
-        pass
+        self.linearize_inputs_v2 = self.linearize_inputs
 
-    def linearize(self, eq=None, x0=np.array([])):
+    def linearize(self, eq=None, x0=np.array([]), input_description=np.array([])):
         if eq:
             self.eq = eq
 
@@ -25,37 +24,14 @@ class PowerSystemModelLinearization:
         self.damping = -self.eigs.real / abs(self.eigs)
         self.freq = self.eigs.imag / (2 * np.pi)
 
-    def linearize_inputs(self, inputs):
-        eq = self.eq
-        b = np.zeros((len(eq.x0), 0))
-        for inp in inputs:
-            var = getattr(eq, inp[0])
-            index = inp[1]
-            if not index:
-                index = range(len(var))
+        if len(input_description) > 0:
+            self.b = self.linearize_inputs_v2(input_description)
 
-            if len(inp) == 3:
-                if inp[2] == 'Complex' or inp[2] == 'imag':
-                    mod = 1j
-            else:
-                mod = 1
-
-            for i in index:
-                var_0 = var[i]
-                var[i] = var_0 + self.eps*mod
-                f_1 = eq.ode_fun(0, eq.x0)
-                var[i] = var_0 - self.eps*mod
-                f_2 = eq.ode_fun(0, eq.x0)
-                var[i] = var_0
-                b = np.hstack([b, ((f_1 - f_2) / (2 * self.eps))[:, None]])
-        # self.b = b
-        return b
-
-    def linearize_inputs_v2(self, input_desc):
+    def linearize_inputs(self, input_description):
         eq = self.eq
         eps = self.eps
-        b = np.zeros((len(eq.x0), len(input_desc)))
-        for i, inp_ in enumerate(input_desc):
+        b = np.zeros((len(eq.x0), len(input_description)))
+        for i, inp_ in enumerate(input_description):
             b_tmp = np.zeros(len(eq.x0))
             for inp__ in inp_:
                 var = getattr(eq, inp__[0])
@@ -76,7 +52,6 @@ class PowerSystemModelLinearization:
     def get_mode_idx(self, mode_type=['em', 'non_conj'], damp_threshold=1, sorted=True):
         eigs = self.eigs
         idx = np.ones(len(eigs), dtype=bool)
-        print('h')
         if not isinstance(mode_type, list):
             mode_type = [mode_type]
 
@@ -95,7 +70,8 @@ class PowerSystemModelLinearization:
 
 
 if __name__ == '__main__':
-
+    
+    import dynpssimpy.dynamic as dps
     import ps_models.k2a as model_data
     import importlib
     importlib.reload(dps)

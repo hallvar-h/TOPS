@@ -12,7 +12,7 @@ if __name__ == '__main__':
     importlib.reload(dps)
 
     # Load model
-    import ps_models.ieee39 as model_data
+    import ps_models.k2a as model_data
     # import ps_models.ieee39 as model_data
     # import ps_models.sm_ib as model_data
     # import ps_models.sm_load as model_data
@@ -28,12 +28,12 @@ if __name__ == '__main__':
     ps.power_flow()
     ps.init_dyn_sim()
 
-    t_end = 20
+    t_end = 10
     x0 = ps.x0.copy()
     x0[ps.angle_idx[0]] += 1
     print(np.max(abs(ps.ode_fun(0, ps.x0))))
 
-    sol = RK23(ps.ode_fun, 0, x0, t_end, max_step=20e-3)
+    sol = RK23(ps.ode_fun, 0, x0, t_end, max_step=10e-3)
 
     t = 0
     result_dict = defaultdict(list)

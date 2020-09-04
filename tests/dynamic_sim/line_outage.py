@@ -22,12 +22,12 @@ if __name__ == '__main__':
     ps.power_flow()
     ps.init_dyn_sim()
 
-    t_end = 5
+    t_end = 20
     x0 = ps.x0.copy()
     # x0[ps.angle_idx[0]] += 1
     np.max(ps.ode_fun(0, ps.x0))
 
-    sol = RK23(ps.ode_fun, 0, x0, t_end, max_step=20e-3)
+    sol = RK23(ps.ode_fun, 0, x0, t_end, max_step=10e-3)
 
     t = 0
     result_dict = defaultdict(list)

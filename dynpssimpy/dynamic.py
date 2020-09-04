@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import time
 from scipy.sparse import lil_matrix
+import dynpssimpy.modal_analysis as dps_mdl
 
 
 def jacobian_num(f, x, eps=1e-10, **params):
@@ -114,9 +115,12 @@ class PowerSystemModel:
         # Get gen nom. voltage. If given as zero in input data, select bus nom. voltage.
         self.V_n_gen = np.zeros(len(self.generators))
         self.S_n_gen = np.zeros(len(self.generators))
+        self.P_n_gen = np.zeros(len(self.generators))
         for i, gen in self.generators.iterrows():
-            self.V_n_gen[i] = gen['V_n'] if gen['V_n'] else self.v_n[self.gen_bus_idx[i]]
-            self.S_n_gen[i] = gen['S_n'] if gen['S_n'] else self.s_n
+            self.V_n_gen[i] = gen['V_n'] if 'V_n' in gen else self.v_n[self.gen_bus_idx[i]]
+            self.S_n_gen[i] = gen['S_n'] if 'S_n' in gen else self.s_n
+            self.P_n_gen[i] = gen['S_n']*gen['PF_n'] if 'PF_n' in gen else self.S_n_gen[i]
+
         self.I_n_gen = self.S_n_gen / (np.sqrt(3) * self.V_n_gen)
         self.Z_n_gen = self.V_n_gen ** 2 / self.S_n_gen
 
@@ -128,10 +132,15 @@ class PowerSystemModel:
         for par in ['T_d0_t', 'T_q0_t', 'T_d0_st', 'T_q0_st']:
             setattr(self, par, np.array(self.generators[par]))
 
+        self.H = np.array(self.generators['H'])
+        if 'PF_n' in self.generators:
+            self.H /= self.generators['PF_n']
+
+
         self.n_par = np.array(self.generators['N_par']) if 'N_par' in self.generators else np.ones(self.n_gen)
 
         self.reduced_bus_idx = self.gen_bus_idx_unique
-        self.y_bus = np.empty((self.n_bus, self.n_bus))
+        self.y_bus = np.empty((self.n_bus, self.n_bus))  # Can not be built before power flow, since load admittances depend on it.
         self.y_bus_lf = np.empty((self.n_bus, self.n_bus))
         self.y_bus_lf[:] = np.nan
         self.y_bus_red = np.empty((self.n_gen, self.n_gen))
@@ -153,11 +162,17 @@ class PowerSystemModel:
         y_rk = y_bus[np.ix_(remove_buses, keep_buses)]
         y_kk = y_bus[np.ix_(keep_buses, keep_buses)]
 
+        # Build matrix for mapping back to full system (v_full = self.red_to_full.dot(self.v_red)
+        self.red_to_full = np.zeros((self.n_bus, self.n_bus_red), dtype=complex)
+        remove_buses = list(set(range(self.n_bus)) - set(self.reduced_bus_idx))
+        self.red_to_full[remove_buses, :] = - np.linalg.inv(y_rr).dot(y_rk)
+        self.red_to_full[self.reduced_bus_idx] = np.eye(self.n_bus_red)
+
         return y_kk - y_rk.T.dot(np.linalg.inv(y_rr)).dot(y_rk)
 
     def read_line_data(self, idx=slice(None)):
         buses = self.buses
-        y_branch = lil_matrix((self.n_bus,) * 2, dtype=complex)
+        y = lil_matrix((self.n_bus,) * 2, dtype=complex)
         for i, line in self.lines.loc[idx].iterrows():
             idx_from = buses[buses['name'] == line['from_bus']].index
             idx_to = buses[buses['name'] == line['to_bus']].index
@@ -191,8 +206,8 @@ class PowerSystemModel:
             cols = np.concatenate([idx_from, idx_to, idx_to, idx_from])
             data = np.concatenate(
                 [1 / impedance + shunt / 2, 1 / impedance + shunt / 2, -1 / impedance, -1 / impedance])
-            y_branch[rows, cols] += data
-        return y_branch
+            y[rows, cols] += data
+        return y
 
     def build_y_bus(self, type='dyn', y_ext=np.empty((0, 0))):
         n_bus = len(self.buses)
@@ -200,7 +215,9 @@ class PowerSystemModel:
         y_branch = np.zeros((n_bus, n_bus), dtype=complex)  # Branches = Trafos + Lines
         buses = self.buses
 
+        # Reading line data is put in separate function (since the same code is required for network_event-function
         y_lines = self.read_line_data().toarray()
+
 
         y_branch += y_lines
 
@@ -273,13 +290,14 @@ class PowerSystemModel:
             _, idx = np.unique(self.reduced_bus_idx, return_index=True)
             self.reduced_bus_idx = self.reduced_bus_idx[np.sort(idx)]
 
+        self.n_bus_red = len(self.reduced_bus_idx)
         self.y_bus_red = self.kron_reduction(self.y_bus, self.reduced_bus_idx)  # np.empty((self.n_gen, self.n_gen))
         self.y_bus_red_mod = np.zeros_like(self.y_bus_red)
 
-        self.n_bus_red = self.y_bus_red.shape[0]
+        # self.n_bus_red = self.y_bus_red.shape[0]
         self.gen_bus_idx_red = self.get_bus_idx_red(self.buses.iloc[self.gen_bus_idx]['name'])
 
-    def power_flow(self):
+    def power_flow(self, print_output=True):
         #  Build admittance matrix if not defined
         if np.any(np.isnan(self.y_bus_lf)):
             self.y_bus_lf = self.build_y_bus(type='lf')
@@ -374,8 +392,9 @@ class PowerSystemModel:
 
             if self.tol > err_norm:
                 converged = True
-                print('Power flow converged.')
-            if i == self.pf_max_it:
+                if print_output:
+                    print('Power flow converged.')
+            if i == self.pf_max_it and print_output:
                 print('Power flow did not converge in {} iterations.'.format(self.pf_max_it))
 
         # soln = newton(pf_equations, x, full_output=True, maxiter=20000, disp=True)
@@ -540,8 +559,8 @@ class PowerSystemModel:
 
         self.p_m = self.p_m_setp.copy()
         self.p_e = self.e_q_st * self.i_q + self.e_d_st*self.i_d - (self.x_d_st - self.x_q_st) * self.i_d * self.i_q
-        self.P_m = self.p_m*self.s_n/self.S_n_gen
-        self.P_e = self.p_e*self.s_n/self.S_n_gen
+        self.P_m = self.p_m*self.s_n/self.P_n_gen
+        self.P_e = self.p_e*self.s_n/self.P_n_gen
 
         # Control model initial conditions
         # GOV
@@ -589,6 +608,8 @@ class PowerSystemModel:
 
     def ode_fun(self, t, x):
 
+        self.time = t
+
         self.speed = x[self.speed_idx]
         self.angle = x[self.angle_idx]
         self.e_q_t = x[self.e_q_t_idx]
@@ -628,7 +649,8 @@ class PowerSystemModel:
         self.e_q_tmp = self.v_g + 1j * self.x_q * self.i_g
 
         self.p_e = self.e_q_st * self.i_q + self.e_d_st * self.i_d - (self.x_d_st - self.x_q_st) * self.i_d * self.i_q
-        self.P_e = self.e_q_st * self.I_q + self.e_d_st * self.I_d - (self.X_d_st - self.X_q_st) * self.I_d * self.I_q
+        # self.P_e = self.e_q_st * self.I_q + self.e_d_st * self.I_d - (self.X_d_st - self.X_q_st) * self.I_d * self.I_q
+        self.P_e = self.p_e*self.s_n/self.P_n_gen
 
         # Get updated dynamic model equations
         dx = np.zeros(self.n_states)
@@ -648,7 +670,7 @@ class PowerSystemModel:
 
                 active_gov_gen_idx = dm.gen_idx[dm.active]
                 self.P_m[active_gov_gen_idx] = delta_p_m[dm.active]
-                self.p_m[active_gov_gen_idx] = (self.P_m[active_gov_gen_idx] * self.S_n_gen[active_gov_gen_idx] / self.s_n)
+                self.p_m[active_gov_gen_idx] = (self.P_m[active_gov_gen_idx] * self.P_n_gen[active_gov_gen_idx] / self.s_n)
 
                 dx[dm.idx] = np.concatenate([
                     1 / dm.par['T_1'] * (v_1 - v_2),
@@ -701,12 +723,12 @@ class PowerSystemModel:
                 dx[dm.states['e_f'][upper_lim_idx]] *= 0
 
         # Generators
-        self.p_m = self.P_m * self.S_n_gen/self.s_n
+        self.p_m = self.P_m * self.P_n_gen/self.s_n
         self.t_m = self.p_m / (1 + self.speed)
         self.T_m = self.P_m / (1 + self.speed)
         for i, dm in enumerate([self.gen_mdl]):
             dx[dm.idx] = np.concatenate([
-                1/(2*dm.par['H'])*(self.T_m - self.P_e - dm.par['D'] * x[dm.states['speed']]),
+                1/(2*self.H)*(self.T_m - self.P_e - dm.par['D'] * x[dm.states['speed']]),
                 x[dm.states['speed']]*2*np.pi*self.f,
                 1/(dm.par['T_d0_t'])*(self.e_q + self.v_aux - x[dm.states['e_q_t']] - self.I_d * (self.X_d - self.X_d_t)),
                 1/(dm.par['T_q0_t'])*(-x[dm.states['e_d_t']] + self.I_q * (self.X_q - self.X_q_t)),
@@ -732,6 +754,11 @@ class PowerSystemModel:
                 index = inp__[1]
                 gain = inp__[2] if len(inp__) == 3 else 1
                 var[index] += u_ * gain
+
+    def linearize(self, **kwargs):
+        lin = dps_mdl.PowerSystemModelLinearization(self)
+        lin.linearize(**kwargs)
+        return lin
 
 
 if __name__ == '__main__':
