@@ -6,14 +6,19 @@ import numpy as np
 from scipy.integrate import RK23, RK45, solve_ivp
 import importlib
 import time
+import dynpssimpy.dyn_models.avr
+
 
 
 if __name__ == '__main__':
-    importlib.reload(dps)
 
     # Load model
     import ps_models.k2a as model_data
     # import ps_models.ieee39 as model_data
+    # import ps_models.n44 as model_data
+
+    [importlib.reload(mdl) for mdl in [dps, model_data]]
+
     # import ps_models.sm_ib as model_data
     # import ps_models.sm_load as model_data
     model = model_data.load()
@@ -28,7 +33,7 @@ if __name__ == '__main__':
     ps.power_flow()
     ps.init_dyn_sim()
 
-    t_end = 10
+    t_end = 2
     x0 = ps.x0.copy()
     x0[ps.angle_idx[0]] += 1
     print(np.max(abs(ps.ode_fun(0, ps.x0))))

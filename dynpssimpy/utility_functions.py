@@ -2,7 +2,7 @@ import numpy as np
 
 
 def jacobian_num(f, x, eps=1e-10, **params):
-
+    # Numerical computation of Jacobian
     J = np.zeros([len(x), len(x)], dtype=np.float)
 
     for i in range(len(x)):
@@ -18,6 +18,12 @@ def jacobian_num(f, x, eps=1e-10, **params):
         J[:, i] = (f1 - f2) / (2 * eps)
 
     return J
+
+
+class DynamicModel:
+    # Empty dummy-class for dynamic models (Gen, AVR, GOV, PSS etc.)
+    def __init__(self):
+        pass
 
 
 class EventManager:

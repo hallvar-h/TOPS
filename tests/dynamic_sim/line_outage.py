@@ -43,7 +43,6 @@ if __name__ == '__main__':
         if t > 1 and event_flag:
             event_flag = False
             ps.network_event('line', 'L7-8-1', 'disconnect')
-
         # Store result
         result_dict['Global', 't'].append(sol.t)
         [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x)]
