@@ -386,7 +386,7 @@ class TimeSeriesPlotFast(QtWidgets.QWidget):
 def main(rts):
     app = QtWidgets.QApplication(sys.argv)
     phasor_plot = PhasorPlot(rts)
-    ts_plot = TimeSeriesPlot(rts, ['angle', 'speed'], update_freq=50)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
+    ts_plot = TimeSeriesPlotFast(rts, ['angle', 'speed'], update_freq=50)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
 
     # Add Control Widgets
     line_outage_ctrl = LineOutageWidget(rts)
