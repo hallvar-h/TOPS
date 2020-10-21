@@ -20,7 +20,7 @@ def jacobian_num(f, x, eps=1e-10, **params):
     return J
 
 
-class DynamicModel:
+class DynamicModel:  # This is not used anymore?
     # Empty dummy-class for dynamic models (Gen, AVR, GOV, PSS etc.)
     def __init__(self):
         pass

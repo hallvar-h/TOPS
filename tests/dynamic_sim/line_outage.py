@@ -21,8 +21,10 @@ if __name__ == '__main__':
     ps.pf_max_it = 100
     ps.power_flow()
     ps.init_dyn_sim()
+    ps.build_y_bus_red(ps.buses['name'])
+    # ps.build_y_bus_red()
 
-    t_end = 20
+    t_end = 10
     x0 = ps.x0.copy()
     # x0[ps.angle_idx[0]] += 1
     np.max(ps.ode_fun(0, ps.x0))

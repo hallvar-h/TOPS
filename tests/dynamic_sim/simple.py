@@ -6,8 +6,7 @@ import numpy as np
 from scipy.integrate import RK23, RK45, solve_ivp
 import importlib
 import time
-import dynpssimpy.dyn_models.avr
-
+import dynpssimpy.dyn_models.avr as avr_models
 
 
 if __name__ == '__main__':
@@ -23,9 +22,6 @@ if __name__ == '__main__':
     # import ps_models.sm_load as model_data
     model = model_data.load()
 
-    # model['avr'] = dict()
-    # model['gov'] = dict()
-    # model['pss'] = dict()
     t_0 = time.time()
 
     ps = dps.PowerSystemModel(model=model)
@@ -33,7 +29,7 @@ if __name__ == '__main__':
     ps.power_flow()
     ps.init_dyn_sim()
 
-    t_end = 2
+    t_end = 10
     x0 = ps.x0.copy()
     x0[ps.angle_idx[0]] += 1
     print(np.max(abs(ps.ode_fun(0, ps.x0))))

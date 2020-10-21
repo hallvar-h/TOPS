@@ -1,5 +1,5 @@
 # This model is based on the PowerFactory-version of the IEEE39-bus system. The following changes were made:
-# - G10 is modeled as a salient pole machine in the PowerFactory-model. Here it is modeled as a round rotor machine with T_q0_t = 0.5
+# - G10 is modeled as a salient pole machine in the PowerFactory-model. This is modeled bu setting X_q  = X_q_t, and choosing an arbitrary value for T_q0_t (does not matter).
 # - The AVR, GOV and PSS-models are changed to SEXS, TGOV1 and PSTAB1, respectively (since these are the only ones implemented at the moment).
 
 

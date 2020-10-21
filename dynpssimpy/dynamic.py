@@ -6,7 +6,9 @@ import time
 from scipy.sparse import lil_matrix
 import dynpssimpy.modal_analysis as dps_mdl
 import dynpssimpy.utility_functions as dps_uf
-# from dynpssimpy.dyn_models.avr import SEXS as avr_SEXS
+import dynpssimpy.dyn_models.avr as avr_lib
+import dynpssimpy.dyn_models.gov as gov_lib
+import dynpssimpy.dyn_models.pss as pss_lib
 
 
 class PowerSystemModel:
@@ -109,6 +111,8 @@ class PowerSystemModel:
         self.y_bus_red = np.empty((self.n_gen, self.n_gen))
         self.y_bus_red_inv = np.empty((self.n_gen, self.n_gen))
         self.y_bus_red_mod = np.zeros_like(self.y_bus_red)
+
+        self.time = 0.0
 
     def get_bus_idx(self, names):
         # Get index of bus with given bus names
@@ -456,22 +460,21 @@ class PowerSystemModel:
 
         self.H = np.array(self.generators['H'])
         if 'PF_n' in self.generators:
-            self.H /= self.generators['PF_n']
+            self.H /= np.array(self.generators['PF_n'])
+            # self.H /= self.generators['PF_n']
 
-        # Build bus admittance matrices
-        self.y_bus = self.build_y_bus()
-        self.build_y_bus_red()
+        # # Build bus admittance matrices
+        # self.y_bus = self.build_y_bus()
+        # self.build_y_bus_red()
 
         # State variables:
         self.state_desc = np.empty((0, 2))
 
-        def add_states(start_idx, data, states, new_arrangement=True):
+        def add_states(start_idx, data, states):
             states = np.array(states)
             names = data['name'].to_numpy()
-            if new_arrangement:
-                state_desc_mdl = np.vstack([np.tile(names, len(states)), np.repeat(states, len(data))]).T
-            else:
-                state_desc_mdl = np.vstack([np.repeat(names, len(states)), np.tile(states, len(data))]).T
+            state_desc_mdl = np.vstack([np.tile(names, len(states)), np.repeat(states, len(data))]).T
+            # state_desc_mdl = np.vstack([np.repeat(names, len(states)), np.tile(states, len(data))]).T
 
             mdl = dps_uf.DynamicModel()
             mdl.idx = start_idx + np.arange(len(state_desc_mdl), dtype=int)
@@ -485,49 +488,43 @@ class PowerSystemModel:
         # Generators
         data = self.generators
         states = np.array(['speed', 'angle', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
-        self.gen_mdl, state_desc_mdl = add_states(len(self.state_desc), data, states, new_arrangement=True)
+        self.gen_mdl, state_desc_mdl = add_states(len(self.state_desc), data, states)
         self.state_desc = np.vstack([self.state_desc, state_desc_mdl])
         [setattr(self, var + '_idx', self.gen_mdl.states[var]) for var in states]  # Define self.speed_idx, self.angle_idx and so on
 
-        # Governors
         self.gov_mdls = dict()
-        for key in self.gov.keys():
-            data = self.gov[key]
-            if key == 'TGOV1':
-                states = ['x_1', 'x_2']
-                int_par = ['x_1_bias']
-
-                mdl, state_desc_mdl = add_states(len(self.state_desc), data, states, new_arrangement=True)
-                mdl.active = np.ones(len(data), dtype=bool)
-                mdl.int_par = dict.fromkeys(int_par, np.zeros(len(data)))
-                mdl.gen_idx = np.array([self.generators[self.generators['name'] == name].index.tolist()[0] for name in data['gen']])
-                self.gov_mdls[key] = mdl
-                self.state_desc = np.vstack([self.state_desc, state_desc_mdl])
-
         self.avr_mdls = dict()
-        for key in self.avr.keys():
-            data = self.avr[key]
-            if key == 'SEXS':
-                states = ['x', 'e_f']
-                int_par = ['x_bias']
-
-                mdl, state_desc_mdl = add_states(len(self.state_desc), data, states, new_arrangement=True)
-                mdl.active = np.ones(len(data), dtype=bool)
-                mdl.int_par = dict.fromkeys(int_par, np.zeros(len(data)))
-                mdl.gen_idx = np.array([self.generators[self.generators['name'] == name].index.tolist()[0] for name in data['gen']])
-                self.avr_mdls[key] = mdl
-                self.state_desc = np.vstack([self.state_desc, state_desc_mdl])
-
         self.pss_mdls = dict()
-        for key in self.pss.keys():
-            data = self.pss[key]
-            if key == 'STAB1':
-                states = ['x_1', 'x_2', 'x_3']
 
-                mdl, state_desc_mdl = add_states(len(self.state_desc), data, states, new_arrangement=True)
+        for input_data, container, library in zip([self.gov, self.pss, self.avr],
+                                                  [self.gov_mdls, self.pss_mdls, self.avr_mdls],
+                                                  [gov_lib, pss_lib, avr_lib]):
+
+            for key in input_data.keys():
+                data = input_data[key]
+                start_idx = len(self.state_desc)
+                mdl = getattr(library, key)()
+                state_list = mdl.state_list
+                names = data['name'].to_numpy()
+                n_units = len(data)
+                n_states = len(state_list)
+
+                state_desc_mdl = np.vstack([np.tile(names, n_states), np.repeat(state_list, n_units)]).T
+
+                mdl.idx = start_idx + np.arange(len(state_desc_mdl),
+                                                dtype=int)  # Indices of all states belonging to model
+                mdl.par = data.to_dict(orient='list')  # Model parameters
                 mdl.active = np.ones(len(data), dtype=bool)
-                mdl.gen_idx = np.array([self.generators[self.generators['name'] == name].index.tolist()[0] for name in data['gen']])
-                self.pss_mdls[key] = mdl
+                mdl.int_par = dict.fromkeys(mdl.int_par_list, np.zeros(len(data)))
+                mdl.gen_idx = np.array(
+                    [self.generators[self.generators['name'] == name].index.tolist()[0] for name in data['gen']])
+                mdl.state_idx = dict(
+                    zip(state_list, [np.arange(n_units * i, n_units * (i + 1)) for i in range(n_states)]))
+
+                for key_ in mdl.par.keys():
+                    mdl.par[key_] = np.array(mdl.par[key_])  # Convert data to np.arrays
+
+                container[key] = mdl
                 self.state_desc = np.vstack([self.state_desc, state_desc_mdl])
 
         self.n_states = self.state_desc.shape[0]  # self.n_gen_states * self.n_gen
@@ -537,6 +534,7 @@ class PowerSystemModel:
         self.e_q_0 = np.zeros(self.n_gen)
         self.e_q = np.zeros(self.n_gen)
 
+        # Build reduced system
         self.y_bus = self.build_y_bus()  # np.empty((self.n_bus, self.n_bus))
         self.build_y_bus_red()
 
@@ -613,31 +611,23 @@ class PowerSystemModel:
         self.P_m = self.p_m*self.s_n/self.P_n_gen
         self.P_e = self.p_e*self.s_n/self.P_n_gen
 
-        # Control model initial conditions
+        # AVR
+        # self.dyn_mdls = {**self.avr_mdls, **self.gov_mdls, **self.pss_mdls}
+        for key in self.avr_mdls.keys():
+            dm = self.avr_mdls[key]
+            if hasattr(dm, 'initialize'):
+                self.x0[dm.idx] = dm.initialize(self.e_q_0[dm.gen_idx])
+
         # GOV
         for key in self.gov_mdls.keys():
             dm = self.gov_mdls[key]
-            if key == 'TGOV1':
-                v_2 = np.minimum(np.maximum(self.P_m[dm.gen_idx], dm.par['V_min']), dm.par['V_max'])
-                v_1 = v_2
-                v_3 = v_2
+            if hasattr(dm, 'initialize'):
+                self.x0[dm.idx] = dm.initialize(self.P_m[dm.gen_idx])
 
-                dm.int_par['x_1_bias'] = dm.par['R'] * v_1
-                self.x0[dm.idx] = np.concatenate([
-                    v_2,
-                    dm.par['T_2'] * v_2 - dm.par['T_3'] * v_3,
-                ])  # .T.flatten()
-
-        # AVR
-        for key in self.avr_mdls.keys():
-            dm = self.avr_mdls[key]
-            if key == 'SEXS':
-                bias = 1 / dm.par['K'] * self.e_q_0[dm.gen_idx]
-                dm.int_par['x_bias'] = bias
-                self.x0[dm.idx] = np.concatenate([
-                    (dm.par['T_a'] - dm.par['T_b']) * bias,
-                    self.e_q_0[dm.gen_idx]
-                ])  # .T.flatten()
+        for key in self.pss_mdls.keys():
+            dm = self.pss_mdls[key]
+            if hasattr(dm, 'initialize'):
+                pass
 
     def ode_fun(self, t, x):
 
@@ -693,71 +683,38 @@ class PowerSystemModel:
         self.speed_dev = x[self.speed_idx]
         for key in self.gov_mdls.keys():
             dm = self.gov_mdls[key]
-            if key == 'TGOV1':
-                speed_dev = -self.speed_dev[dm.gen_idx]
-                # delta_p_m = 1 / dm.par['R'] * (1 / dm.par['T_2'] * (dm.par['T_1'] * (-speed_dev) - x[dm.states['x']]))
-                v_1 = 1 / dm.par['R'] * (speed_dev + dm.int_par['x_1_bias'])
-                v_2 = np.minimum(np.maximum(x[dm.states['x_1']], dm.par['V_min']), dm.par['V_max'])
-                v_3 = dm.par['T_2'] / dm.par['T_3'] * v_2 - 1 / dm.par['T_3'] * x[dm.states['x_2']]
-                delta_p_m = v_3 - dm.par['D_t'] * speed_dev
+            input = -self.speed_dev[dm.gen_idx]
+            dx_loc, output = dm.update(x[dm.idx], input)
+            dx[dm.idx] = dx_loc
 
-                active_gov_gen_idx = dm.gen_idx[dm.active]
-                self.P_m[active_gov_gen_idx] = delta_p_m[dm.active]
-                self.p_m[active_gov_gen_idx] = (self.P_m[active_gov_gen_idx] * self.P_n_gen[active_gov_gen_idx] / self.s_n)
-
-                dx[dm.idx] = np.concatenate([
-                    1 / dm.par['T_1'] * (v_1 - v_2),
-                    v_3 - v_2
-                ])  # .T.flatten()
-
-                # Lims on state variable x_1 (clamping)
-                lower_lim_idx = (x[dm.states['x_1']] <= dm.par['V_min']) & (dx[dm.states['x_1']] < 0)
-                dx[dm.states['x_1'][lower_lim_idx]] *= 0
-
-                upper_lim_idx = (x[dm.states['x_1']] >= dm.par['V_max']) & (dx[dm.states['x_1']] > 0)
-                dx[dm.states['x_1'][upper_lim_idx]] *= 0
+            # dm.apply(self, output)
+            active_mdls = dm.active
+            active_gov_gen_idx = dm.gen_idx[active_mdls]
+            self.P_m[active_gov_gen_idx] = output[active_mdls]
+            self.p_m[active_gov_gen_idx] = (self.P_m[active_gov_gen_idx] * self.P_n_gen[active_gov_gen_idx] / self.s_n)
 
         # PSS
         for key in self.pss_mdls.keys():
             dm = self.pss_mdls[key]
-            if key == 'STAB1':
-                u = self.speed[dm.gen_idx]
-                v_1 = (dm.par['K']*u - x[dm.states['x_1']])/dm.par['T']
-                v_2 = 1/dm.par['T_3']*(dm.par['T_1']*v_1 - x[dm.states['x_2']])
-                v_3 = 1/dm.par['T_4']*(dm.par['T_2']*v_2 - x[dm.states['x_3']])
-                self.v_pss[dm.gen_idx[dm.active]] = np.minimum(np.maximum(v_3, -dm.par['H_lim']), dm.par['H_lim'])[dm.active]
+            input = self.speed[dm.gen_idx]
+            dx_loc, output = dm.update(x[dm.idx], input)
+            dx[dm.idx] = dx_loc
 
-                dx[dm.idx] = np.concatenate([
-                    v_1,
-                    (dm.par['T_1']/dm.par['T_3'] - 1)*v_1 - 1/dm.par['T_3']*x[dm.states['x_2']],
-                    (dm.par['T_2']/dm.par['T_4'] - 1)*v_2 - 1/dm.par['T_4']*x[dm.states['x_3']],
-                ])  # .T.flatten()
+            # dm.apply(self, output)
+            active_mdls = dm.active
+            self.v_pss[dm.gen_idx[active_mdls]] = output[active_mdls]
 
         # AVR
         self.v_g_dev = self.v_g_setp - abs(self.v_g)  # Used for validating AVR
         for key in self.avr_mdls.keys():
             dm = self.avr_mdls[key]
-            if key == 'SEXS':
-                active_avr_gen_idx = dm.gen_idx[dm.active]
-                self.e_q[active_avr_gen_idx] = \
-                (np.minimum(np.maximum(x[dm.states['e_f']], dm.par['E_min']), dm.par['E_max']))[dm.active]
-                # self.e_q[dm.gen_idx] = x[dm.states['e_f']]
-                u = self.v_g_setp[dm.gen_idx] - abs(self.v_g[dm.gen_idx]) + self.v_pss[dm.gen_idx] + dm.int_par[
-                    'x_bias']
-                v_1 = 1 / dm.par['T_b'] * (dm.par['T_a'] * u - x[dm.states['x']])
+            input = self.v_g_setp[dm.gen_idx] - abs(self.v_g[dm.gen_idx]) + self.v_pss[dm.gen_idx]
+            dx_loc, output = dm.update(x[dm.idx], input)
+            dx[dm.idx] = dx_loc
 
-                dx[dm.idx] = np.concatenate([
-                    # (dm.par['T_a']/dm.par['T_b'] - 1)*u - 1/dm.par['T_b']*(x[dm.states['x']] - dm.int_par['x_bias']),
-                    v_1 - u,
-                    1 / dm.par['T_e'] * (dm.par['K'] * v_1 - x[dm.states['e_f']])  # + self.v_aux[dm.gen_idx])
-                ])  # .T.flatten()
-
-                # Lims on state variable e_f (clamping)
-                lower_lim_idx = (x[dm.states['e_f']] <= dm.par['E_min']) & (dx[dm.states['e_f']] < 0)
-                dx[dm.states['e_f'][lower_lim_idx]] *= 0
-
-                upper_lim_idx = (x[dm.states['e_f']] >= dm.par['E_max']) & (dx[dm.states['e_f']] > 0)
-                dx[dm.states['e_f'][upper_lim_idx]] *= 0
+            # dm.apply(self, output)
+            active_mdls = dm.active
+            self.e_q[dm.gen_idx[active_mdls ]] = output[active_mdls]
 
         # Generators
         self.p_m = self.P_m * self.P_n_gen/self.s_n
@@ -792,20 +749,28 @@ class PowerSystemModel:
             cols = np.array([idx_from, idx_to, idx_to, idx_from])
             data = np.array([admittance + shunt / 2, admittance + shunt / 2, -admittance, -admittance])
 
+            rebuild_red = not(idx_from in self.reduced_bus_idx and idx_to in self.reduced_bus_idx)
+
+            if action == 'connect':
+                sign = 1
+            elif action == 'disconnect':
+                sign = -1
+
+
             y_line = lil_matrix((self.n_bus,) * 2, dtype=complex)
             y_line[rows, cols] = data
-
-            # y_contrib = self.read_line_data(df[df['name'] == name].index)
-            y_contrib = y_line
-
-            if action == 'disconnect':
-                self.y_bus -= y_contrib
-                self.v_to_i_lines[line.index, [idx_from, idx_to]] -= [admittance + shunt / 2, -admittance]
-            elif action == 'connect':
-                self.y_bus += y_contrib
-                self.v_to_i_lines_rev[line.index, [idx_to, idx_from]] += [admittance + shunt / 2, -admittance]
-
-        self.build_y_bus_red()
+            self.y_bus += sign*y_line
+            # self.v_to_i_lines_rev[line.index, [idx_to, idx_from]] += sign*np.array([admittance + shunt / 2, -admittance])
+            if rebuild_red:
+                self.build_y_bus_red()
+            else:
+                idx_from_red = np.where(self.reduced_bus_idx == idx_from)[0][0]
+                idx_to_red = np.where(self.reduced_bus_idx == idx_to)[0][0]
+                rows_red = np.array([idx_from_red, idx_to_red, idx_from_red, idx_to_red])
+                cols_red = np.array([idx_from_red, idx_to_red, idx_to_red, idx_from_red])
+                y_line_red = lil_matrix((self.n_bus_red,) * 2, dtype=complex)
+                y_line_red[rows_red, cols_red] = data
+                self.y_bus_red += sign*y_line_red
 
     def apply_inputs(self, input_desc, u):
         # Function to make it easy to apply the same control action as in the linearized model.
