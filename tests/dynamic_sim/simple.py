@@ -34,7 +34,7 @@ if __name__ == '__main__':
     x0[ps.angle_idx[0]] += 1
     print(np.max(abs(ps.ode_fun(0, ps.x0))))
 
-    sol = RK23(ps.ode_fun, 0, x0, t_end, max_step=10e-3)
+    sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=10e-3)
 
     t = 0
     result_dict = defaultdict(list)

@@ -1,5 +1,4 @@
 import numpy as np
-from dynpssimpy.dyn_models.base_classes import AVR
 
 
 class SEXS:
