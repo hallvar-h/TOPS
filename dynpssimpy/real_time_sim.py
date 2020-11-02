@@ -16,8 +16,38 @@ import pandas as pd
 import time
 
 
+class RK4_simple:
+    def __init__(self, f, t0, x0, t_end, dt=5e-3, **kwargs):
+        self.f = f
+        self.t = t0
+        self.x = x0
+        self.t_end = t_end
+        self.dt = dt
+
+        for key, value in kwargs.items():
+            if key == 'max_step':
+                self.dt = value
+
+    def step(self):
+        f = self.f
+        x = self.x
+        t = self.t
+        dt = self.dt
+
+        if t < self.t_end:
+            k_1 = f(t, x)
+            k_2 = f(t + dt / 2, x + (dt / 2) * k_1)
+            k_3 = f(t + dt / 2, x + (dt / 2) * k_2)
+            k_4 = f(t + dt, x + dt * k_3)
+
+            self.x = x + (dt / 6) * (k_1 + 2 * k_2 + 2 * k_3 + k_4)
+            self.t = t + dt
+        else:
+            print('End of simulation time reached.')
+
+
 class RealTimeSimulator(threading.Thread):
-    def __init__(self, ps, dt=5e-3, speed=1):
+    def __init__(self, ps, dt=5e-3, speed=1, solver=RK4_simple):
         threading.Thread.__init__(self)
         self.daemon = True
 
@@ -29,43 +59,45 @@ class RealTimeSimulator(threading.Thread):
 
         self.ps = ps
         # self.sol = RK23(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
-        self.sol = RK45(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
+        self.sol = solver(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
+        # self.sol = RK45(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
         # self.sol = BDF(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
         self.ps.ode_fun(0, self.ps.x0)
 
-    def run(self):
+        self.new_data_cv = threading.Condition()  # condition variable used to both lock and to notify threads
+        self.new_data_ready = False
 
+    def run(self):
         self.exit_flag = threading.Event()
 
         t_start_sim = time.time()
-        t_adj = 0
+        # t_adj = 0
         t_prev = time.time()
         t_world = 0
         t_err = 0
+
         while self.running:  # and t < self.t_end:
 
             # Simulate next step
             t_sim = time.time()
             if self.speed > 0:
-                self.sol.step()
+                with self.new_data_cv:
+                    self.sol.step()
+                    self.new_data_ready = True
+                    self.new_data_cv.notify()
 
             t_sim = time.time() - t_sim
 
             dt = time.time() - t_prev
             t_prev = time.time()
             t_world += dt*self.speed
-
-            # t_world = time.time() - t_start_sim - t_adj
-            # t_world = t_world + real_time_passed*self.speed
-            # real_time_passed = time.time() - t_prev
-
             t_err = self.sol.t - t_world
             if t_err > 0:
                 time.sleep(t_err/self.speed)
             elif t_err < 0:
                 print('Overflow! {:.2f} ms.'.format(1000*t_err))
-                if self.adjust_time:
-                    t_adj -= t_err
+                # if self.adjust_time:
+                #     t_adj -= t_err
 
         return
 
@@ -80,11 +112,14 @@ class RealTimeSimulator(threading.Thread):
 
 
 
+
+
+
 if __name__ == '__main__':
     importlib.reload(dps)
 
     # import ps_models.n44 as model_data
-    import ps_models.ieee39 as model_data
+    import ps_models.n44 as model_data
     # import ps_models.sm_ib as model_data
 
     model = model_data.load()
@@ -125,7 +160,7 @@ if __name__ == '__main__':
     ps.init_dyn_sim()
     ps.build_y_bus_red(ps.buses['name'])
     ps.x0[ps.angle_idx][0] += 1e-3
-    rts = RealTimeSimulator(ps, dt=5e-3)
+    rts = RealTimeSimulator(ps, dt=5e-3, speed=1, solver=RK4_simple)
     rts.start()
 
     # print(rts.is_alive())

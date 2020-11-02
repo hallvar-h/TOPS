@@ -714,7 +714,7 @@ class PowerSystemModel:
 
             # dm.apply(self, output)
             active_mdls = dm.active
-            self.e_q[dm.gen_idx[active_mdls ]] = output[active_mdls]
+            self.e_q[dm.gen_idx[active_mdls]] = output[active_mdls]
 
         # Generators
         self.p_m = self.P_m * self.P_n_gen/self.s_n
