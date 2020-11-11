@@ -20,10 +20,8 @@ class TGOV1:
             p['T_2'] * v_2 - p['T_3'] * v_3,
         ])
 
-    def update(self, x, input):
-        p = self.par
-        s = self.state_idx
-        int_par = self.int_par
+    @staticmethod
+    def _update(dx, x, input, p, s, int_par):
 
         speed_dev = input
         v_1 = 1 / p['R'] * (speed_dev + int_par['x_1_bias'])
@@ -33,10 +31,10 @@ class TGOV1:
 
         output = delta_p_m
 
-        dx = np.concatenate([
+        dx[:] = np.concatenate((
             1 / p['T_1'] * (v_1 - v_2),
             v_3 - v_2
-        ])
+        ))
 
         # Lims on state variable x_1 (clamping)
         lower_lim_idx = (x[s['x_1']] <= p['V_min']) & (dx[s['x_1']] < 0)
@@ -45,4 +43,4 @@ class TGOV1:
         upper_lim_idx = (x[s['x_1']] >= p['V_max']) & (dx[s['x_1']] > 0)
         dx[s['x_1'][upper_lim_idx]] *= 0
 
-        return dx, output
+        return output

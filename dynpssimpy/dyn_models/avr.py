@@ -16,18 +16,16 @@ class SEXS:
             output_0
         ])
 
-    def update(self, x, input):
-        p = self.par
-        s = self.state_idx
-        int_par = self.int_par
+    @staticmethod
+    def _update(dx, x, input, p, s, int_par):
 
         u = input + int_par['x_bias']
         v_1 = 1 / p['T_b'] * (p['T_a'] * u - x[s['x']])
 
-        dx = np.concatenate([
+        dx[:] = np.concatenate((
             v_1 - u,
             1/p['T_e'] * (p['K'] * v_1 - x[s['e_f']])
-        ])
+        ))
 
         # Lims on state variable e_f (clamping)
         lower_lim_idx = (x[s['e_f']] <= p['E_min']) & (dx[s['e_f']] < 0)
@@ -38,7 +36,7 @@ class SEXS:
 
         output = np.minimum(np.maximum(x[s['e_f']], p['E_min']), p['E_max'])
 
-        return dx, output
+        return output
 
 
 if __name__ == '__main__':
@@ -65,7 +63,8 @@ if __name__ == '__main__':
         'x_bias': np.array([0]*n)
     }
 
-    x = np.zeros(2*n)
+    # x = np.zeros(2*n)
+    x = np.arange(2*n)
     t_0 = time.time()
     n_it = 1000
     for _ in range(n_it):

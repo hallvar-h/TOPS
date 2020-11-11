@@ -12,7 +12,7 @@ import dynpssimpy.dyn_models.avr as avr_models
 if __name__ == '__main__':
 
     # Load model
-    import ps_models.k2a as model_data
+    import ps_models.ieee39 as model_data
     # import ps_models.ieee39 as model_data
     # import ps_models.n44 as model_data
 
@@ -26,15 +26,18 @@ if __name__ == '__main__':
 
     ps = dps.PowerSystemModel(model=model)
     ps.pf_max_it = 100
+    ps.use_numba = False
     ps.power_flow()
     ps.init_dyn_sim()
-
-    t_end = 2
+    ps.ode_fun(0.0, ps.x0)
+    t_end = 0.1
     x0 = ps.x0.copy()
     x0[ps.angle_idx[0]] += 1
-    print(np.max(abs(ps.ode_fun(0, ps.x0))))
+    # print(np.max(abs(ps.ode_fun(0, ps.x0))))
+    # np.allclose(ps.ode_fun(0, ps.x0), ps.ode_fun_new(0, ps.x0))
 
-    sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=10e-3)
+
+    sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=5e-3)
 
     t = 0
     result_dict = defaultdict(list)
@@ -59,5 +62,5 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(2)
     ax[0].plot(result[('Global', 't')], result.xs(key='speed', axis='columns', level=1))
     ax[1].plot(result[('Global', 't')], result.xs(key='angle', axis='columns', level=1))
-    plt.show(True)
+    plt.show()
 

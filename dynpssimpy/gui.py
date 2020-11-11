@@ -184,7 +184,8 @@ class LivePlotter(QtWidgets.QMainWindow):
         phasors = self.ps.e[:, None]*self.phasor_0
         self.pl_ph = []
         for i, phasor in enumerate(phasors):
-            self.pl_ph.append(plot_win_ph.plot(phasor.real, phasor.imag, pen=self.colors(i)))
+            pen = pg.mkPen(color=self.colors(i), width=2)
+            self.pl_ph.append(plot_win_ph.plot(phasor.real, phasor.imag, pen=pen))
         plot_win_ph.enableAutoRange('xy', False)
 
 
@@ -203,7 +204,8 @@ class LivePlotter(QtWidgets.QMainWindow):
 
             pl_tmp = []
             for i in range(n_series):
-                pl_tmp.append(graphWidget.plot(self.ts_keeper.time, np.zeros(n_samples), pen=self.colors(i)))
+                pen = pg.mkPen(color=self.colors(i), width=2)
+                pl_tmp.append(graphWidget.plot(self.ts_keeper.time, np.zeros(n_samples), pen=pen))
 
             self.pl[plot] = pl_tmp
             self.graphWidget.nextRow()
@@ -248,7 +250,7 @@ class PhasorPlot(QtWidgets.QWidget):
 
         self.colors = lambda i: pg.intColor(i, hues=9, values=1, maxValue=255, minValue=150, maxHue=360, minHue=0, sat=255, alpha=255)
         # Phasor diagram
-        self.graphWidget = pg.GraphicsLayoutWidget(show=True, title="Phasors, new")
+        self.graphWidget = pg.GraphicsLayoutWidget(show=True, title="Phasors")
         # self.setCentralWidget(self.graphWidget)
 
         self.phasor_0 = np.array([0, 1, 0.9, 1, 0.9, 1]) + 1j * np.array([0, 0, -0.1, 0, 0.1, 0])
@@ -258,7 +260,8 @@ class PhasorPlot(QtWidgets.QWidget):
         phasors = self.ps.e[:, None] * self.phasor_0
         self.pl_ph = []
         for i, phasor in enumerate(phasors):
-            self.pl_ph.append(plot_win_ph.plot(phasor.real, phasor.imag, pen=self.colors(i)))
+            pen = pg.mkPen(color=self.colors(i), width=2)
+            self.pl_ph.append(plot_win_ph.plot(phasor.real, phasor.imag, pen=pen))
         plot_win_ph.enableAutoRange('xy', False)
 
         self.graphWidget.show()
@@ -305,7 +308,8 @@ class TimeSeriesPlot(QtWidgets.QWidget):
 
             pl_tmp = []
             for i in range(n_series):
-                pl_tmp.append(graphWidget.plot(self.ts_keeper.time, np.zeros(n_samples), pen=self.colors(i)))
+                pen = pg.mkPen(color=self.colors(i), width=2)
+                pl_tmp.append(graphWidget.plot(self.ts_keeper.time, np.zeros(n_samples), pen=pen))
 
             self.pl[plot] = pl_tmp
             self.graphWidget.nextRow()
@@ -383,10 +387,62 @@ class TimeSeriesPlotFast(QtWidgets.QWidget):
                 self.pl[plot].setData(x, y)
 
 
+class SimulationStatsPlot(QtWidgets.QWidget):
+    def __init__(self, rts, update_freq=50, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.rts = rts
+        self.ps = rts.ps
+        self.dt = self.rts.dt
+
+        self.graphWidget = pg.GraphicsLayoutWidget(show=True, title="Simulation Stats")
+
+        n_samples = 500
+
+        self.colors = lambda i: pg.intColor(i, hues=9, values=1, maxValue=255, minValue=150, maxHue=360, minHue=0,
+                                            sat=255, alpha=255)
+
+        self.ts_keeper = TimeSeriesKeeper()
+        self.ts_keeper.time = np.arange(-n_samples * self.dt, 0, self.dt)
+        # self.y = np.zeros_like(self.ts_keeper.time)
+        self.pl = {}
+        # self.axes = [0, 1, 1]
+        self.plots = ['dt_loop', 'dt_ideal', 'dt_sim']
+
+        # for plot in self.plots:
+        graphWidget = self.graphWidget.addPlot(title='Synchronization')
+        for i, plot in enumerate(self.plots):
+            setattr(self.ts_keeper, plot, np.zeros(n_samples))
+            pen = pg.mkPen(color=self.colors(i), width=2)
+            self.pl[plot] = graphWidget.plot(self.ts_keeper.time, np.zeros(n_samples), pen=pen)
+            # self.graphWidget.nextRow()
+
+        self.graphWidget.show()
+
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update)
+        self.timer.start(1000/update_freq)
+
+    def update(self):
+        if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
+            self.ts_keeper.time = np.append(self.ts_keeper.time[1:], self.ps.time)
+
+            for plot in self.plots:
+                old_data = getattr(self.ts_keeper, plot)[1:]
+                new_data = getattr(self.rts, plot)
+                # setattr(self.ts_keeper, plot, np.concatenate([old_data, new_data]))
+                setattr(self.ts_keeper, plot, np.append(old_data, new_data))
+                plot_data = getattr(self.ts_keeper, plot)
+                # for i, pl in enumerate(self.pl[plot]):
+                self.pl[plot].setData(self.ts_keeper.time, plot_data)
+
+
+
 def main(rts):
     app = QtWidgets.QApplication(sys.argv)
     phasor_plot = PhasorPlot(rts)
     ts_plot = TimeSeriesPlotFast(rts, ['angle', 'speed'], update_freq=50)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
+    stats_plot = SimulationStatsPlot(rts, update_freq=50)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
 
     # Add Control Widgets
     line_outage_ctrl = LineOutageWidget(rts)

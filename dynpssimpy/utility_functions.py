@@ -1,6 +1,38 @@
 import numpy as np
 
 
+class SimpleRK4:
+    def __init__(self, f, t0, x0, t_end, dt=5e-3, **kwargs):
+        self.f = f
+        self.t = t0
+        self.x = x0
+        self.y = self.x
+        self.t_end = t_end
+        self.dt = dt
+
+        for key, value in kwargs.items():
+            if key == 'max_step':
+                self.dt = value
+
+    def step(self):
+        f = self.f
+        x = self.x
+        t = self.t
+        dt = self.dt
+
+        if t < self.t_end:
+            k_1 = f(t, x)
+            k_2 = f(t + dt / 2, x + (dt / 2) * k_1)
+            k_3 = f(t + dt / 2, x + (dt / 2) * k_2)
+            k_4 = f(t + dt, x + dt * k_3)
+
+            self.x = x + (dt / 6) * (k_1 + 2 * k_2 + 2 * k_3 + k_4)
+            self.t = t + dt
+            self.y = self.x
+        else:
+            print('End of simulation time reached.')
+
+
 def jacobian_num(f, x, eps=1e-10, **params):
     # Numerical computation of Jacobian
     J = np.zeros([len(x), len(x)], dtype=np.float)

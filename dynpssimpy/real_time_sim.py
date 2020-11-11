@@ -14,40 +14,13 @@ import importlib
 from pyqtconsole.console import PythonConsole
 import pandas as pd
 import time
-
-
-class RK4_simple:
-    def __init__(self, f, t0, x0, t_end, dt=5e-3, **kwargs):
-        self.f = f
-        self.t = t0
-        self.x = x0
-        self.t_end = t_end
-        self.dt = dt
-
-        for key, value in kwargs.items():
-            if key == 'max_step':
-                self.dt = value
-
-    def step(self):
-        f = self.f
-        x = self.x
-        t = self.t
-        dt = self.dt
-
-        if t < self.t_end:
-            k_1 = f(t, x)
-            k_2 = f(t + dt / 2, x + (dt / 2) * k_1)
-            k_3 = f(t + dt / 2, x + (dt / 2) * k_2)
-            k_4 = f(t + dt, x + dt * k_3)
-
-            self.x = x + (dt / 6) * (k_1 + 2 * k_2 + 2 * k_3 + k_4)
-            self.t = t + dt
-        else:
-            print('End of simulation time reached.')
+from collections import defaultdict
+import matplotlib.pyplot as plt
+import dynpssimpy.utility_functions as dps_uf
 
 
 class RealTimeSimulator(threading.Thread):
-    def __init__(self, ps, dt=5e-3, speed=1, solver=RK4_simple):
+    def __init__(self, ps, dt=5e-3, speed=1, solver=dps_uf.SimpleRK4, log_fun=[], ode_fun=[]):
         threading.Thread.__init__(self)
         self.daemon = True
 
@@ -56,13 +29,28 @@ class RealTimeSimulator(threading.Thread):
         self.adjust_time = False
         self.speed = speed
         self.running = True
+        self.log_fun = log_fun
+        self.log = callable(self.log_fun)
+
+        self.dt_sim = 0
+        self.t_world = 0
+        self.dt_loop = 0
+        self.dt_err = 0
+        self.dt_ideal = self.dt / self.speed
 
         self.ps = ps
+
+
+        if callable(ode_fun):
+            self.ode_fun = ode_fun
+        else:
+            self.ode_fun = self.ps.ode_fun
+
         # self.sol = RK23(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
-        self.sol = solver(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
+        self.sol = solver(self.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
         # self.sol = RK45(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
         # self.sol = BDF(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
-        self.ps.ode_fun(0, self.ps.x0)
+        # self.ode_fun(0, self.ps.x0)
 
         self.new_data_cv = threading.Condition()  # condition variable used to both lock and to notify threads
         self.new_data_ready = False
@@ -73,31 +61,34 @@ class RealTimeSimulator(threading.Thread):
         t_start_sim = time.time()
         # t_adj = 0
         t_prev = time.time()
-        t_world = 0
-        t_err = 0
 
         while self.running:  # and t < self.t_end:
 
             # Simulate next step
-            t_sim = time.time()
+            t_sim_0 = time.time()
             if self.speed > 0:
                 with self.new_data_cv:
                     self.sol.step()
                     self.new_data_ready = True
                     self.new_data_cv.notify()
 
-            t_sim = time.time() - t_sim
+            self.dt_sim = time.time() - t_sim_0
+            self.dt_loop = time.time() - t_prev
 
-            dt = time.time() - t_prev
             t_prev = time.time()
-            t_world += dt*self.speed
-            t_err = self.sol.t - t_world
-            if t_err > 0:
-                time.sleep(t_err/self.speed)
-            elif t_err < 0:
-                print('Overflow! {:.2f} ms.'.format(1000*t_err))
+            self.t_world += self.dt_loop*self.speed
+            self.dt_err = self.sol.t - self.t_world
+            if self.dt_err > 0:
+                time.sleep(self.dt_err / self.speed)
+            elif self.dt_err < 0:
+                print('Overflow! {:.2f} ms.'.format(1000*self.dt_err))
                 # if self.adjust_time:
                 #     t_adj -= t_err
+
+            self.dt_ideal = self.dt / self.speed
+
+            if self.log:
+                self.log_fun(self)
 
         return
 
@@ -112,14 +103,16 @@ class RealTimeSimulator(threading.Thread):
 
 
 
-
+def logger(rts, log, attributes=['dt_loop', 'dt_sim', 'dt_ideal']):
+    for attr in attributes:
+        log[attr].append(getattr(rts, attr))
 
 
 if __name__ == '__main__':
     importlib.reload(dps)
 
     # import ps_models.n44 as model_data
-    import ps_models.n44 as model_data
+    import ps_models.ieee39 as model_data
     # import ps_models.sm_ib as model_data
 
     model = model_data.load()
@@ -158,9 +151,11 @@ if __name__ == '__main__':
 
     ps.power_flow()
     ps.init_dyn_sim()
-    ps.build_y_bus_red(ps.buses['name'])
+    ps.build_y_bus_red()  # ps.buses['name'])
     ps.x0[ps.angle_idx][0] += 1e-3
-    rts = RealTimeSimulator(ps, dt=5e-3, speed=1, solver=RK4_simple)
+    log = defaultdict(list)
+    rts = RealTimeSimulator(ps, dt=10e-3, speed=1, solver=dps_uf.SimpleRK4, log_fun=lambda x: logger(x, log))
+    time.sleep(2)
     rts.start()
 
     # print(rts.is_alive())
@@ -169,3 +164,16 @@ if __name__ == '__main__':
 
     time.sleep(10)
     rts.stop()
+
+    fig, ax = plt.subplots(1)
+    ax.plot(log['dt_loop'])
+    ax.plot(log['dt_ideal'])
+    ax.plot(log['dt_sim'])
+    plt.show()
+    #
+    #
+    # np.savez(r'C:\Users\lokal_hallvhau\Dropbox\Python\Plotting for Presentations\2020 - DynPSSimPy\rtsim\data',
+    #          dt_loop=np.array(log['dt_loop']),
+    #          dt_ideal=np.array(log['dt_ideal']),
+    #          dt_sim=np.array(log['dt_sim']),
+    #          )

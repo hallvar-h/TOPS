@@ -18,10 +18,11 @@ import dynpssimpy.gui as gui
 
 
 def main(rts):
+    pg.setConfigOptions(antialias=True)
     app = QtWidgets.QApplication(sys.argv)
     # main_win = gui.LivePlotter(rts, [])  # ['angle', 'speed'])
     phasor_plot = gui.PhasorPlot(rts)
-    ts_plot = gui.TimeSeriesPlot(rts, ['speed'], update_freq=50)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
+    ts_plot = gui.TimeSeriesPlot(rts, ['speed', 'angle'], update_freq=50)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
 
     # Add Control Widgets
     line_outage_ctrl = gui.LineOutageWidget(rts)
@@ -62,8 +63,10 @@ if __name__ == '__main__':
     ps.power_flow()
     ps.init_dyn_sim()
     ps.build_y_bus_red(ps.buses['name'])
-    ps.x0[ps.angle_idx][0] += 1e-1
-    rts = dps_rts.RealTimeSimulator(ps, dt=5e-3, speed=0.25, solver=dps_rts.RK4_simple)
+    # ps.x0[ps.angle_idx][0] += 1e-1
+    rts = dps_rts.RealTimeSimulator(ps, dt=20e-3, speed=0.5, ode_fun=ps.ode_fun)
+    rts.ode_fun(0, ps.x0)
+
 
     # gui.PhasorPlot(rts)
     rts.start()
