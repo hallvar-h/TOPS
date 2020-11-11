@@ -218,7 +218,7 @@ class PowerSystemModel:
             idx_from = dps_uf.lookup_strings(line['from_bus'], buses['name'])
             idx_to = dps_uf.lookup_strings(line['to_bus'], buses['name'])
             if line['unit'] in ['p.u.', 'pu', 'pu/km']:
-                if 'S_n' in line and 'V_n' in line and line['S_n'] != 0 and line['V_n'] != 0:
+                if 'S_n' in line.dtype.names and 'V_n' in line.dtype.names and line['S_n'] != 0 and line['V_n'] != 0:
                     # If impedance given in p.u./km
                     impedance = (line['R'] + 1j * line['X']) * line['length'] * line['V_n'] ** 2 / line['S_n'] / \
                                 self.z_n[idx_from]

@@ -31,7 +31,7 @@ if __name__ == '__main__':
     ps.init_dyn_sim()
     ps.build_y_bus_red()
     ps.ode_fun(0.0, ps.x0)
-    t_end = 0.1
+    t_end = 5
     x0 = ps.x0.copy()
     x0[ps.angle_idx[0]] += 1
     # print(np.max(abs(ps.ode_fun(0, ps.x0))))
