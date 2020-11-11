@@ -12,7 +12,7 @@ import dynpssimpy.dyn_models.gov as gov_lib
 import dynpssimpy.dyn_models.pss as pss_lib
 import dynpssimpy.dyn_models.gen as gen_lib
 import importlib
-importlib.reload(gen_lib)
+importlib.reload(dps_uf)
 
 
 class PowerSystemModel:
@@ -22,21 +22,6 @@ class PowerSystemModel:
         self.use_numba = False
         self.pf_max_it = 10
         self.tol = 1e-8
-
-        # Get model data
-        for td in ['buses', 'lines', 'loads', 'generators', 'transformers', 'shunts']:
-            if td in model:
-                if len(model[td]) > 0:
-                    # Get dtype for column
-                    data = model[td][1:]
-                    data_T = list(map(list, zip(*data)))
-                    col_dtypes = [np.array(col).dtype for col in data_T]
-
-                    data = [tuple(entry) for entry in model[td][1:]]
-                    dtypes = [(name_, dtype_) for name_, dtype_ in zip(model[td][0], col_dtypes)]
-                    setattr(self, td, np.array(data, dtype=dtypes))
-            else:
-                setattr(self, td, np.empty(0))
 
         # Get model data
         for td in ['buses', 'lines', 'loads', 'generators', 'transformers', 'shunts']:
@@ -57,10 +42,47 @@ class PowerSystemModel:
 
         for td in ['gov', 'avr', 'pss']:
             setattr(self, td, dict())
-            setattr(self, td, dict())
+            # setattr(self, td, dict())
             if td in model:
                 for key in model[td].keys():
                     getattr(self, td)[key] = pd.DataFrame(model[td][key][1:], columns=model[td][key][0])
+
+        recarray_test = True
+        if recarray_test:
+            # Get model data
+            for td in ['buses', 'lines', 'loads', 'generators', 'transformers', 'shunts']:
+                if td in model and len(model[td]) > 0:
+                    header = model[td][0]
+                    # Get dtype for each column
+                    data = model[td][1:]
+                    data_T = list(map(list, zip(*data)))
+                    col_dtypes = [np.array(col).dtype for col in data_T]
+
+                    entries = [tuple(entry) for entry in model[td][1:]]
+                    dtypes = [(name_, dtype_) for name_, dtype_ in zip(header, col_dtypes)]
+                    setattr(self, td, np.array(entries, dtype=dtypes))
+                else:
+                    setattr(self, td, np.empty(0))
+
+            for req_attr, default in zip(['PF_n', 'N_par'], [1, 1]):
+                if not req_attr in self.generators.dtype.names:
+                    new_field = np.ones(len(self.generators), dtype=[(req_attr, float)])
+                    new_field[req_attr] *= default
+                    self.generators = dps_uf.combine_recarrays(self.generators, new_field)
+
+            for td in ['gov', 'avr', 'pss']:
+                setattr(self, td, dict())
+                if td in model and len(model[td]) > 0:
+                    for key in model[td].keys():
+                        # Get dtype for each column
+                        header = model[td][key][0]
+                        data = model[td][key][1:]
+                        data_T = list(map(list, zip(*data)))
+                        col_dtypes = [np.array(col).dtype for col in data_T]
+
+                        entries = [tuple(entry) for entry in data]
+                        dtypes = [(name_, dtype_) for name_, dtype_ in zip(header, col_dtypes)]
+                        getattr(self, td)[key] = np.array(entries, dtype=dtypes)
 
         self.branches = self.lines
 
@@ -96,7 +118,14 @@ class PowerSystemModel:
         self.v_pss = np.zeros(self.n_gen, dtype=float)
         self.v_aux = np.zeros(self.n_gen, dtype=float)
 
-        self.gen_bus_idx = np.array([self.buses[self.buses['name'] == gen['bus']].index[0] for i, gen in self.generators.iterrows()])
+        if recarray_test:
+            gen_bus_names = self.generators['bus']
+            bus_names = self.buses['name']
+            self.gen_bus_idx = dps_uf.lookup_strings(gen_bus_names, bus_names)
+
+        else:
+            self.gen_bus_idx = np.array([self.buses[self.buses['name'] == gen['bus']].index[0] for i, gen in self.generators.iterrows()])
+
 
         # Remove duplicate buses
         _, idx = np.unique(self.gen_bus_idx, return_index=True)
@@ -108,18 +137,19 @@ class PowerSystemModel:
         self.V_n_gen = np.zeros(len(self.generators))
         self.S_n_gen = np.zeros(len(self.generators))
         self.P_n_gen = np.zeros(len(self.generators))
-        for i, gen in self.generators.iterrows():
-            if 'V_n' in gen and gen['V_n'] > 0:
+
+        for i, gen in enumerate(self.generators):
+            if 'V_n' in self.generators.dtype.names and gen['V_n'] > 0:
                 self.V_n_gen[i] = gen['V_n']
             else:
                 self.V_n_gen[i] = self.v_n[self.gen_bus_idx[i]]
 
-            if 'S_n' in gen and gen['S_n'] > 0:
+            if 'S_n' in self.generators.dtype.names and gen['S_n'] > 0:
                 self.S_n_gen[i] = gen['S_n']
             else:
                 self.S_n_gen[i] = self.s_n
 
-            if 'PF_n' in gen:
+            if 'PF_n' in self.generators.dtype.names:
                 self.P_n_gen[i] = gen['S_n']*gen['PF_n']
             else:
                 self.P_n_gen[i] = self.S_n_gen[i]
@@ -127,7 +157,7 @@ class PowerSystemModel:
         self.I_n_gen = self.S_n_gen / (np.sqrt(3) * self.V_n_gen)
         self.Z_n_gen = self.V_n_gen ** 2 / self.S_n_gen
 
-        self.n_par = np.array(self.generators['N_par']) if 'N_par' in self.generators else np.ones(self.n_gen)
+        self.n_par = np.array(self.generators['N_par']) if 'N_par' in self.generators.dtype.names else np.ones(self.n_gen)
 
         self.reduced_bus_idx = self.gen_bus_idx_unique
         self.y_bus = np.empty((self.n_bus, self.n_bus))  # Can not be built before power flow, since load admittances depend on it.
@@ -181,11 +211,12 @@ class PowerSystemModel:
 
     def read_admittance_data(self, element_type, element):
         buses = self.buses
-
         if element_type == 'line':
             line = element
-            idx_from = buses[buses['name'] == line['from_bus']].index[0]
-            idx_to = buses[buses['name'] == line['to_bus']].index[0]
+            # idx_from = np.where(buses['name'] == line['from_bus'])[0][0]
+            # idx_to = np.where(buses['name'] == line['to_bus'])[0][0]
+            idx_from = dps_uf.lookup_strings(line['from_bus'], buses['name'])
+            idx_to = dps_uf.lookup_strings(line['to_bus'], buses['name'])
             if line['unit'] in ['p.u.', 'pu', 'pu/km']:
                 if 'S_n' in line and 'V_n' in line and line['S_n'] != 0 and line['V_n'] != 0:
                     # If impedance given in p.u./km
@@ -210,10 +241,12 @@ class PowerSystemModel:
 
         elif element_type == 'transformer':
             trafo = element
-            idx_from = buses[buses['name'] == trafo['from_bus']].index
-            idx_to = buses[buses['name'] == trafo['to_bus']].index
-            ratio_from = (trafo['ratio_from'] if not np.isnan(trafo['ratio_from']) else 1) if 'ratio_from' in trafo else 1
-            ratio_to = (trafo['ratio_to'] if not np.isnan(trafo['ratio_to']) else 1) if 'ratio_to' in trafo else 1
+            # idx_from = buses[buses['name'] == trafo['from_bus']].index
+            # idx_to = buses[buses['name'] == trafo['to_bus']].index
+            idx_from = dps_uf.lookup_strings(trafo['from_bus'], buses['name'])
+            idx_to = dps_uf.lookup_strings(trafo['to_bus'], buses['name'])
+            ratio_from = (trafo['ratio_from'] if not np.isnan(trafo['ratio_from']) else 1) if 'ratio_from' in trafo.dtype.names else 1
+            ratio_to = (trafo['ratio_to'] if not np.isnan(trafo['ratio_to']) else 1) if 'ratio_to' in trafo.dtype.names else 1
 
             V_n_from = trafo['V_n_from'] if trafo['V_n_from'] else self.v_n[idx_from]
             Z_base_trafo = V_n_from ** 2 / trafo['S_n']  # <= Could also have used _to instead of _from
@@ -233,7 +266,7 @@ class PowerSystemModel:
         self.v_to_i_lines_rev = np.zeros((n_elements, self.n_bus), dtype=complex)
         self.lines_from_mat = np.zeros((n_elements, self.n_bus), dtype=complex)
         self.lines_to_mat = np.zeros((n_elements, self.n_bus), dtype=complex)
-        for i, element in self.lines.iterrows():
+        for i, element in enumerate(self.lines):
             idx_from, idx_to, admittance, shunt = self.read_admittance_data('line', element)
             self.v_to_i_lines[i, [idx_from, idx_to]] = [admittance + shunt/2, -admittance]
             self.v_to_i_lines_rev[i, [idx_to, idx_from]] = [admittance + shunt/2, -admittance]
@@ -246,7 +279,7 @@ class PowerSystemModel:
         self.v_to_i_trafos_rev = np.zeros((n_elements, self.n_bus), dtype=complex)
         self.trafos_from_mat = np.zeros((n_elements, self.n_bus), dtype=complex)
         self.trafos_to_mat = np.zeros((n_elements, self.n_bus), dtype=complex)
-        for i, element in self.transformers.iterrows():
+        for i, element in enumerate(self.transformers):
             idx_from, idx_to, admittance, ratio_from, ratio_to = self.read_admittance_data('transformer', element)
 
             # This might not be correct for phase shifting transformers (conj in the right place?)
@@ -274,7 +307,7 @@ class PowerSystemModel:
 
         y_lines = np.zeros((n_bus, n_bus), dtype=complex)
 
-        for i, line in self.lines.iterrows():
+        for i, line in enumerate(self.lines):
             idx_from, idx_to, admittance, shunt = self.read_admittance_data('line', line)
             rows = np.array([idx_from, idx_to, idx_from, idx_to])
             cols = np.array([idx_from, idx_to, idx_to, idx_from])
@@ -285,7 +318,7 @@ class PowerSystemModel:
         y_branch += y_lines
 
         y_trafo = np.zeros((n_bus, n_bus), dtype=complex)
-        for i, trafo in self.transformers.iterrows():
+        for i, trafo in enumerate(self.transformers):
 
             idx_from, idx_to, admittance, ratio_from, ratio_to = self.read_admittance_data('transformer', trafo)
 
@@ -302,26 +335,28 @@ class PowerSystemModel:
         y_branch += y_trafo
 
         y_gen = np.zeros((n_bus, n_bus), dtype=complex)
-        for i, gen in self.generators.iterrows():
+        for i, gen in enumerate(self.generators):
             # Generator impedance on system base
-            idx_bus = buses[buses['name'] == gen['bus']].index
+            idx_bus = dps_uf.lookup_strings(gen['bus'], buses['name'])
             V_n = gen['V_n'] if gen['V_n'] else self.v_n[idx_bus]
             impedance = 1j * gen['X_d_st'] * V_n**2/gen['S_n']/self.z_n[self.gen_bus_idx[i]]
             y_gen[idx_bus, idx_bus] += self.n_par[i] / impedance
 
         y_load = np.zeros((n_bus, n_bus), dtype=complex)
         if type == 'dyn':
-            for i, load in self.loads.iterrows():
+            for i, load in enumerate(self.loads):
                 s_load = (load['P'] + 1j * load['Q']) / self.s_n
                 if load['model'] == 'Z' and abs(s_load) > 0:
-                    idx_bus = buses[buses['name'] == load['bus']].index
+                    # idx_bus = buses[buses['name'] == load['bus']].index
+                    idx_bus = dps_uf.lookup_strings(load['bus'], buses['name'])
                     z = np.conj(abs(self.v_0[idx_bus])**2/s_load)
                     y_load[idx_bus, idx_bus] += 1/z
 
         y_shunt = np.zeros((n_bus, n_bus), dtype=complex)
-        for i, shunt in self.shunts.iterrows():
+        for i, shunt in enumerate(self.shunts):
             # if shunt['model'] == 'Z':
-            idx_bus = buses[buses['name'] == shunt['bus']].index
+            # idx_bus = buses[buses['name'] == shunt['bus']].index
+            idx_bus = dps_uf.lookup_strings(shunt['bus'], buses['name'])
             s_shunt = -1j*shunt['Q']/self.s_n
 
             z = np.conj(abs(1)**2/s_shunt)
@@ -349,7 +384,9 @@ class PowerSystemModel:
         # If extra buses are specified before , store these. To ensure that the reduced admittance matrix has the same
         # dimension if rebuilt (by i.e. by network_event()-function.
         if len(keep_extra_buses) > 0:
-            keep_extra_buses_idx = [self.buses[self.buses.name == name].index[0] for name in keep_extra_buses]
+            # keep_extra_buses_idx = [self.buses[self.buses.name == name].index[0] for name in keep_extra_buses]
+            keep_extra_buses_idx = dps_uf.lookup_strings(keep_extra_buses, self.buses['name'])
+
             self.reduced_bus_idx = np.concatenate([self.gen_bus_idx, np.array(keep_extra_buses_idx, dtype=int)])
 
             # Remove duplicate buses
@@ -361,7 +398,7 @@ class PowerSystemModel:
         self.y_bus_red_mod = np.zeros_like(self.y_bus_red)
 
         # self.n_bus_red = self.y_bus_red.shape[0]
-        self.gen_bus_idx_red = self.get_bus_idx_red(self.buses.iloc[self.gen_bus_idx]['name'])
+        self.gen_bus_idx_red = self.get_bus_idx_red(self.buses[self.gen_bus_idx]['name'])
 
         self.build_y_branch()
 
@@ -383,7 +420,7 @@ class PowerSystemModel:
         q_sum_bus = np.empty(self.n_bus)
         q_sum_loads_bus = np.empty(self.n_bus)
 
-        for i, bus in self.buses.iterrows():
+        for i, bus in enumerate(self.buses):
             gen_idx = self.generators['bus'] == bus['name']
             p_sum_loads_bus[i] = (sum(self.loads[self.loads['bus'] == bus['name']]['P']) / self.s_n) if len(self.loads) > 0 else 0
             p_sum_bus[i] = p_sum_loads_bus[i] - sum(self.generators[gen_idx]['P']*self.n_par[gen_idx]) / self.s_n
@@ -404,7 +441,8 @@ class PowerSystemModel:
         pq_idx = np.where(bus_type == 'PQ')[0]
         pvpq_idx = np.concatenate([pv_idx, pq_idx])
         sl_idx = np.where(bus_type == 'SL')
-        self.slack_bus = self.buses.iloc[sl_idx].name.tolist()[0]
+        # self.slack_bus = self.buses.iloc[sl_idx].name.tolist()[0]
+        self.slack_bus = self.buses[sl_idx]['name'][0]
 
         # Map x to angles and voltages
         idx_phi = range(self.n_bus - 1)
@@ -711,10 +749,7 @@ class PowerSystemModel:
         for par in ['T_d0_t', 'T_q0_t', 'T_d0_st', 'T_q0_st']:
             setattr(self, par, np.array(self.generators[par]))
 
-        self.H = np.array(self.generators['H'])
-        if 'PF_n' in self.generators:
-            self.H /= np.array(self.generators['PF_n'])
-            # self.H /= self.generators['PF_n']
+        self.H = self.generators['H']/self.generators['PF_n']
 
         # [setattr(self, var + '_idx', self.gen_mdls.states[var]) for var in states]  # Define self.speed_idx, self.angle_idx and so on
         [setattr(self, state + '_idx', self.gen_mdls['GEN'].state_idx[state]) for state in self.gen_mdls['GEN'].state_list]
@@ -806,7 +841,7 @@ class PowerSystemModel:
             start_idx = len(self.state_desc)
             mdl = getattr(library, key)()
             state_list = mdl.state_list
-            names = data['name'].to_numpy()
+            names = data['name']
             n_units = len(data)
             n_states = len(state_list)
 
@@ -814,7 +849,7 @@ class PowerSystemModel:
 
             # mdl.idx = start_idx + np.arange(len(state_desc_mdl), dtype=int)  # Indices of all states belonging to model
             mdl.idx = slice(start_idx, start_idx + len(state_desc_mdl))  # Indices of all states belonging to model
-            mdl.par = data.to_records()  # Model parameters
+            mdl.par = data  # .to_records()  # Model parameters
 
             if self.use_numba:
                 mdl.update = jit()(mdl._update)
@@ -847,7 +882,7 @@ class PowerSystemModel:
                 start_idx = len(self.state_desc)
                 mdl = getattr(library, key)()
                 state_list = mdl.state_list
-                names = data['name'].to_numpy()
+                names = data['name']
                 n_units = len(data)
                 n_states = len(state_list)
 
@@ -855,7 +890,7 @@ class PowerSystemModel:
 
                 # mdl.idx = start_idx + np.arange(len(state_desc_mdl), dtype=int)  # Indices of all states belonging to model
                 mdl.idx = slice(start_idx, start_idx + len(state_desc_mdl))  # Indices of all states belonging to model
-                mdl.par = data.to_records()  # Model parameters
+                mdl.par = data  # .to_records()  # Model parameters
 
                 if self.use_numba:
                     mdl.update = jit()(mdl._update)
@@ -865,7 +900,8 @@ class PowerSystemModel:
                 mdl.active = np.ones(len(data), dtype=bool)
                 # mdl.int_par = dict.fromkeys(mdl.int_par_list, np.zeros(len(data)))
                 mdl.int_par = np.array(np.zeros(len(data)), [(par, float) for par in mdl.int_par_list])
-                mdl.gen_idx = np.array([self.generators[self.generators['name'] == name].index.tolist()[0] for name in data['gen']])
+                # mdl.gen_idx = np.array([self.generators[self.generators['name'] == name].index.tolist()[0] for name in data['gen']])
+                mdl.gen_idx = dps_uf.lookup_strings(data['gen'], self.generators['name'])
                 # mdl.state_idx = dict(zip(state_list, [np.arange(n_units * i, n_units * (i + 1)) for i in range(n_states)]))
                 mdl.state_idx = np.recarray((n_units,), dtype=[(state, int) for state in state_list])
                 for i, state in enumerate(state_list):
@@ -889,7 +925,9 @@ class PowerSystemModel:
         self.build_y_bus_red()
 
         # Choose first generator at slack bus as slack generator
-        self.slack_generator = (self.generators[self.generators['bus'] == self.slack_bus]).index[0]
+        # self.slack_generator = (self.generators[self.generators['bus'] == self.slack_bus]).index[0]
+        self.slack_generator = dps_uf.lookup_strings(self.slack_bus, self.generators['bus'])
+
         self.p_m_setp = np.array(self.generators['P'])/self.s_n
         sum_load_sl = sum(self.loads[self.loads['bus'] == self.slack_bus]['P'])/self.s_n if len(self.loads) > 0 else 0  # Sum loads at slack bus
 
@@ -1175,8 +1213,7 @@ class PowerSystemModel:
         for key in self.gen_mdls.keys():
             dm = self.gen_mdls[key]
 
-            inputs = [self.e_q, self.P_m, self.v_aux]
-            dm.update(dx[dm.idx], self.f, x[dm.idx], self.v_g, inputs, dm.par, dm.state_idx)
+            dm.update(dx[dm.idx], self.f, x[dm.idx], self.v_g, self.e_q, self.P_m, self.v_aux, dm.par, dm.state_idx)
             # dx[dm.idx] = dx_loc
 
         return dx
@@ -1191,9 +1228,10 @@ class PowerSystemModel:
         df = getattr(self, element_type)
         if element_type == 'lines':
 
-            line = df[df['name'] == name]
 
-            idx_from, idx_to, admittance, shunt = self.read_admittance_data('line', line.iloc[0])
+            line = df[dps_uf.lookup_strings(name, df['name'])]
+
+            idx_from, idx_to, admittance, shunt = self.read_admittance_data('line', line)
             rows = np.array([idx_from, idx_to, idx_from, idx_to])
             cols = np.array([idx_from, idx_to, idx_to, idx_from])
             data = np.array([admittance + shunt / 2, admittance + shunt / 2, -admittance, -admittance])

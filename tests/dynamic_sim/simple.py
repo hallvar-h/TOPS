@@ -12,7 +12,7 @@ import dynpssimpy.dyn_models.avr as avr_models
 if __name__ == '__main__':
 
     # Load model
-    import ps_models.ieee39 as model_data
+    import ps_models.k2a as model_data
     # import ps_models.ieee39 as model_data
     # import ps_models.n44 as model_data
 
@@ -26,9 +26,10 @@ if __name__ == '__main__':
 
     ps = dps.PowerSystemModel(model=model)
     ps.pf_max_it = 100
-    ps.use_numba = False
+    # ps.use_numba = True
     ps.power_flow()
     ps.init_dyn_sim()
+    ps.build_y_bus_red()
     ps.ode_fun(0.0, ps.x0)
     t_end = 0.1
     x0 = ps.x0.copy()

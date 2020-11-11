@@ -57,7 +57,7 @@ class LineOutageWidget(QtWidgets.QWidget):
         # self.graphWidget_ctrl = pg.GraphicsLayoutWidget(show=True, title="Controls")
         layout_box = QtWidgets.QVBoxLayout()
         self.check_boxes = []
-        for i, line in self.ps.lines.iterrows():
+        for i, line in enumerate(self.ps.lines):
             check_box = QtWidgets.QCheckBox(line['name'])
             check_box.setChecked(True)
             check_box.stateChanged.connect(self.updateLines)
@@ -108,7 +108,7 @@ class GenCtrlWidget(QtWidgets.QWidget):
         self.gen_to_avr_idx = map_idx_fun(avr_to_gen_idx, np.arange(self.ps.n_gen))
         self.gen_to_gov_idx = map_idx_fun(gov_to_gen_idx, np.arange(self.ps.n_gen))
         self.gen_to_pss_idx = map_idx_fun(pss_to_gen_idx, np.arange(self.ps.n_gen))
-        for i, gen in self.ps.generators.iterrows():
+        for i, gen in enumerate(self.ps.generators):
             # y_0 = 1/np.conj(abs(self.ps.v_0[idx_bus]) ** 2 / s_load)
             slider = QtWidgets.QSlider(QtCore.Qt.Horizontal, self.ctrlWidget)
             slider.setMinimum(0)

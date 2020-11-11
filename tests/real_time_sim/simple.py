@@ -13,9 +13,10 @@ if __name__ == '__main__':
     model = model_data.load()
 
     ps = dps.PowerSystemModel(model=model)
-
+    ps.use_numba = True
     ps.power_flow()
     ps.init_dyn_sim()
+    ps.ode_fun(0, ps.x0)
     ps.build_y_bus_red(ps.buses['name'])
     ps.x0[ps.angle_idx][0] += 1e-3
     rts = dps_rts.RealTimeSimulator(ps, dt=5e-3)

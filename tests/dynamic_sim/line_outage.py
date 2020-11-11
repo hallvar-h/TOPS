@@ -55,4 +55,4 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(2)
     ax[0].plot(result[('Global', 't')], result.xs(key='speed', axis='columns', level=1))
     ax[1].plot(result[('Global', 't')], result.xs(key='angle', axis='columns', level=1))
-    plt.show(True)
+    plt.show()

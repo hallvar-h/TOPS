@@ -1,6 +1,26 @@
 import numpy as np
 
 
+def combine_recarrays(a, b):
+    new_dtype = a.dtype.descr + b.dtype.descr
+    c = np.zeros(a.shape, new_dtype)
+    for name in a.dtype.names:
+        c[name] = a[name]
+
+    for name in b.dtype.names:
+        c[name] = b[name]
+
+    return c
+
+
+def lookup_strings(a, b):
+    # Function to find the index of the element in b that equal the element in a, for each element in a
+    if isinstance(a, np.ndarray):
+        return np.array([np.where(b == a_)[0][0] for a_ in a])
+    else:
+        return np.where(b == a)[0][0]
+
+
 class SimpleRK4:
     def __init__(self, f, t0, x0, t_end, dt=5e-3, **kwargs):
         self.f = f
