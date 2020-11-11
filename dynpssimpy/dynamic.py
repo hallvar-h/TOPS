@@ -251,7 +251,7 @@ class PowerSystemModel:
             V_n_from = trafo['V_n_from'] if trafo['V_n_from'] else self.v_n[idx_from]
             Z_base_trafo = V_n_from ** 2 / trafo['S_n']  # <= Could also have used _to instead of _from
             impedance = (trafo['R'] + 1j * trafo['X']) * Z_base_trafo / self.z_n[idx_from]
-            n_par = trafo['N_par'] if 'N_par' in trafo else 1
+            n_par = trafo['N_par'] if 'N_par' in trafo.dtype.names else 1
             admittance = n_par / impedance
 
             return idx_from, idx_to, admittance, ratio_from, ratio_to

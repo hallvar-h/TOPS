@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     [importlib.reload(module) for module in [dps, dps_rts, gui]]
 
-    import ps_models.k2a as model_data
+    import ps_models.ieee39 as model_data
     model = model_data.load()
 
     # model['pss'] = {}
