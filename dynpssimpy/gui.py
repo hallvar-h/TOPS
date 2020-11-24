@@ -437,12 +437,11 @@ class SimulationStatsPlot(QtWidgets.QWidget):
                 self.pl[plot].setData(self.ts_keeper.time, plot_data)
 
 
-
 def main(rts):
     app = QtWidgets.QApplication(sys.argv)
     phasor_plot = PhasorPlot(rts)
-    ts_plot = TimeSeriesPlotFast(rts, ['angle', 'speed'], update_freq=50)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
-    stats_plot = SimulationStatsPlot(rts, update_freq=50)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
+    ts_plot = TimeSeriesPlotFast(rts, ['angle', 'speed'], update_freq=25)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
+    stats_plot = SimulationStatsPlot(rts, update_freq=25)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
 
     # Add Control Widgets
     line_outage_ctrl = LineOutageWidget(rts)
@@ -470,11 +469,14 @@ if __name__ == '__main__':
 
     importlib.reload(dps_rts)
     ps = dps.PowerSystemModel(model=model)
+    ps.use_numba = True
+    ps.use_sparse = True
 
     ps.power_flow()
     ps.init_dyn_sim()
-    ps.build_y_bus_red(ps.buses['name'])
+    ps.build_y_bus_red()#ps.buses['name'])
     ps.x0[ps.angle_idx][0] += 1e-3
+    ps.ode_fun(0, ps.x0)
     rts = dps_rts.RealTimeSimulator(ps, dt=5e-3, speed=0.25)
     rts.start()
 

@@ -74,9 +74,17 @@ class GEN:
 
         return x_0, inputs_0
 
-    def current_injections(self, x):
-        p = self.par
-        s = self.state_idx
+    # def current_injections(self, x):
+    #     p = self.par
+    #     s = self.state_idx
+    #     d = np.exp(1j * (x[s['angle']] - np.pi / 2))
+    #     q = np.exp(1j * x[s['angle']])
+    #     i_inj_d = x[s['e_q_st']] / (1j * p['X_d_st']) * q * p['N_par']
+    #     i_inj_q = x[s['e_d_st']] / (1j * p['X_q_st']) * d * p['N_par']
+    #     return i_inj_d, i_inj_q
+
+    @staticmethod
+    def _current_injections(x, p, s):
         d = np.exp(1j * (x[s['angle']] - np.pi / 2))
         q = np.exp(1j * x[s['angle']])
         i_inj_d = x[s['e_q_st']] / (1j * p['X_d_st']) * q * p['N_par']

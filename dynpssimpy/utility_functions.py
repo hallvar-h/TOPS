@@ -53,6 +53,33 @@ class SimpleRK4:
             print('End of simulation time reached.')
 
 
+class ModifiedEuler(SimpleRK4):
+    def __init__(self, *args, n_it=1, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.n_it = n_it
+
+    def step(self):
+        f = self.f
+        x = self.x
+        t = self.t
+        dt = self.dt
+
+        if t < self.t_end:
+            dxdt_0 = f(t, x)
+            x_1 = x + dxdt_0*dt
+            for _ in range(self.n_it):
+                dxdt_1 = f(t + dt, x_1)
+                dxdt_est = (dxdt_0 + dxdt_1) / 2
+                x_1 = x + dxdt_est*dt
+
+            self.x = x_1
+            self.t = t + dt
+
+            self.y = self.x  # To make syntax equal to solvers in scipy.integrate
+        else:
+            print('End of simulation time reached.')
+
+
 def jacobian_num(f, x, eps=1e-10, **params):
     # Numerical computation of Jacobian
     J = np.zeros([len(x), len(x)], dtype=np.float)

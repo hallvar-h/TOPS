@@ -119,16 +119,19 @@ if __name__ == '__main__':
 
     importlib.reload(dps)
     ps = dps.PowerSystemModel(model=model)
+    ps.use_numba = True
+    ps.use_sparse = True
 
     # The below code simply adds generator controls (gov, avr, pss) to all generators. Used for N44 (since these are not defined in the model).
-    # ps.gov['TGOV1'] = pd.DataFrame(
-    #     columns=[
-    #         'name', 'gen', 'R', 'D_t', 'V_min', 'V_max', 'T_1', 'T_2', 'T_3',
-    #     ],
+    # ps.gov['TGOV1'] = np.recarray(
     #     data=[
     #         ['GOV' + str(i), name, 0.05, 0.02, 0, 1, 0.5, 1, 2]
-    #         for i, name in enumerate(ps.generators['name'].tolist())
-    #     ])
+    #         for i, name in enumerate(ps.generators['name'])
+    #     ],
+    #     dtype=[
+    #         'name', 'gen', 'R', 'D_t', 'V_min', 'V_max', 'T_1', 'T_2', 'T_3',
+    #     ],
+    # )
     #
     # ps.avr['SEXS'] = pd.DataFrame(
     #     columns=[
@@ -136,7 +139,7 @@ if __name__ == '__main__':
     #     ],
     #     data=[
     #         ['AVR' + str(i), name, 100, 10.0, 10.0, 0.01, -3, 3]
-    #         for i, name in enumerate(ps.generators['name'].tolist())
+    #         for i, name in enumerate(ps.generators['name'])
     #     ])
     #
     # ps.pss['STAB1'] = pd.DataFrame(
@@ -145,7 +148,7 @@ if __name__ == '__main__':
     #     ],
     #     data=[
     #         ['PSS' + str(i), name, 50, 10.0, 0.5, 0.5, 0.5, 0.05, 0.03]
-    #         for i, name in enumerate(ps.generators['name'].tolist())
+    #         for i, name in enumerate(ps.generators['name'])
     #     ])
 
 
@@ -153,8 +156,9 @@ if __name__ == '__main__':
     ps.init_dyn_sim()
     ps.build_y_bus_red()  # ps.buses['name'])
     ps.x0[ps.angle_idx][0] += 1e-3
+    ps.ode_fun(0, ps.x0)
     log = defaultdict(list)
-    rts = RealTimeSimulator(ps, dt=10e-3, speed=1, solver=dps_uf.SimpleRK4, log_fun=lambda x: logger(x, log))
+    rts = RealTimeSimulator(ps, dt=5e-3, speed=1, solver=dps_uf.SimpleRK4, log_fun=lambda x: logger(x, log))
     time.sleep(2)
     rts.start()
 
@@ -170,8 +174,7 @@ if __name__ == '__main__':
     ax.plot(log['dt_ideal'])
     ax.plot(log['dt_sim'])
     plt.show()
-    #
-    #
+    # #
     # np.savez(r'C:\Users\lokal_hallvhau\Dropbox\Python\Plotting for Presentations\2020 - DynPSSimPy\rtsim\data',
     #          dt_loop=np.array(log['dt_loop']),
     #          dt_ideal=np.array(log['dt_ideal']),
