@@ -40,8 +40,9 @@ class SEXS:
 
 
 if __name__ == '__main__':
-    # Simple speed test of model
+    # Simple speed test of model (jit vs nojit)
     import time
+    from numba import jit
 
     avr = SEXS()
     n = 20
@@ -66,8 +67,16 @@ if __name__ == '__main__':
     # x = np.zeros(2*n)
     x = np.arange(2*n)
     dx = np.arange(2*n)
-    t_0 = time.time()
+    # update_jit = jit()(avr._update)
+    # update_jit(dx, x, 1, avr.par, avr.state_idx, avr.int_par)
+
     n_it = 1000
+    t_0 = time.time()
     for _ in range(n_it):
         avr._update(dx, x, 1, avr.par, avr.state_idx, avr.int_par)
     print(time.time() - t_0)
+
+    # t_0 = time.time()
+    # for _ in range(n_it):
+    #     update_jit(dx, x, 1, avr.par, avr.state_idx, avr.int_par)
+    # print(time.time() - t_0)

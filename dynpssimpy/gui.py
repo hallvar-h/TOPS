@@ -257,9 +257,12 @@ class PhasorPlot(QtWidgets.QWidget):
         plot_win_ph = self.graphWidget.addPlot(title='Phasors')
         plot_win_ph.setAspectLocked(True)
 
-        phasors = self.ps.e[:, None] * self.phasor_0
+        angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
+        magnitude = self.ps.e_q
+        phasors = magnitude*np.exp(1j*angle)
+
         self.pl_ph = []
-        for i, phasor in enumerate(phasors):
+        for i, phasor in enumerate(phasors[:, None]*self.phasor_0):
             pen = pg.mkPen(color=self.colors(i), width=2)
             self.pl_ph.append(plot_win_ph.plot(phasor.real, phasor.imag, pen=pen))
         plot_win_ph.enableAutoRange('xy', False)
@@ -273,8 +276,10 @@ class PhasorPlot(QtWidgets.QWidget):
     def update(self):
         # if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
         # Phasors:
-        phasors = self.ps.e[:, None] * self.phasor_0
-        for i, (pl_ph, phasor) in enumerate(zip(self.pl_ph, phasors)):
+        angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
+        magnitude = self.ps.e_q
+        phasors = magnitude * np.exp(1j * angle)
+        for i, (pl_ph, phasor) in enumerate(zip(self.pl_ph, phasors[:, None]*self.phasor_0)):
             pl_ph.setData(phasor.real, phasor.imag)
 
 
@@ -326,7 +331,8 @@ class TimeSeriesPlot(QtWidgets.QWidget):
 
             for plot in self.plots:
                 old_data = getattr(self.ts_keeper, plot)[1:, :]
-                new_data = getattr(self.ps, plot)
+                # new_data = getattr(self.ps, plot)
+                new_data = rts.x[rts.ps.gen_mdls['GEN'].state_idx[plot]]
                 setattr(self.ts_keeper, plot, np.vstack([old_data, new_data]))
                 plot_data = getattr(self.ts_keeper, plot)
                 for i, pl in enumerate(self.pl[plot]):
@@ -375,7 +381,8 @@ class TimeSeriesPlotFast(QtWidgets.QWidget):
 
             for plot in self.plots:
                 # old_data =
-                new_data = getattr(self.ps, plot)
+                # new_data = getattr(self.ps, plot)
+                new_data = rts.x[rts.ps.gen_mdls['GEN'].state_idx[plot]]
 
                 setattr(self.ts_keeper, plot, np.vstack([getattr(self.ts_keeper, plot)[1:, :], new_data]))
                 plot_data = getattr(self.ts_keeper, plot)
@@ -440,7 +447,7 @@ class SimulationStatsPlot(QtWidgets.QWidget):
 def main(rts):
     app = QtWidgets.QApplication(sys.argv)
     phasor_plot = PhasorPlot(rts, update_freq=25)
-    ts_plot = TimeSeriesPlot(rts, ['angle', 'speed'], update_freq=25)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
+    ts_plot = TimeSeriesPlotFast(rts, ['angle', 'speed'], update_freq=25)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
     stats_plot = SimulationStatsPlot(rts, update_freq=25)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
 
     # Add Control Widgets
@@ -450,7 +457,7 @@ def main(rts):
     # console = PythonConsole()
     console = PythonConsole()
     console.push_local_ns('rts', rts)
-    console.push_local_ns('ts_plot', ts_plot)
+    # console.push_local_ns('ts_plot', ts_plot)
     console.push_local_ns('phasor_plot', phasor_plot)
     console.push_local_ns('line_outage_ctrl', line_outage_ctrl)
     console.push_local_ns('excitation_ctrl', excitation_ctrl)
@@ -467,15 +474,14 @@ if __name__ == '__main__':
     import ps_models.k2a as model_data
     model = model_data.load()
 
-    importlib.reload(dps_rts)
+    [importlib.reload(mdl) for mdl in [dps_rts, dps]]
     ps = dps.PowerSystemModel(model=model)
     ps.use_numba = True
-    # ps.use_sparse = True
 
     ps.power_flow()
     ps.init_dyn_sim()
     ps.build_y_bus_red()#ps.buses['name'])
-    ps.x0[ps.angle_idx][0] += 1e-3
+    # ps.x0[ps.angle_idx][0] += 1e-3
     ps.ode_fun(0, ps.x0)
     rts = dps_rts.RealTimeSimulator(ps, dt=5e-3, speed=0.25)
     rts.start()

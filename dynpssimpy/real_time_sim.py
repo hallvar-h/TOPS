@@ -49,6 +49,8 @@ class RealTimeSimulator(threading.Thread):
 
         self.new_data_cv = threading.Condition()  # condition variable used to both lock and to notify threads
         self.new_data_ready = False
+        self.x = self.sol.y
+        self.t = self.sol.t
 
     def run(self):
         self.exit_flag = threading.Event()

@@ -33,7 +33,7 @@ if __name__ == '__main__':
     ps.ode_fun(0.0, ps.x0)
     t_end = 5
     x0 = ps.x0.copy()
-    x0[ps.angle_idx[0]] += 1
+    x0[ps.gen_mdls['GEN'].state_idx['angle'][0]] += 1
     # print(np.max(abs(ps.ode_fun(0, ps.x0))))
     # np.allclose(ps.ode_fun(0, ps.x0), ps.ode_fun_new(0, ps.x0))
 
