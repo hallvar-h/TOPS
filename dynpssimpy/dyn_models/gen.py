@@ -9,26 +9,13 @@ class GEN:
         p = self.par
         s = self.state_idx
 
-        v_g = v_0  #self.v_0[self.gen_bus_idx]
-        # self.s_g = s_0
+        v_g = v_0
         S_g = S_0
         P_m_0 = S_0.real/p['PF_n']
 
-        # self.s_g = (self.s_0 + self.p_sum_loads_bus + 1j*self.q_sum_loads_bus)[self.gen_bus_idx]
-        # self.s_g = (self.p_m_setp + 1j * self.q_g)
-        # self.i_g = np.conj(self.s_g / self.v_g)
         I_g = np.conj(S_g / v_g)
 
-        # Alternative 1
-        # self.e_t = self.v_g + self.i_g * 1j * self.x_d_t
-        # self.e_q_t = abs(self.e_t)
-        # self.angle = np.angle(self.e_t)
-
-        # Get rotor angle
-        # self.e_q_tmp = self.v_g + 1j * self.x_q * self.i_g
-        # self.I_g = self.i_g * self.i_n[self.gen_bus_idx] / self.I_n_gen
         e_q_tmp = v_g + 1j * p['X_q'] * I_g
-        # self.e_q_tmp = self.v_g + 1j * self.x_q * self.i_g  # Equivalent with above line (due to same nominal voltage).
         angle = np.angle(e_q_tmp)
         speed = np.zeros_like(angle)
 
@@ -56,10 +43,7 @@ class GEN:
         e_q_0 = e_q.copy()
 
         P_m = P_m_0.copy()
-        # p_e = e_q_st * i_q + e_d_st*i_d - (x_d_st - x_q_st) * i_d * i_q
         P_e = e_q_st * I_q + e_d_st * I_d - (p['X_d_st'] - p['X_q_st']) * I_d * I_q
-        # P_m = p_m*s_n/P_n_gen
-        # P_e = p_e*s_n/P_n_gen
 
         x_0 = np.concatenate((
             speed,
@@ -73,15 +57,6 @@ class GEN:
         inputs_0 = e_q_0, P_m_0
 
         return x_0, inputs_0
-
-    # def current_injections(self, x):
-    #     p = self.par
-    #     s = self.state_idx
-    #     d = np.exp(1j * (x[s['angle']] - np.pi / 2))
-    #     q = np.exp(1j * x[s['angle']])
-    #     i_inj_d = x[s['e_q_st']] / (1j * p['X_d_st']) * q * p['N_par']
-    #     i_inj_q = x[s['e_d_st']] / (1j * p['X_q_st']) * d * p['N_par']
-    #     return i_inj_d, i_inj_q
 
     @staticmethod
     def _current_injections(x, p, s):

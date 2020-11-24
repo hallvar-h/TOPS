@@ -65,8 +65,9 @@ if __name__ == '__main__':
 
     # x = np.zeros(2*n)
     x = np.arange(2*n)
+    dx = np.arange(2*n)
     t_0 = time.time()
     n_it = 1000
     for _ in range(n_it):
-        avr.update(x, 0)
+        avr._update(dx, x, 1, avr.par, avr.state_idx, avr.int_par)
     print(time.time() - t_0)
