@@ -159,9 +159,9 @@ class PowerSystemModel:
         self.y_bus = np.empty((self.n_bus, self.n_bus))  # Can not be built before power flow, since load admittances depend on it.
         self.y_bus_lf = np.empty((self.n_bus, self.n_bus))
         self.y_bus_lf[:] = np.nan
-        self.y_bus_red = np.empty((self.n_gen, self.n_gen))
-        self.y_bus_red_inv = np.empty((self.n_gen, self.n_gen))
-        self.y_bus_red_mod = np.zeros_like(self.y_bus_red)
+        self.y_bus_red_full = np.empty((self.n_gen, self.n_gen))
+        # self.y_bus_red_inv = np.empty((self.n_gen, self.n_gen))
+        self.y_bus_red_mod_full = np.zeros_like(self.y_bus_red_full)
 
         self.time = 0.0
 
@@ -255,6 +255,7 @@ class PowerSystemModel:
     def build_y_branch(self):
         # Build matrices for easy computation of branch (line and trafo) currents.
         # E.g. i_lines = self.v_to_i_lines*v_bus (full system, not reduced).
+        # NB: Experimental. Is not updated when y_bus is updated.
 
         # Lines:
         n_elements = len(self.lines)
@@ -390,15 +391,15 @@ class PowerSystemModel:
             self.reduced_bus_idx = self.reduced_bus_idx[np.sort(idx)]
 
         self.n_bus_red = len(self.reduced_bus_idx)
-        self.y_bus_red = self.kron_reduction(self.y_bus, self.reduced_bus_idx)  # np.empty((self.n_gen, self.n_gen))
-        self.y_bus_red_mod = np.zeros_like(self.y_bus_red)
+        self.y_bus_red_full = self.kron_reduction(self.y_bus, self.reduced_bus_idx)  # np.empty((self.n_gen, self.n_gen))
+        self.y_bus_red_mod_full = np.zeros_like(self.y_bus_red_full)
 
         # self.n_bus_red = self.y_bus_red.shape[0]
         self.gen_bus_idx_red = self.get_bus_idx_red(self.buses[self.gen_bus_idx]['name'])
 
         # if self.use_sparse:
-        self.y_bus_red_sp = sparse.csr_matrix(self.y_bus_red)
-        self.y_bus_red_mod_sp = self.y_bus_red_sp*0
+        self.y_bus_red = sparse.csr_matrix(self.y_bus_red_full)
+        self.y_bus_red_mod = self.y_bus_red*0
 
         self.build_y_branch()
 
@@ -1176,7 +1177,7 @@ class PowerSystemModel:
         # if not self.use_sparse:
         #     self.v_red = np.linalg.solve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
         # else:
-        self.v_red = sparse.linalg.spsolve(self.y_bus_red_sp + self.y_bus_red_mod_sp, self.i_inj)
+        self.v_red = sparse.linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
 
 
         self.v_g = self.v_red[self.gen_bus_idx_red]
@@ -1272,7 +1273,6 @@ class PowerSystemModel:
                 y_line_red = lil_matrix((self.n_bus_red,) * 2, dtype=complex)
                 y_line_red[rows_red, cols_red] = data
                 self.y_bus_red += sign*y_line_red
-                self.y_bus_red_sp += sign*y_line_red
 
     def apply_inputs(self, input_desc, u):
         # Function to make it easy to apply the same control action as in the linearized model.
