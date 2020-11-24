@@ -19,7 +19,6 @@ importlib.reload(dps_uf)
 class PowerSystemModel:
     def __init__(self, model):
 
-        self.use_sparse = False
         self.use_numba = False
 
         # Load flow parameters
@@ -397,8 +396,9 @@ class PowerSystemModel:
         # self.n_bus_red = self.y_bus_red.shape[0]
         self.gen_bus_idx_red = self.get_bus_idx_red(self.buses[self.gen_bus_idx]['name'])
 
-        if self.use_sparse:
-            self.y_bus_red_sparse = sparse.csr_matrix(self.y_bus_red)
+        # if self.use_sparse:
+        self.y_bus_red_sp = sparse.csr_matrix(self.y_bus_red)
+        self.y_bus_red_mod_sp = self.y_bus_red_sp*0
 
         self.build_y_branch()
 
@@ -1173,10 +1173,10 @@ class PowerSystemModel:
         self.i_inj = self.i_inj_d + self.i_inj_q
 
 
-        if not self.use_sparse:
-            self.v_red = np.linalg.solve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
-        else:
-            self.v_red = sparse.linalg.spsolve(self.y_bus_red_sparse, self.i_inj)
+        # if not self.use_sparse:
+        #     self.v_red = np.linalg.solve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
+        # else:
+        self.v_red = sparse.linalg.spsolve(self.y_bus_red_sp + self.y_bus_red_mod_sp, self.i_inj)
 
 
         self.v_g = self.v_red[self.gen_bus_idx_red]
@@ -1272,6 +1272,7 @@ class PowerSystemModel:
                 y_line_red = lil_matrix((self.n_bus_red,) * 2, dtype=complex)
                 y_line_red[rows_red, cols_red] = data
                 self.y_bus_red += sign*y_line_red
+                self.y_bus_red_sp += sign*y_line_red
 
     def apply_inputs(self, input_desc, u):
         # Function to make it easy to apply the same control action as in the linearized model.

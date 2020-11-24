@@ -20,7 +20,7 @@ import dynpssimpy.utility_functions as dps_uf
 
 
 class RealTimeSimulator(threading.Thread):
-    def __init__(self, ps, dt=5e-3, speed=1, solver=dps_uf.SimpleRK4, log_fun=[], ode_fun=[]):
+    def __init__(self, ps, dt=5e-3, speed=1, solver=dps_uf.ModifiedEuler, log_fun=[], ode_fun=[]):
         threading.Thread.__init__(self)
         self.daemon = True
 
@@ -40,17 +40,12 @@ class RealTimeSimulator(threading.Thread):
 
         self.ps = ps
 
-
         if callable(ode_fun):
             self.ode_fun = ode_fun
         else:
             self.ode_fun = self.ps.ode_fun
 
-        # self.sol = RK23(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
         self.sol = solver(self.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
-        # self.sol = RK45(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
-        # self.sol = BDF(self.ps.ode_fun, 0, self.ps.x0, self.t_end, max_step=self.dt, first_step=self.dt)
-        # self.ode_fun(0, self.ps.x0)
 
         self.new_data_cv = threading.Condition()  # condition variable used to both lock and to notify threads
         self.new_data_ready = False
@@ -101,8 +96,6 @@ class RealTimeSimulator(threading.Thread):
         self.speed = speed
 
 
-
-
 def logger(rts, log, attributes=['dt_loop', 'dt_sim', 'dt_ideal']):
     for attr in attributes:
         log[attr].append(getattr(rts, attr))
@@ -120,37 +113,6 @@ if __name__ == '__main__':
     importlib.reload(dps)
     ps = dps.PowerSystemModel(model=model)
     ps.use_numba = True
-    ps.use_sparse = True
-
-    # The below code simply adds generator controls (gov, avr, pss) to all generators. Used for N44 (since these are not defined in the model).
-    # ps.gov['TGOV1'] = np.recarray(
-    #     data=[
-    #         ['GOV' + str(i), name, 0.05, 0.02, 0, 1, 0.5, 1, 2]
-    #         for i, name in enumerate(ps.generators['name'])
-    #     ],
-    #     dtype=[
-    #         'name', 'gen', 'R', 'D_t', 'V_min', 'V_max', 'T_1', 'T_2', 'T_3',
-    #     ],
-    # )
-    #
-    # ps.avr['SEXS'] = pd.DataFrame(
-    #     columns=[
-    #         'name', 'gen', 'K', 'T_a', 'T_b', 'T_e', 'E_min', 'E_max',
-    #     ],
-    #     data=[
-    #         ['AVR' + str(i), name, 100, 10.0, 10.0, 0.01, -3, 3]
-    #         for i, name in enumerate(ps.generators['name'])
-    #     ])
-    #
-    # ps.pss['STAB1'] = pd.DataFrame(
-    #     columns=[
-    #         'name', 'gen', 'K', 'T', 'T_1', 'T_2', 'T_3', 'T_4', 'H_lim',
-    #     ],
-    #     data=[
-    #         ['PSS' + str(i), name, 50, 10.0, 0.5, 0.5, 0.5, 0.05, 0.03]
-    #         for i, name in enumerate(ps.generators['name'])
-    #     ])
-
 
     ps.power_flow()
     ps.init_dyn_sim()
@@ -158,13 +120,9 @@ if __name__ == '__main__':
     ps.x0[ps.angle_idx][0] += 1e-3
     ps.ode_fun(0, ps.x0)
     log = defaultdict(list)
-    rts = RealTimeSimulator(ps, dt=5e-3, speed=1, solver=dps_uf.SimpleRK4, log_fun=lambda x: logger(x, log))
+    rts = RealTimeSimulator(ps, dt=5e-3, speed=1, solver=dps_uf.ModifiedEuler, log_fun=lambda x: logger(x, log))
     time.sleep(2)
     rts.start()
-
-    # print(rts.is_alive())
-    from threading import Thread
-    # app, main = main(rts)
 
     time.sleep(10)
     rts.stop()
@@ -174,9 +132,3 @@ if __name__ == '__main__':
     ax.plot(log['dt_ideal'])
     ax.plot(log['dt_sim'])
     plt.show()
-    # #
-    # np.savez(r'C:\Users\lokal_hallvhau\Dropbox\Python\Plotting for Presentations\2020 - DynPSSimPy\rtsim\data',
-    #          dt_loop=np.array(log['dt_loop']),
-    #          dt_ideal=np.array(log['dt_ideal']),
-    #          dt_sim=np.array(log['dt_sim']),
-    #          )

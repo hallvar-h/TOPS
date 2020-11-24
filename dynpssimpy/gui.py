@@ -439,8 +439,8 @@ class SimulationStatsPlot(QtWidgets.QWidget):
 
 def main(rts):
     app = QtWidgets.QApplication(sys.argv)
-    phasor_plot = PhasorPlot(rts)
-    ts_plot = TimeSeriesPlotFast(rts, ['angle', 'speed'], update_freq=25)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
+    phasor_plot = PhasorPlot(rts, update_freq=25)
+    ts_plot = TimeSeriesPlot(rts, ['angle', 'speed'], update_freq=25)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
     stats_plot = SimulationStatsPlot(rts, update_freq=25)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
 
     # Add Control Widgets
@@ -470,7 +470,7 @@ if __name__ == '__main__':
     importlib.reload(dps_rts)
     ps = dps.PowerSystemModel(model=model)
     ps.use_numba = True
-    ps.use_sparse = True
+    # ps.use_sparse = True
 
     ps.power_flow()
     ps.init_dyn_sim()

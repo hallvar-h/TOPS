@@ -46,9 +46,8 @@ class SimpleRK4:
             k_3 = f(t + dt / 2, x + (dt / 2) * k_2)
             k_4 = f(t + dt, x + dt * k_3)
 
-            self.x = x + (dt / 6) * (k_1 + 2 * k_2 + 2 * k_3 + k_4)
+            self.x[:] = x + (dt / 6) * (k_1 + 2 * k_2 + 2 * k_3 + k_4)
             self.t = t + dt
-            self.y = self.x
         else:
             print('End of simulation time reached.')
 
@@ -72,7 +71,7 @@ class ModifiedEuler(SimpleRK4):
                 dxdt_est = (dxdt_0 + dxdt_1) / 2
                 x_1 = x + dxdt_est*dt
 
-            self.x = x_1
+            self.x[:] = x_1
             self.t = t + dt
 
             self.y = self.x  # To make syntax equal to solvers in scipy.integrate

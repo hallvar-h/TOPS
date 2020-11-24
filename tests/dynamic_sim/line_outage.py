@@ -22,7 +22,6 @@ if __name__ == '__main__':
     ps.power_flow()
     ps.init_dyn_sim()
     ps.build_y_bus_red(ps.buses['name'])
-    # ps.build_y_bus_red()
 
     t_end = 10
     x0 = ps.x0.copy()
@@ -45,6 +44,7 @@ if __name__ == '__main__':
         if t > 1 and event_flag:
             event_flag = False
             ps.network_event('line', 'L7-8-1', 'disconnect')
+
         # Store result
         result_dict['Global', 't'].append(sol.t)
         [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x)]
