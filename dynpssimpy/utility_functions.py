@@ -74,7 +74,6 @@ class ModifiedEuler(SimpleRK4):
             self.x[:] = x_1
             self.t = t + dt
 
-            self.y = self.x  # To make syntax equal to solvers in scipy.integrate
         else:
             print('End of simulation time reached.')
 
