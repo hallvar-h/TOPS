@@ -37,7 +37,6 @@ if __name__ == '__main__':
     # print(np.max(abs(ps.ode_fun(0, ps.x0))))
     # np.allclose(ps.ode_fun(0, ps.x0), ps.ode_fun_new(0, ps.x0))
 
-
     sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=5e-3)
 
     t = 0

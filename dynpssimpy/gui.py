@@ -326,6 +326,7 @@ class TimeSeriesPlot(QtWidgets.QWidget):
         self.timer.start(1000/update_freq)
 
     def update(self):
+        rts = self.rts
         if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
             self.ts_keeper.time = np.append(self.ts_keeper.time[1:], self.ps.time)
 
@@ -376,6 +377,7 @@ class TimeSeriesPlotFast(QtWidgets.QWidget):
         self.timer.start(1000/update_freq)
 
     def update(self):
+        rts = self.rts
         if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
             self.ts_keeper.time = np.append(self.ts_keeper.time[1:], self.ps.time)
 

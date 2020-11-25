@@ -119,7 +119,6 @@ if __name__ == '__main__':
     ps.power_flow()
     ps.init_dyn_sim()
     ps.build_y_bus_red()  # ps.buses['name'])
-    ps.x0[ps.angle_idx][0] += 1e-3
     ps.ode_fun(0, ps.x0)
     log = defaultdict(list)
     rts = RealTimeSimulator(ps, dt=5e-3, speed=1, solver=dps_uf.ModifiedEuler, log_fun=lambda x: logger(x, log))

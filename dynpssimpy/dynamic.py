@@ -12,7 +12,9 @@ import dynpssimpy.dyn_models.gov as gov_lib
 import dynpssimpy.dyn_models.pss as pss_lib
 import dynpssimpy.dyn_models.gen as gen_lib
 import importlib
-from scipy import sparse
+from scipy import sparse as sp
+from scipy.sparse import linalg as sp_linalg
+
 importlib.reload(dps_uf)
 
 
@@ -398,7 +400,7 @@ class PowerSystemModel:
         self.gen_bus_idx_red = self.get_bus_idx_red(self.buses[self.gen_bus_idx]['name'])
 
         # if self.use_sparse:
-        self.y_bus_red = sparse.csr_matrix(self.y_bus_red_full)
+        self.y_bus_red = sp.csr_matrix(self.y_bus_red_full)
         self.y_bus_red_mod = self.y_bus_red*0
 
         self.build_y_branch()
@@ -796,7 +798,7 @@ class PowerSystemModel:
             np.add.at(self.i_inj_q, self.gen_bus_idx_red, i_inj_q_mdl)
 
         self.i_inj = self.i_inj_d + self.i_inj_q
-        self.v_red = sparse.linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
+        self.v_red = sp_linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
 
 
         self.v_g = self.v_red[self.gen_bus_idx_red]

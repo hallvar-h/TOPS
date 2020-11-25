@@ -39,7 +39,6 @@ def plot_eigs(eigs):
                     fig.canvas.draw_idle()
 
     fig.canvas.mpl_connect("motion_notify_event", hover)
-    plt.show()
 
 
 def phasor(vec, start=0j, ax=None, **kwargs):

@@ -111,6 +111,7 @@ if __name__ == '__main__':
     
     import dynpssimpy.dynamic as dps
     import ps_models.k2a as model_data
+
     import importlib
     importlib.reload(dps)
 
@@ -128,9 +129,11 @@ if __name__ == '__main__':
     # Get mode shape for electromechanical modes
     mode_idx = ps_lin.get_mode_idx(['em'], damp_threshold=0.3)
     rev = ps_lin.rev
-    mode_shape = rev[np.ix_(ps.speed_idx, mode_idx)]
+    mode_shape = rev[np.ix_(ps.gen_mdls['GEN'].state_idx['speed'], mode_idx)]
 
     # Plot mode shape
     fig, ax = plt.subplots(1, mode_shape.shape[1], subplot_kw={'projection': 'polar'})
     for ax_, ms in zip(ax, mode_shape.T):
         dps_plt.plot_mode_shape(ms, ax=ax_, normalize=True)
+
+    plt.show()
