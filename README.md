@@ -1,2 +1,2 @@
 # DynPSSimPy
-Repository for dynamic power system simulation in Python.
+Dynamic Power System Simulation in Python.
