@@ -24,7 +24,7 @@ def main(rts):
     # main_win = gui.LivePlotter(rts, [])  # ['angle', 'speed'])
     phasor_plot = gui.PhasorPlot(rts, update_freq=30)
     ts_plot = gui.TimeSeriesPlot(rts, ['speed', 'angle'], update_freq=30)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
-    stats_plot = gui.SimulationStatsPlot(rts, update_freq=30)
+    # stats_plot = gui.SimulationStatsPlot(rts, update_freq=30)
 
     # Add Control Widgets
     line_outage_ctrl = gui.LineOutageWidget(rts)

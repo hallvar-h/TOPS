@@ -33,9 +33,9 @@ if __name__ == '__main__':
     time.sleep(10)
     rts.stop()
 
-    fig, ax = plt.subplots(2)
-    ax[0].plot(log['dt_loop'])
-    ax[0].plot(log['dt_ideal'], zorder=10)
-    ax[0].plot(log['dt_sim'])
+    fig, ax = plt.subplots(1)
+    ax.plot(log['dt_loop'])
+    ax.plot(log['dt_ideal'], zorder=10)
+    ax.plot(log['dt_sim'])
 
     plt.show()
