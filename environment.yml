@@ -1,0 +1,8 @@
+name: dynpssimpy-binder-env
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - scipy
+  - matplotlib
+  - pandas
