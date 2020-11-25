@@ -39,4 +39,3 @@ if __name__ == '__main__':
     ax[0].plot(log['dt_sim'])
 
     plt.show()
-    
