@@ -41,6 +41,8 @@ if __name__ == '__main__':
     import ps_models.n44 as model_data
     model = model_data.load()
 
+    # Add generator controls?
+
     importlib.reload(dps)
     ps = dps.PowerSystemModel(model=model)
     ps.use_numba = True
