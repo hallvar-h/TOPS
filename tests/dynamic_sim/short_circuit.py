@@ -6,7 +6,6 @@ import numpy as np
 from scipy.integrate import RK23, RK45, solve_ivp
 import importlib
 import time
-import dynpssimpy.dyn_models.avr as avr_models
 
 
 if __name__ == '__main__':
@@ -17,9 +16,6 @@ if __name__ == '__main__':
     # import ps_models.n44 as model_data
 
     [importlib.reload(mdl) for mdl in [dps, model_data]]
-
-    # import ps_models.sm_ib as model_data
-    # import ps_models.sm_load as model_data
     model = model_data.load()
 
     t_0 = time.time()
@@ -34,8 +30,6 @@ if __name__ == '__main__':
     t_end = 5
     x0 = ps.x0.copy()
     x0[ps.gen_mdls['GEN'].state_idx['angle'][0]] += 1
-    # print(np.max(abs(ps.ode_fun(0, ps.x0))))
-    # np.allclose(ps.ode_fun(0, ps.x0), ps.ode_fun_new(0, ps.x0))
 
     sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=5e-3)
 

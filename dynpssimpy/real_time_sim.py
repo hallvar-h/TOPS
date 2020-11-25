@@ -1,18 +1,6 @@
-from PyQt5 import QtWidgets
-from pyqtgraph import PlotWidget, plot
-import pyqtgraph as pg
-import sys  # We need sys so that we can pass argv to QApplication
-import numpy as np
-import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui, QtCore
-import time
 import threading
-from scipy.integrate import RK23, RK45, BDF, trapz
-sys.path.append(r'C:/Users/lokal_hallvhau/Dropbox/Python/DynPSSimPy/')
 import dynpssimpy.dynamic as dps
 import importlib
-from pyqtconsole.console import PythonConsole
-import pandas as pd
 import time
 from collections import defaultdict
 import matplotlib.pyplot as plt

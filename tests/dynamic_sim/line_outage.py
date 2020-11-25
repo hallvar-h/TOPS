@@ -3,7 +3,7 @@ from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.integrate import RK23, RK45
+from scipy.integrate import RK45
 import importlib
 
 
