@@ -28,30 +28,6 @@ class PowerSystemModel:
         self.pf_max_it = 10
         self.tol = 1e-8
 
-        # # Get model data
-        # for td in ['buses', 'lines', 'loads', 'generators', 'transformers', 'shunts']:
-        #     # print(td)
-        #     if td in model:
-        #         if isinstance(model[td], pd.core.frame.DataFrame):
-        #             # Import dataframe
-        #             setattr(self, td, model[td])
-        #         else:
-        #             # Make DataFrame from list
-        #             setattr(self, td, pd.DataFrame(model[td][1:], columns=model[td][0]))
-        #     else:
-        #         setattr(self, td, pd.DataFrame())
-        #
-        # for req_attr, default in zip(['PF_n', 'N_par'], [1, 1]):
-        #     if not req_attr in self.generators.columns:
-        #         self.generators[req_attr] = default
-        #
-        # for td in ['gov', 'avr', 'pss']:
-        #     setattr(self, td, dict())
-        #     # setattr(self, td, dict())
-        #     if td in model:
-        #         for key in model[td].keys():
-        #             getattr(self, td)[key] = pd.DataFrame(model[td][key][1:], columns=model[td][key][0])
-
         # Get model data
         for td in ['buses', 'lines', 'loads', 'generators', 'transformers', 'shunts']:
             if td in model and len(model[td]) > 0:
@@ -101,11 +77,6 @@ class PowerSystemModel:
         self.v_n = np.array(self.buses['V_n'])  # Assuming nominal bus voltages are according to transformer ratios
         self.z_n = self.v_n ** 2 / self.s_n
         self.i_n = self.s_n / (np.sqrt(3) * self.v_n)
-
-        # self.S_n = self.s_n
-        # self.I_n = self.i_n
-        # self.V_n = self.v_n
-        # self.z_n = self.z_n
 
         self.e = np.empty((0, 0))
 
@@ -212,8 +183,6 @@ class PowerSystemModel:
         buses = self.buses
         if element_type == 'line':
             line = element
-            # idx_from = np.where(buses['name'] == line['from_bus'])[0][0]
-            # idx_to = np.where(buses['name'] == line['to_bus'])[0][0]
             idx_from = dps_uf.lookup_strings(line['from_bus'], buses['name'])
             idx_to = dps_uf.lookup_strings(line['to_bus'], buses['name'])
             if line['unit'] in ['p.u.', 'pu', 'pu/km']:
@@ -240,8 +209,6 @@ class PowerSystemModel:
 
         elif element_type == 'transformer':
             trafo = element
-            # idx_from = buses[buses['name'] == trafo['from_bus']].index
-            # idx_to = buses[buses['name'] == trafo['to_bus']].index
             idx_from = dps_uf.lookup_strings(trafo['from_bus'], buses['name'])
             idx_to = dps_uf.lookup_strings(trafo['to_bus'], buses['name'])
             ratio_from = (trafo['ratio_from'] if not np.isnan(trafo['ratio_from']) else 1) if 'ratio_from' in trafo.dtype.names else 1
@@ -384,7 +351,6 @@ class PowerSystemModel:
         # If extra buses are specified before , store these. To ensure that the reduced admittance matrix has the same
         # dimension if rebuilt (by i.e. by network_event()-function.
         if len(keep_extra_buses) > 0:
-            # keep_extra_buses_idx = [self.buses[self.buses.name == name].index[0] for name in keep_extra_buses]
             keep_extra_buses_idx = dps_uf.lookup_strings(keep_extra_buses, self.buses['name'])
 
             self.reduced_bus_idx = np.concatenate([self.gen_bus_idx, np.array(keep_extra_buses_idx, dtype=int)])
@@ -397,10 +363,8 @@ class PowerSystemModel:
         self.y_bus_red_full = self.kron_reduction(self.y_bus, self.reduced_bus_idx)  # np.empty((self.n_gen, self.n_gen))
         self.y_bus_red_mod_full = np.zeros_like(self.y_bus_red_full)
 
-        # self.n_bus_red = self.y_bus_red.shape[0]
         self.gen_bus_idx_red = self.get_bus_idx_red(self.buses[self.gen_bus_idx]['name'])
 
-        # if self.use_sparse:
         self.y_bus_red = sp.csr_matrix(self.y_bus_red_full)
         self.y_bus_red_mod = self.y_bus_red*0
 
@@ -487,7 +451,6 @@ class PowerSystemModel:
         err_norm = max(abs(err))
         # print(err_norm)
 
-        # Based on PYPOWER code!
         while (not converged and i < self.pf_max_it):
             i = i + 1
             J = dps_uf.jacobian_num(pf_equations, x)
@@ -498,7 +461,6 @@ class PowerSystemModel:
 
             err = pf_equations(x)
             err_norm = max(abs(err))
-            # print(err_norm)
 
             if self.tol > err_norm:
                 converged = True
@@ -506,9 +468,6 @@ class PowerSystemModel:
                     print('Power flow converged.')
             if i == self.pf_max_it and print_output:
                 print('Power flow did not converge in {} iterations.'.format(self.pf_max_it))
-
-        # soln = newton(pf_equations, x, full_output=True, maxiter=20000, disp=True)
-        # pf_equations(soln.root)
 
         self.v_0 = x_to_v(x)
         self.s_0 = self.v_0 * np.conj(y_bus.dot(self.v_0))
@@ -570,11 +529,6 @@ class PowerSystemModel:
     #     self.T_m = self.P_m / (1 + self.speed)
 
     def init_dyn_sim(self):
-
-        # # Build bus admittance matrices
-        # self.y_bus = self.build_y_bus()
-        # self.build_y_bus_red()
-
         # State variables:
         self.state_desc = np.empty((0, 2))
 
@@ -609,10 +563,7 @@ class PowerSystemModel:
                 for fun in compile_these:
                     if hasattr(mdl, fun):
                         setattr(mdl, fun[1:], getattr(mdl, fun))
-            # mdl.active = np.ones(len(data), dtype=bool)
-            # mdl.int_par = np.array(np.zeros(len(data)), [(par, float) for par in mdl.int_par_list])
-            # mdl.gen_idx = np.array([self.generators[self.generators['name'] == name].index.tolist()[0] for name in data['gen']])
-            # mdl.state_idx = dict(zip(state_list, [np.arange(n_units * i, n_units * (i + 1)) for i in range(n_states)]))
+
             mdl.state_idx = np.recarray((n_units,), dtype=[(state, int) for state in state_list])
             for i, state in enumerate(state_list):
                 mdl.state_idx[state] = np.arange(n_units * i, n_units * (i + 1))
@@ -640,7 +591,6 @@ class PowerSystemModel:
 
                 state_desc_mdl = np.vstack([np.tile(names, n_states), np.repeat(state_list, n_units)]).T
 
-                # mdl.idx = start_idx + np.arange(len(state_desc_mdl), dtype=int)  # Indices of all states belonging to model
                 mdl.idx = slice(start_idx, start_idx + len(state_desc_mdl))  # Indices of all states belonging to model
                 mdl.par = data  # .to_records()  # Model parameters
 
@@ -650,17 +600,11 @@ class PowerSystemModel:
                     mdl.update = mdl._update
 
                 mdl.active = np.ones(len(data), dtype=bool)
-                # mdl.int_par = dict.fromkeys(mdl.int_par_list, np.zeros(len(data)))
                 mdl.int_par = np.array(np.zeros(len(data)), [(par, float) for par in mdl.int_par_list])
-                # mdl.gen_idx = np.array([self.generators[self.generators['name'] == name].index.tolist()[0] for name in data['gen']])
                 mdl.gen_idx = dps_uf.lookup_strings(data['gen'], self.generators['name'])
-                # mdl.state_idx = dict(zip(state_list, [np.arange(n_units * i, n_units * (i + 1)) for i in range(n_states)]))
                 mdl.state_idx = np.recarray((n_units,), dtype=[(state, int) for state in state_list])
                 for i, state in enumerate(state_list):
                     mdl.state_idx[state] = np.arange(n_units * i, n_units * (i + 1))
-
-                # for key_ in mdl.par.keys():
-                #     mdl.par[key_] = np.array(mdl.par[key_])  # Convert data to np.arrays
 
                 container[key] = mdl
                 self.state_desc = np.vstack([self.state_desc, state_desc_mdl])
@@ -677,17 +621,15 @@ class PowerSystemModel:
         self.build_y_bus_red()
 
         # Choose first generator at slack bus as slack generator
-        # self.slack_generator = (self.generators[self.generators['bus'] == self.slack_bus]).index[0]
         self.slack_generator = dps_uf.lookup_strings(self.slack_bus, self.generators['bus'])
 
         self.p_m_setp = np.array(self.generators['P'])/self.s_n
         sum_load_sl = sum(self.loads[self.loads['bus'] == self.slack_bus]['P'])/self.s_n if len(self.loads) > 0 else 0  # Sum loads at slack bus
-
         sl_gen_idx = np.array(self.generators['bus'] == self.slack_bus)
+
         # The case with multiple generators at the slack bus where one or more are n_par in parallel has not been tested.
         sum_gen_sl = sum((self.p_m_setp[sl_gen_idx]*self.n_par[sl_gen_idx])[1:])  # Sum other generation at slack bus (not slack gen)
         self.p_m_setp[self.slack_generator] = self.s_0[self.get_bus_idx([self.slack_bus])].real - sum_gen_sl + sum_load_sl
-        # self.p_m_setp = self.s_0[self.gen_bus_idx].real + self.p_sum_loads_bus[self.gen_bus_idx]
         self.p_m_setp[self.slack_generator] /= self.n_par[self.slack_generator]
 
         # Distribute reactive power equally among generators on the same bus
@@ -697,59 +639,8 @@ class PowerSystemModel:
         self.q_g /= self.n_par
 
         # From Load Flow
-        # self.v_g_setp = abs(self.v_0[self.gen_bus_idx])
         self.v_g = self.v_0[self.gen_bus_idx]
-        # self.s_g = (self.s_0 + self.p_sum_loads_bus + 1j*self.q_sum_loads_bus)[self.gen_bus_idx]
         self.s_g = (self.p_m_setp + 1j*self.q_g)
-        # self.i_g = np.conj(self.s_g/self.v_g)
-        #
-        # # Alternative 1
-        # # self.e_t = self.v_g + self.i_g * 1j * self.x_d_t
-        # # self.e_q_t = abs(self.e_t)
-        # # self.angle = np.angle(self.e_t)
-        #
-        # # Get rotor angle
-        # # self.e_q_tmp = self.v_g + 1j * self.x_q * self.i_g
-        # self.I_g = self.i_g*self.i_n[self.gen_bus_idx]/self.I_n_gen
-        # self.e_q_tmp = self.v_g + 1j * self.X_q * self.I_g
-        # # self.e_q_tmp = self.v_g + 1j * self.x_q * self.i_g  # Equivalent with above line (due to same nominal voltage).
-        # self.angle = np.angle(self.e_q_tmp)
-        # self.speed = np.zeros_like(self.angle)
-        #
-        # self.d = np.exp(1j*(self.angle - np.pi/2))
-        # self.q = np.exp(1j*self.angle)
-        #
-        # self.i_g_dq = self.i_g * np.exp(1j * (np.pi / 2 - self.angle))
-        # self.i_d = self.i_g_dq.real
-        # self.i_q = self.i_g_dq.imag  # q-axis leading d-axis
-        #
-        # self.v_g_dq = self.v_g*np.exp(1j*(np.pi/2 - self.angle))
-        # self.v_d = self.v_g_dq.real
-        # self.v_q = self.v_g_dq.imag
-        #
-        # self.e_q_t = self.v_q + self.x_d_t*self.i_d
-        # self.e_d_t = self.v_d - self.x_q_t*self.i_q
-        # self.e_t = self.e_q_t*self.q + self.e_d_t*self.d
-        #
-        # self.e_q_st = self.v_q + self.x_d_st * self.i_d
-        # self.e_d_st = self.v_d - self.x_q_st * self.i_q
-        # self.e_st = self.e_q_st * self.q + self.e_d_st * self.d
-        #
-        # self.e_q = self.e_q_t + self.i_d * (self.x_d - self.x_d_t)
-        # self.e = self.e_q * np.exp(1j * self.angle)
-        # self.e_q_0 = self.e_q.copy()
-        #
-        # # self.x0 = np.zeros((self.n_gen_states + self.n_gov_states + self.n_avr_states)* self.n_gen)
-        # self.x0[self.angle_idx] = np.angle(self.e_q_tmp)
-        # self.x0[self.e_q_t_idx] = self.e_q_t
-        # self.x0[self.e_d_t_idx] = self.e_d_t
-        # self.x0[self.e_q_st_idx] = self.e_q_st
-        # self.x0[self.e_d_st_idx] = self.e_d_st
-        #
-        # self.p_m = self.p_m_setp.copy()
-        # self.p_e = self.e_q_st * self.i_q + self.e_d_st*self.i_d - (self.x_d_st - self.x_q_st) * self.i_d * self.i_q
-        # self.P_m = self.p_m*self.s_n/self.P_n_gen
-        # self.P_e = self.p_e*self.s_n/self.P_n_gen
 
         # Generators
         self.x0 = self.x0.copy()
@@ -897,6 +788,7 @@ class PowerSystemModel:
                 self.y_bus_red += sign*y_line_red
 
     def apply_inputs(self, input_desc, u):
+        # NB: Experimental
         # Function to make it easy to apply the same control action as in the linearized model.
         # Go through all variables to be changed, and set to zero. Neccessary to be able to have multiple inputs
         # controlling the same variables.
@@ -929,8 +821,6 @@ if __name__ == '__main__':
 
     importlib.reload(model_data)
     model = model_data.load()
-    # model['loads'] = pd.DataFrame(columns=['name', 'bus', 'P', 'Q', 'model'],
-    #                               data=[['L1', 'B1', 1998, 0, 'Z']])
 
     ps = PowerSystemModel(model=model)
     ps.pf_max_it = 100
