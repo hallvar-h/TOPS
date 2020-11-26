@@ -27,7 +27,7 @@ if __name__ == '__main__':
     ps.init_dyn_sim()
     ps.build_y_bus_red()
     ps.ode_fun(0.0, ps.x0)
-    t_end = 5
+    t_end = 1
     x0 = ps.x0.copy()
     x0[ps.gen_mdls['GEN'].state_idx['angle'][0]] += 1
 
