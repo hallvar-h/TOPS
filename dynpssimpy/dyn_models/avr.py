@@ -6,35 +6,30 @@ class SEXS:
         self.state_list = ['x', 'e_f']
         self.int_par_list = ['x_bias']
 
-    def initialize(self, output_0):
-        p = self.par
-        s = self.state_idx
+    @staticmethod
+    def initialize(x_0, output_0, p, int_par):
         bias = 1 / p['K'] * output_0
-        self.int_par['x_bias'] = bias
-        return np.concatenate([
-            (self.par['T_a'] - self.par['T_b']) * bias,
-            output_0
-        ])
+        int_par['x_bias'] = bias
+        x_0['x'][:] = (p['T_a'] - p['T_b']) * bias
+        x_0['e_f'][:] = output_0
 
     @staticmethod
-    def _update(dx, x, input, p, s, int_par):
+    def _update(dx, x, input, p, int_par):
 
         u = input + int_par['x_bias']
-        v_1 = 1 / p['T_b'] * (p['T_a'] * u - x[s['x']])
+        v_1 = 1 / p['T_b'] * (p['T_a'] * u - x['x'])
 
-        dx[:] = np.concatenate((
-            v_1 - u,
-            1/p['T_e'] * (p['K'] * v_1 - x[s['e_f']])
-        ))
+        dx['x'][:] = v_1 - u
+        dx['e_f'][:] = 1/p['T_e'] * (p['K'] * v_1 - x['e_f'])
 
         # Lims on state variable e_f (clamping)
-        lower_lim_idx = (x[s['e_f']] <= p['E_min']) & (dx[s['e_f']] < 0)
-        dx[s['e_f'][lower_lim_idx]] *= 0
+        lower_lim_idx = (x['e_f'] <= p['E_min']) & (dx['e_f'] < 0)
+        dx['e_f'][lower_lim_idx] *= 0
 
-        upper_lim_idx = (x[s['e_f']] >= p['E_max']) & (dx[s['e_f']] > 0)
-        dx[s['e_f'][upper_lim_idx]] *= 0
+        upper_lim_idx = (x['e_f'] >= p['E_max']) & (dx['e_f'] > 0)
+        dx['e_f'][upper_lim_idx] *= 0
 
-        output = np.minimum(np.maximum(x[s['e_f']], p['E_min']), p['E_max'])
+        output = np.minimum(np.maximum(x['e_f'], p['E_min']), p['E_max'])
 
         return output
 
