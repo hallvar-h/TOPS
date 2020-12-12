@@ -12,7 +12,7 @@ import dynpssimpy.utility_functions as dps_uf
 def main(rts):
     pg.setConfigOptions(antialias=True)
     app = QtWidgets.QApplication(sys.argv)
-    phasor_plot = gui.PhasorPlot(rts, update_freq=30)
+    phasor_plot = gui.PhasorPlotFast(rts, update_freq=30)
     ts_plot = gui.TimeSeriesPlotFast(rts, ['speed', 'angle'], update_freq=30)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
     # stats_plot = gui.SimulationStatsPlot(rts, update_freq=30)
 
