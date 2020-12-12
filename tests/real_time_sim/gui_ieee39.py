@@ -50,8 +50,8 @@ if __name__ == '__main__':
     ps.build_y_bus_red(ps.buses['name'])
     ps.ode_fun(0, ps.x0)
 
-    rts = dps_rts.RealTimeSimulator(ps, dt=5e-3, speed=1, solver=dps_uf.ModifiedEuler)
-    rts.sol.n_it = 0
+    rts = dps_rts.RealTimeSimulator(ps, dt=2.5e-3, speed=1, solver=dps_uf.ModifiedEuler)
+    rts.sol.n_it = 1
     rts.ode_fun(0, ps.x0)
 
     rts.start()
