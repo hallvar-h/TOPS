@@ -59,7 +59,9 @@ class PowerSystemModel:
                     dtypes = [(name_, dtype_) for name_, dtype_ in zip(header, col_dtypes)]
                     getattr(self, td)[key] = np.array(entries, dtype=dtypes)
 
+        # Would like to have self.gen or self.generators as a dict (like AVR, GOV and PSS-models)
         if isinstance(model[td], dict):
+            self.gen = self.generators
             self.generators = self.generators['GEN']
 
         for req_attr, default in zip(['PF_n', 'N_par'], [1, 1]):
@@ -67,6 +69,8 @@ class PowerSystemModel:
                 new_field = np.ones(len(self.generators), dtype=[(req_attr, float)])
                 new_field[req_attr] *= default
                 self.generators = dps_uf.combine_recarrays(self.generators, new_field)
+
+        self.gen['GEN'].par = self.generators
 
         if 'slack_bus' in model:
             self.slack_bus = model['slack_bus']
@@ -76,10 +80,10 @@ class PowerSystemModel:
         self.n_bus = len(self.buses)
         self.n_gen = len(self.generators)
 
-        # Base for pu-system (determined by transformers)
+        # Base for pu-system
         self.f = model['f']
         self.s_n = model['base_mva']  # For all buses
-        self.v_n = np.array(self.buses['V_n'])  # Assuming nominal bus voltages are according to transformer ratios
+        self.v_n = np.array(self.buses['V_n'])
         self.z_n = self.v_n ** 2 / self.s_n
         self.i_n = self.s_n / (np.sqrt(3) * self.v_n)
 
