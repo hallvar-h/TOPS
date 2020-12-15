@@ -8,6 +8,8 @@ from scipy.integrate import RK45
 
 class MyTestCase(unittest.TestCase):
     def test_k2a(self):
+        # Test to compare simulation of K2A system with PowerFactory results.
+        # Error should be bounded by specified value.
         import ps_models.k2a as model_data
         model = model_data.load()
 
@@ -17,7 +19,6 @@ class MyTestCase(unittest.TestCase):
         ps.gov['TGOV1']['T_1'] = 0.5
         ps.gov['TGOV1']['T_2'] = 1
         ps.gov['TGOV1']['T_3'] = 2
-        ps.pf_max_it = 100
         ps.power_flow()
         ps.init_dyn_sim()
 
@@ -59,14 +60,14 @@ class MyTestCase(unittest.TestCase):
         self.assertLessEqual(error, 0.02)
 
     def test_ieee39(self):
+        # Test to compare simulation of IEEE 39 bus system with PowerFactory results.
+        # Error should be bounded by specified value.
         import ps_models.ieee39 as model_data
         model = model_data.load()
 
         ps = dps.PowerSystemModel(model=model)
-        ps.pf_max_it = 100
         ps.power_flow()
         ps.init_dyn_sim()
-        print(max(abs(ps.ode_fun(0, ps.x0))))
 
         t_end = 10
         max_step = 5e-3
@@ -109,6 +110,21 @@ class MyTestCase(unittest.TestCase):
 
         error = compute_error(ps, result, pf_res, max_step)
         self.assertLessEqual(error, 0.02)
+
+    def test_n44_init(self):
+        # Test to verify that systems initialize properly.
+        import ps_models.sm_ib as model_data_smib
+        import ps_models.k2a as model_data_k2a
+        import ps_models.ieee39 as model_data_ieee39
+        import ps_models.n44 as model_data_n44
+
+        for model_data in [model_data_smib, model_data_k2a, model_data_ieee39, model_data_n44]:
+            model = model_data.load()
+            ps = dps.PowerSystemModel(model=model)
+            ps.power_flow()
+            ps.init_dyn_sim()
+            diff_max = max(abs(ps.ode_fun(0, ps.x0)))
+            self.assertLessEqual(diff_max, 1e-9)
 
 
 if __name__ == '__main__':

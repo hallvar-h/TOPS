@@ -29,9 +29,7 @@ class PowerSystemModel:
         self.tol = 1e-8
 
         # Get model data
-        for td in ['buses', 'lines', 'loads', 'transformers', 'generators', 'shunts']:
-            if isinstance(model[td], dict):
-                continue
+        for td in ['buses', 'lines', 'loads', 'transformers', 'shunts']:
             if td in model and len(model[td]) > 0:
                 header = model[td][0]
                 # Get dtype for each column
