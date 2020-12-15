@@ -3,9 +3,9 @@ from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.integrate import RK23, RK45, solve_ivp
 import importlib
 import time
+import dynpssimpy.utility_functions as dps_uf
 
 
 if __name__ == '__main__':
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     x0 = ps.x0.copy()
     x0[ps.gen_mdls['GEN'].state_idx['angle'][0]] += 1
 
-    sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=5e-3)
+    sol = dps_uf.ModifiedEuler(ps.ode_fun, 0, x0, t_end, max_step=5e-3)
 
     t = 0
     result_dict = defaultdict(list)

@@ -30,7 +30,7 @@ class MyTestCase(unittest.TestCase):
 
         # Python result
         x0 = ps.x0
-        sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=5e-3)
+        sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=max_step)
 
         t = 0
         result_dict = defaultdict(list)
@@ -77,7 +77,7 @@ class MyTestCase(unittest.TestCase):
 
         x0 = ps.x0
 
-        sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=5e-3)
+        sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=max_step)
 
         t = 0
         result_dict = defaultdict(list)

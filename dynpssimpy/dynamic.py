@@ -481,55 +481,14 @@ class PowerSystemModel:
         self.state_desc = np.empty((0, 2))
 
         self.gen_mdls = dict()
-        if True:
-            key = 'GEN'
-            input_data = self.generators
-            container = self.gen_mdls
-            library = gen_lib
-            # self.state_desc_2 = np.empty((0, 2))
-            data = self.generators  # input_data[key]
-            start_idx = len(self.state_desc)
-            mdl = getattr(library, key)()
-            state_list = mdl.state_list
-            names = data['name']
-            n_units = len(data)
-            n_states = len(state_list)
-
-            # state_desc_mdl = np.vstack([np.tile(names, n_states), np.repeat(state_list, n_units)]).T
-            state_desc_mdl = np.vstack([np.repeat(names, n_states), np.tile(state_list, n_units)]).T
-
-            mdl.idx = slice(start_idx, start_idx + len(state_desc_mdl))  # Indices of all states belonging to model
-            mdl.par = data  # .to_records()  # Model parameters
-            mdl.dtypes = [(state, np.float) for state in state_list]
-            mdl.shape = (n_states, n_units)
-
-            compile_these = ['_update', '_current_injections']
-            if self.use_numba:
-                for fun in compile_these:
-                    if hasattr(mdl, fun):
-                        setattr(mdl, fun[1:], jit()(getattr(mdl, fun)))
-
-            else:
-                for fun in compile_these:
-                    if hasattr(mdl, fun):
-                        setattr(mdl, fun[1:], getattr(mdl, fun))
-
-            # mdl.state_idx = np.recarray((n_units,), dtype=[(state, int) for state in state_list])
-            mdl.state_idx = np.zeros((n_units,), dtype=[(state, int) for state in state_list])
-            for i, state in enumerate(state_list):
-                mdl.state_idx[state] = np.where(state_desc_mdl[:, 1] == state)[0]
-
-            container[key] = mdl
-            # self.state_desc_2 = np.vstack([self.state_desc_2, state_desc_mdl])
-            self.state_desc = np.vstack([self.state_desc, state_desc_mdl])
-
         self.gov_mdls = dict()
         self.avr_mdls = dict()
         self.pss_mdls = dict()
 
-        for i, (input_data, container, library) in enumerate(zip([self.gov, self.pss, self.avr],
-                                                                 [self.gov_mdls, self.pss_mdls, self.avr_mdls],
-                                                                 [gov_lib, pss_lib, avr_lib])):
+        self.gen_tmp_dict = {'GEN': self.generators}
+        for i, (input_data, container, library) in enumerate(zip([self.gen_tmp_dict, self.gov, self.pss, self.avr],
+                                                                 [self.gen_mdls, self.gov_mdls, self.pss_mdls, self.avr_mdls],
+                                                                 [gen_lib, gov_lib, pss_lib, avr_lib])):
 
             for key in input_data.keys():
                 data = input_data[key]
@@ -560,7 +519,7 @@ class PowerSystemModel:
                         if hasattr(mdl, fun):
                             setattr(mdl, fun[1:], getattr(mdl, fun))
 
-                if i > -1:  # Do this for control models only (not generators) (planning to include generators in the same loop)
+                if i > 0:  # Do this for control models only (not generators) (planning to include generators in the same loop)
                     mdl.active = np.ones(len(data), dtype=bool)
                     mdl.int_par = np.array(np.zeros(len(data)), [(par, float) for par in mdl.int_par_list])
                     mdl.gen_idx = dps_uf.lookup_strings(data['gen'], self.generators['name'])
@@ -572,7 +531,7 @@ class PowerSystemModel:
                 container[key] = mdl
                 self.state_desc = np.vstack([self.state_desc, state_desc_mdl])
 
-        self.n_states = self.state_desc.shape[0]  # self.n_gen_states * self.n_gen
+        self.n_states = self.state_desc.shape[0]
         self.state_desc_der = self.state_desc.copy()
         self.state_desc_der[:, 1] = np.char.add(np.array(self.n_states * ['d_']), self.state_desc[:, 1])
         self.x0 = np.zeros(self.n_states)
