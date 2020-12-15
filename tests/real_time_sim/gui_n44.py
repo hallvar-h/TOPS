@@ -41,6 +41,8 @@ if __name__ == '__main__':
     import ps_models.n44 as model_data
     model = model_data.load()
     ps = dps.PowerSystemModel(model=model)
+
+    # Add controls for all generators (not specified in model)
     model['gov'] = {'TGOV1':
         [['name', 'gen', 'R', 'D_t', 'V_min', 'V_max', 'T_1', 'T_2', 'T_3']] +
         [['GOV'+str(i), gen_name, 0.05, 0, 0, 1, 0.2, 1, 2] for i, gen_name in enumerate(ps.generators['name'])]
