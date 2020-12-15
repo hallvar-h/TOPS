@@ -61,7 +61,6 @@ class PowerSystemModel:
 
         # Would like to have self.gen or self.generators as a dict (like AVR, GOV and PSS-models)
         if isinstance(model[td], dict):
-            self.gen = self.generators
             self.generators = self.generators['GEN']
 
         for req_attr, default in zip(['PF_n', 'N_par'], [1, 1]):
@@ -69,8 +68,6 @@ class PowerSystemModel:
                 new_field = np.ones(len(self.generators), dtype=[(req_attr, float)])
                 new_field[req_attr] *= default
                 self.generators = dps_uf.combine_recarrays(self.generators, new_field)
-
-        self.gen['GEN'].par = self.generators
 
         if 'slack_bus' in model:
             self.slack_bus = model['slack_bus']
@@ -144,7 +141,6 @@ class PowerSystemModel:
         self.y_bus_lf[:] = np.nan
         self.y_bus_red_full = np.empty((self.n_gen, self.n_gen))
         # self.y_bus_red_inv = np.empty((self.n_gen, self.n_gen))
-        self.y_bus_red_mod_full = np.zeros_like(self.y_bus_red_full)
 
         self.time = 0.0
 
@@ -370,7 +366,6 @@ class PowerSystemModel:
 
         self.n_bus_red = len(self.reduced_bus_idx)
         self.y_bus_red_full = self.kron_reduction(self.y_bus, self.reduced_bus_idx)  # np.empty((self.n_gen, self.n_gen))
-        self.y_bus_red_mod_full = np.zeros_like(self.y_bus_red_full)
 
         self.gen_bus_idx_red = self.get_bus_idx_red(self.buses[self.gen_bus_idx]['name'])
 
