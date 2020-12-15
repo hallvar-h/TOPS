@@ -479,60 +479,6 @@ class PowerSystemModel:
         self.p_sum_loads_bus = p_sum_loads_bus
         self.q_sum_loads_bus = q_sum_loads_bus
 
-    # def init_dyn_sim_backwards_compatibility(self):
-    #     # Generator parameters, p.u. on system base (lower case letters) and p.u. on generator base (upper case letters)
-    #     for par in ['X_d', 'X_q', 'X_d_t', 'X_q_t', 'X_d_st', 'X_q_st']:
-    #         setattr(self, par, np.array(self.generators[par]))
-    #         setattr(self, par.lower(), np.array(self.generators[par]) * self.Z_n_gen / self.z_n[self.gen_bus_idx])
-    #
-    #     for par in ['T_d0_t', 'T_q0_t', 'T_d0_st', 'T_q0_st']:
-    #         setattr(self, par, np.array(self.generators[par]))
-    #
-    #     self.H = self.generators['H']/self.generators['PF_n']
-    #
-    #     # [setattr(self, var + '_idx', self.gen_mdls.states[var]) for var in states]  # Define self.speed_idx, self.angle_idx and so on
-    #     [setattr(self, state + '_idx', self.gen_mdls['GEN'].state_idx[state]) for state in self.gen_mdls['GEN'].state_list]
-
-    # def ode_fun_backwards_compatibility(self, t, x):
-    #
-    #     self.time = t
-    #
-    #     self.speed = x[self.speed_idx]
-    #     self.angle = x[self.angle_idx]
-    #     self.e_q_t = x[self.e_q_t_idx]
-    #     self.e_d_t = x[self.e_d_t_idx]
-    #     self.e_q_st = x[self.e_q_st_idx]
-    #     self.e_d_st = x[self.e_d_st_idx]
-    #
-    #     self.d = np.exp(1j * (self.angle - np.pi / 2))
-    #     self.q = np.exp(1j * self.angle)
-    #
-    #     self.e_st = self.e_q_st * self.q + self.e_d_st * self.d
-    #     self.e_t = self.e_q_t * self.q + self.e_d_t * self.d
-    #     self.e = self.e_q * self.q
-    #
-    #     self.v_g_dq = self.v_g * np.exp(1j * (np.pi / 2 - self.angle))
-    #     self.v_d = self.v_g_dq.real
-    #     self.v_q = self.v_g_dq.imag
-    #
-    #     self.i_g = (self.e_st - self.v_g) / (1j * self.x_d_st)
-    #     self.i_g_dq = self.i_g * np.exp(1j * (np.pi / 2 - self.angle))
-    #     self.i_d = self.i_g_dq.real
-    #     self.i_q = self.i_g_dq.imag
-    #
-    #     self.I_d = self.i_d * self.i_n[self.gen_bus_idx] / self.I_n_gen
-    #     self.I_q = self.i_q * self.i_n[self.gen_bus_idx] / self.I_n_gen
-    #
-    #     self.e_q_tmp = self.v_g + 1j * self.x_q * self.i_g
-    #
-    #     self.p_e = self.e_q_st * self.i_q + self.e_d_st * self.i_d  # - (self.x_d_st - self.x_q_st) * self.i_d * self.i_q
-    #     # self.P_e = self.e_q_st * self.I_q + self.e_d_st * self.I_d - (self.X_d_st - self.X_q_st) * self.I_d * self.I_q
-    #     self.P_e = self.p_e * self.s_n / self.P_n_gen
-    #
-    #     self.p_m = self.P_m * self.P_n_gen/self.s_n
-    #     self.t_m = self.p_m / (1 + self.speed)
-    #     self.T_m = self.P_m / (1 + self.speed)
-
     def init_dyn_sim(self):
         # State variables:
         self.state_desc = np.empty((0, 2))
