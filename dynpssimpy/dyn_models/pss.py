@@ -5,6 +5,8 @@ class STAB1:
     def __init__(self):
         self.state_list = ['x_1', 'x_2', 'x_3']
         self.int_par_list = []
+        self.input_list = ['speed']
+        self.output_list = ['v_pss']
 
     @staticmethod
     def _update(dx, x, input, p, int_par):

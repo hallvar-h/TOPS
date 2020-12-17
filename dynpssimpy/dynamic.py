@@ -529,9 +529,14 @@ class PowerSystemModel:
 
                 mdl.n_units = n_units
                 mdl.idx = slice(start_idx, start_idx + len(state_desc_mdl))  # Indices of all states belonging to model
+                # dtypes-attribute is defined to allow view to be created easily (with named fields)
+                # Allows syntax x['speed'] instead of x[state_idx['speed']]
+                # within differential equations of dyn. models.
                 mdl.dtypes = [(state, np.float) for state in state_list]
                 mdl.shape = (n_states, n_units)
                 mdl.par = data
+                mdl.input = np.zeros(n_units, [(field, np.float) for field in mdl.input_list])
+                mdl.output = np.zeros(n_units, [(field, np.float) for field in mdl.output_list])
 
                 # JIT-compilation using Numba
                 compile_these = ['_update', '_current_injections']
@@ -632,6 +637,8 @@ class PowerSystemModel:
                 self.x0[dm.idx].view(dtype=dm.dtypes),
                 v_g, s_g, dm.par)
             dm.e_q, dm.P_m = inputs_0
+            dm.input['E_f'], dm.input['P_m'] = inputs_0
+
             self.e_q_0, self.P_m_0 = inputs_0
             self.e_q = self.e_q_0.copy()
             self.P_m = self.P_m_0.copy()
@@ -648,7 +655,7 @@ class PowerSystemModel:
                     # mask: Boolean mask to map controls to generators
                     # idx: Points to which generators are controlled
                     gen_mdl = self.gen_mdls[gen_key]
-                    e_q_0[mask] = gen_mdl.e_q[idx]
+                    e_q_0[mask] = gen_mdl.input['E_f'][idx]
 
                 # for gen_key in dm.gen_mdl_list:
                 #     e_q_0[dm.gen_mdl_3 == gen_key] = self.gen_mdls[gen_key].e_q[dm.gen_idx_2[gen_key]]
@@ -666,7 +673,7 @@ class PowerSystemModel:
                     # mask: Boolean mask to map controls to generators
                     # idx: Points to which generators are controlled
                     gen_mdl = self.gen_mdls[gen_key]
-                    P_m_0[mask] = gen_mdl.P_m[idx]
+                    P_m_0[mask] = gen_mdl.input['P_m'][idx]
 
                 # for gen_key in dm.gen_mdl_list:
                 #     P_m_0[dm.gen_mdl_3 == gen_key] = self.gen_mdls[gen_key].P_m[dm.gen_idx_2[gen_key]]
@@ -727,13 +734,12 @@ class PowerSystemModel:
 
             for gen_key, (mask, idx) in dm.gen_idx.items():
                 gen_mdl = self.gen_mdls[gen_key]
-                gen_mdl.P_m[idx[dm.active[mask]]] = output[dm.active & mask]
+                gen_mdl.input['P_m'][idx[dm.active[mask]]] = output[dm.active & mask]
 
             # self.P_m[active_gov_gen_idx] = output[active_mdls]
             # self.p_m[active_gov_gen_idx] = (self.P_m[active_gov_gen_idx] * self.P_n_gen[active_gov_gen_idx] / self.s_n)
 
         # PSS
-        # self.speed = x[self.gen_mdls['GEN'].state_idx['speed']]
         for key, dm in self.pss_mdls.items():
             input = np.zeros(dm.n_units, dtype=float)
             for gen_key, (mask, idx) in dm.gen_idx.items():
@@ -750,13 +756,11 @@ class PowerSystemModel:
 
             for gen_key, (mask, idx) in dm.gen_idx.items():
                 gen_mdl = self.gen_mdls[gen_key]
-                gen_mdl.v_pss[idx[dm.active[mask]]] = output[dm.active & mask]
+                gen_mdl.input['v_pss'][idx[dm.active[mask]]] = output[dm.active & mask]
 
 
         # AVR
-        # self.v_g_dev = self.v_g_setp - abs(self.v_g)  # Used for validating AVR
-        for key in self.avr_mdls.keys():
-            dm = self.avr_mdls[key]
+        for key, dm in self.avr_mdls.items():
             input = np.zeros(dm.n_units, dtype=float)
             for gen_key, (mask, idx) in dm.gen_idx.items():
                 # mask: Boolean mask to map controls to generators
@@ -764,7 +768,7 @@ class PowerSystemModel:
                 gen_mdl = self.gen_mdls[gen_key]
                 v_g_setp = gen_mdl.par['V'][idx]
                 v_g = self.v_red[gen_mdl.bus_idx_red][idx]
-                v_pss = gen_mdl.v_pss[idx]
+                v_pss = gen_mdl.input['v_pss'][idx]
                 input[mask] = v_g_setp - abs(v_g) + v_pss
 
             output = dm.update(
@@ -776,17 +780,21 @@ class PowerSystemModel:
             # dm.apply(self, output)
             for gen_key, (mask, idx) in dm.gen_idx.items():
                 gen_mdl = self.gen_mdls[gen_key]
-                gen_mdl.e_q[idx[dm.active[mask]]] = output[dm.active & mask]
+                gen_mdl.input['E_f'][idx[dm.active[mask]]] = output[dm.active & mask]
 
 
         # Generators
         for key in self.gen_mdls.keys():
             dm = self.gen_mdls[key]
             v_g = self.v_red[dm.bus_idx_red]
+
             dm.update(
                 dx[dm.idx].view(dtype=dm.dtypes),
                 x[dm.idx].view(dtype=dm.dtypes),
-                self.f, v_g, dm.e_q, dm.P_m, dm.v_aux, dm.par)
+                self.f, v_g, dm.input['E_f'], dm.input['P_m'], dm.input['v_aux'], dm.par)
+
+            # dx[dm.idx] = dx_loc
+
             # dx[dm.idx] = dx_loc
 
         return dx

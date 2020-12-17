@@ -5,6 +5,8 @@ class SEXS:
     def __init__(self):
         self.state_list = ['x', 'e_f']
         self.int_par_list = ['x_bias']
+        self.input_list = ['v_dev', 'v_pss']
+        self.output_list = ['E_f']
 
     @staticmethod
     def initialize(x_0, output_0, p, int_par):

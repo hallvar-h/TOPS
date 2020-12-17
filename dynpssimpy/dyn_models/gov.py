@@ -5,6 +5,8 @@ class TGOV1:
     def __init__(self):
         self.state_list = ['x_1', 'x_2']
         self.int_par_list = ['x_1_bias']
+        self.input_list = ['speed_dev']
+        self.output_list = ['P_m']
 
     @staticmethod
     def initialize(x_0, output_0, p, int_par):
