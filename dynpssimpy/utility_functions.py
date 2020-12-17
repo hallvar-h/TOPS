@@ -13,12 +13,28 @@ def combine_recarrays(a, b):
     return c
 
 
-def lookup_strings(a, b):
+def lookup_strings(a, b, return_mask=False):
     # Function to find the index of the element in b that equal the element in a, for each element in a
-    if isinstance(a, np.ndarray):
-        return np.array([np.where(b == a_)[0][0] for a_ in a])
+    if isinstance(a, np.ndarray) or isinstance(a, list):
+        lookups = []
+        found = []
+        for a_ in a:
+            lookup = np.where(b == a_)[0]
+            if len(lookup) > 0:
+                lookups.append(lookup[0])
+                found.append(True)
+            else:
+                found.append(False)
+        if return_mask:
+            return np.array(lookups), np.array(found)
+        else:
+            return np.array(lookups)
     else:
-        return np.where(b == a)[0][0]
+        lookup = np.where(b == a)[0]
+        if len(lookup) > 0:
+            return lookup[0]
+        else:
+            return np.nan
 
 
 class SimpleRK4:

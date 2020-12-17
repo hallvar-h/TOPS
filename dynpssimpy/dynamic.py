@@ -58,14 +58,33 @@ class PowerSystemModel:
                     getattr(self, td)[key] = np.array(entries, dtype=dtypes)
 
         # Would like to have self.gen or self.generators as a dict (like AVR, GOV and PSS-models)
-        if isinstance(model[td], dict):
-            self.generators = self.generators['GEN']
+        # if isinstance(model[td], dict):
+        #     self.generators = self.generators['GEN']
 
-        for req_attr, default in zip(['PF_n', 'N_par'], [1, 1]):
-            if not req_attr in self.generators.dtype.names:
-                new_field = np.ones(len(self.generators), dtype=[(req_attr, float)])
-                new_field[req_attr] *= default
-                self.generators = dps_uf.combine_recarrays(self.generators, new_field)
+        for key in self.generators.keys():
+            for req_attr, default in zip(['PF_n', 'N_par'], [1, 1]):
+                if not req_attr in self.generators[key].dtype.names:
+                    new_field = np.ones(len(self.generators[key]), dtype=[(req_attr, float)])
+                    new_field[req_attr] *= default
+                    self.generators[key] = dps_uf.combine_recarrays(self.generators[key], new_field)
+
+        # Base for pu-system
+        self.f = model['f']
+        self.s_n = model['base_mva']  # For all buses
+        self.v_n = np.array(self.buses['V_n'])
+        self.z_n = self.v_n ** 2 / self.s_n
+        self.i_n = self.s_n / (np.sqrt(3) * self.v_n)
+
+        for key in self.generators.keys():
+            fix_idx = self.generators[key]['V_n'] == 0
+            gen_bus_idx = dps_uf.lookup_strings(self.generators[key]['bus'], self.buses['name'])
+            self.generators[key]['V_n'][fix_idx] = self.buses['V_n'][gen_bus_idx][fix_idx]
+
+            fix_idx = self.generators[key]['S_n'] == 0
+            self.generators[key]['S_n'][fix_idx] = self.s_n
+
+        self.gen = self.generators
+        self.generators = self.gen['GEN']
 
         if 'slack_bus' in model:
             self.slack_bus = model['slack_bus']
@@ -75,17 +94,22 @@ class PowerSystemModel:
         self.n_bus = len(self.buses)
         self.n_gen = len(self.generators)
 
-        # Base for pu-system
-        self.f = model['f']
-        self.s_n = model['base_mva']  # For all buses
-        self.v_n = np.array(self.buses['V_n'])
-        self.z_n = self.v_n ** 2 / self.s_n
-        self.i_n = self.s_n / (np.sqrt(3) * self.v_n)
-
         self.e = np.empty((0, 0))
 
         # Load flow
-        self.v_g_setp = np.array(self.generators['V'], dtype=float)
+        self.n_gen = sum([len(self.gen[key]) for key in self.gen.keys()])
+        self.v_g_setp = np.concatenate([self.gen[key]['V'] for key in self.gen.keys()])
+        self.P_g_setp = np.concatenate([self.gen[key]['P'] for key in self.gen.keys()])
+        self.n_par = np.concatenate([self.gen[key]['N_par'] for key in self.gen.keys()])
+        self.gen_bus_names = np.concatenate([self.gen[key]['bus'] for key in self.gen.keys()])
+        self.gen_pf_map_idx = []
+        for key in self.gen.keys():
+            [self.gen_pf_map_idx.append((key, i)) for i in range(len(self.gen[key]))]
+        self.gen_pf_map_idx = np.array(self.gen_pf_map_idx)
+
+        np.cumsum([len(self.gen[key]) for key in self.gen.keys()])
+        bus_names = self.buses['name']
+        self.gen_bus_idx = dps_uf.lookup_strings(self.gen_bus_names, bus_names)
 
         self.v_g = np.empty(self.n_gen, dtype=complex)
         self.i_inj = np.empty(self.n_gen, dtype=complex)
@@ -93,13 +117,6 @@ class PowerSystemModel:
         self.angle = np.empty(self.n_gen, dtype=complex)
         self.v_pss = np.zeros(self.n_gen, dtype=float)
         self.v_aux = np.zeros(self.n_gen, dtype=float)
-
-        gen_bus_names = self.generators['bus']
-        bus_names = self.buses['name']
-        self.gen_bus_idx = dps_uf.lookup_strings(gen_bus_names, bus_names)
-
-        # self.gen_bus_idx = np.array([self.buses[self.buses['name'] == gen['bus']].index[0] for i, gen in self.generators.iterrows()])
-
 
         # Remove duplicate buses
         _, idx = np.unique(self.gen_bus_idx, return_index=True)
@@ -131,7 +148,7 @@ class PowerSystemModel:
         self.I_n_gen = self.S_n_gen / (np.sqrt(3) * self.V_n_gen)
         self.Z_n_gen = self.V_n_gen ** 2 / self.S_n_gen
 
-        self.n_par = np.array(self.generators['N_par']) if 'N_par' in self.generators.dtype.names else np.ones(self.n_gen)
+        # self.n_par = np.array(self.generators['N_par']) if 'N_par' in self.generators.dtype.names else np.ones(self.n_gen)
 
         self.reduced_bus_idx = self.gen_bus_idx_unique
         self.y_bus = np.empty((self.n_bus, self.n_bus))  # Can not be built before power flow, since load admittances depend on it.
@@ -305,12 +322,12 @@ class PowerSystemModel:
         y_branch += y_trafo
 
         y_gen = np.zeros((n_bus, n_bus), dtype=complex)
-        for i, gen in enumerate(self.generators):
-            # Generator impedance on system base
-            idx_bus = dps_uf.lookup_strings(gen['bus'], buses['name'])
-            V_n = gen['V_n'] if gen['V_n'] else self.v_n[idx_bus]
-            impedance = 1j * gen['X_d_st'] * V_n**2/gen['S_n']/self.z_n[self.gen_bus_idx[i]]
-            y_gen[idx_bus, idx_bus] += self.n_par[i] / impedance
+        for key, data in self.gen.items():
+            for gen in data:
+                idx_bus = dps_uf.lookup_strings(gen['bus'], buses['name'])
+                V_n = gen['V_n']
+                impedance = 1j * gen['X_d_st'] * V_n ** 2 / gen['S_n'] / self.z_n[idx_bus]
+                y_gen[idx_bus, idx_bus] += gen['N_par'] / impedance
 
         y_load = np.zeros((n_bus, n_bus), dtype=complex)
         if type == 'dyn':
@@ -389,15 +406,19 @@ class PowerSystemModel:
         p_sum_loads_bus = np.empty(self.n_bus)
         q_sum_bus = np.empty(self.n_bus)
         q_sum_loads_bus = np.empty(self.n_bus)
-
+        self.gen_bus_idx
         for i, bus in enumerate(self.buses):
-            gen_idx = self.generators['bus'] == bus['name']
+            # gen_idx = self.generators['bus'] == bus['name']
+            gen_idx = self.gen_bus_idx == i
+            # sum_gen = sum(self.generators[gen_idx]['P'] * self.n_par[gen_idx])
+            sum_gen = sum(self.P_g_setp[gen_idx]*self.n_par[gen_idx])
+
             p_sum_loads_bus[i] = (sum(self.loads[self.loads['bus'] == bus['name']]['P']) / self.s_n) if len(self.loads) > 0 else 0
-            p_sum_bus[i] = p_sum_loads_bus[i] - sum(self.generators[gen_idx]['P']*self.n_par[gen_idx]) / self.s_n
+            p_sum_bus[i] = p_sum_loads_bus[i] - sum_gen / self.s_n
             q_sum_loads_bus[i] = (sum(self.loads[self.loads['bus'] == bus['name']]['Q']) / self.s_n) if len(self.loads) > 0 else 0
             q_sum_bus[i] = q_sum_loads_bus[i]  # - 0*(sum(self.shunts[self.shunts['bus'] == bus['name']]['Q'])) / self.s_n
             # print(p_sum_bus, q_sum_bus)
-            if any(bus['name'] == self.generators['bus']):
+            if any(i == self.gen_bus_idx):
                 bus_type[i] = 'PV'
             else:
                 bus_type[i] = 'PQ'
@@ -477,6 +498,11 @@ class PowerSystemModel:
         self.q_sum_loads_bus = q_sum_loads_bus
 
     def init_dyn_sim(self):
+
+        # Build reduced system
+        self.y_bus = self.build_y_bus()  # np.empty((self.n_bus, self.n_bus))
+        self.build_y_bus_red()
+
         # State variables:
         self.state_desc = np.empty((0, 2))
 
@@ -485,13 +511,12 @@ class PowerSystemModel:
         self.avr_mdls = dict()
         self.pss_mdls = dict()
 
-        self.gen_tmp_dict = {'GEN': self.generators}
-        for i, (input_data, container, library) in enumerate(zip([self.gen_tmp_dict, self.gov, self.pss, self.avr],
+        for i, (input_data, container, library) in enumerate(zip([self.gen, self.gov, self.pss, self.avr],
                                                                  [self.gen_mdls, self.gov_mdls, self.pss_mdls, self.avr_mdls],
                                                                  [gen_lib, gov_lib, pss_lib, avr_lib])):
 
             for key in input_data.keys():
-                data = input_data[key]
+                data = input_data[key].copy()
                 start_idx = len(self.state_desc)
                 mdl = getattr(library, key)()
                 state_list = mdl.state_list
@@ -502,10 +527,11 @@ class PowerSystemModel:
                 # state_desc_mdl = np.vstack([np.tile(names, n_states), np.repeat(state_list, n_units)]).T
                 state_desc_mdl = np.vstack([np.repeat(names, n_states), np.tile(state_list, n_units)]).T
 
+                mdl.n_units = n_units
                 mdl.idx = slice(start_idx, start_idx + len(state_desc_mdl))  # Indices of all states belonging to model
-                mdl.par = data  # .to_records()  # Model parameters
                 mdl.dtypes = [(state, np.float) for state in state_list]
                 mdl.shape = (n_states, n_units)
+                mdl.par = data
 
                 # JIT-compilation using Numba
                 compile_these = ['_update', '_current_injections']
@@ -519,13 +545,37 @@ class PowerSystemModel:
                         if hasattr(mdl, fun):
                             setattr(mdl, fun[1:], getattr(mdl, fun))
 
-                if i > 0:  # Do this for control models only (not generators) (planning to include generators in the same loop)
+                if i == 0:  # Do this for generators only
+                    mdl.bus_idx = dps_uf.lookup_strings(data['bus'], self.buses['name'])
+                    mdl.bus_idx_red = self.get_bus_idx_red(data['bus'])
+
+                    # Generator inputs (temp.fix)
+                    mdl.P_m = np.zeros(n_units, dtype=float)
+                    mdl.e_q = np.zeros(n_units, dtype=float)
+                    mdl.v_aux = np.zeros(n_units, dtype=float)
+                    mdl.v_pss = np.zeros(n_units, dtype=float)
+
+                else:  # Do this for control models only
                     mdl.active = np.ones(len(data), dtype=bool)
                     mdl.int_par = np.array(np.zeros(len(data)), [(par, float) for par in mdl.int_par_list])
                     mdl.gen_idx = dps_uf.lookup_strings(data['gen'], self.generators['name'])
+                    mdl.gen_idx_2 = dict()
+                    max_gen_key_len = max([len(key) for key in self.gen.keys()])
+                    mdl.gen_mdl_3 = np.zeros(n_units, dtype='U'+str(max_gen_key_len))
+                    mdl.gen_idx_3 = -np.ones(n_units, dtype=int)
+                    mdl.gen_mdl_list = []
+                    for gen_key in self.gen.keys():
+                        lookup, mask = dps_uf.lookup_strings(data['gen'], self.gen[gen_key]['name'], return_mask=True)
+                        if len(lookup) > 0:
+                            mdl.gen_idx_2[gen_key] = lookup
+                            mdl.gen_mdl_list.append(gen_key)
+                            mdl.gen_idx_3[mask] = lookup
+                            mdl.gen_mdl_3[mask] = gen_key
+                    mdl.gen_mdl_list = np.array(mdl.gen_mdl_list)
+
 
                 mdl.state_idx = np.zeros((n_units,), dtype=[(state, int) for state in state_list])
-                for i, state in enumerate(state_list):
+                for state in state_list:
                     mdl.state_idx[state] = np.where(state_desc_mdl[:, 1] == state)[0]
 
                 container[key] = mdl
@@ -534,20 +584,23 @@ class PowerSystemModel:
         self.n_states = self.state_desc.shape[0]
         self.state_desc_der = self.state_desc.copy()
         self.state_desc_der[:, 1] = np.char.add(np.array(self.n_states * ['d_']), self.state_desc[:, 1])
-        self.x0 = np.zeros(self.n_states)
+
         self.e_q_0 = np.zeros(self.n_gen)
         self.e_q = np.zeros(self.n_gen)
-
-        # Build reduced system
-        self.y_bus = self.build_y_bus()  # np.empty((self.n_bus, self.n_bus))
-        self.build_y_bus_red()
-
         # Choose first generator at slack bus as slack generator
-        self.slack_generator = dps_uf.lookup_strings(self.slack_bus, self.generators['bus'])
+        # self.slack_generator = dps_uf.lookup_strings(self.slack_bus, self.generators['bus'])
+        for gen_key in self.gen_mdls.keys():
+            lookup = dps_uf.lookup_strings(self.slack_bus, self.gen_mdls[gen_key].par['bus'])
+            if not np.isnan(lookup) > 0:
+                print(gen_key, lookup)
+                self.slack_generator_id = (gen_key, lookup)
+                break
 
-        self.p_m_setp = np.array(self.generators['P'])/self.s_n
+        self.slack_generator = np.where((self.gen_pf_map_idx == self.slack_generator_id).all(axis=1))[0][0]
+
+        self.p_m_setp = self.P_g_setp/self.s_n
         sum_load_sl = sum(self.loads[self.loads['bus'] == self.slack_bus]['P'])/self.s_n if len(self.loads) > 0 else 0  # Sum loads at slack bus
-        sl_gen_idx = np.array(self.generators['bus'] == self.slack_bus)
+        sl_gen_idx = np.array(self.gen_bus_names == self.slack_bus)
 
         # The case with multiple generators at the slack bus where one or more are n_par in parallel has not been tested.
         sum_gen_sl = sum((self.p_m_setp[sl_gen_idx]*self.n_par[sl_gen_idx])[1:])  # Sum other generation at slack bus (not slack gen)
@@ -564,12 +617,18 @@ class PowerSystemModel:
         self.v_g = self.v_0[self.gen_bus_idx]
         self.s_g = (self.p_m_setp + 1j*self.q_g)
 
+        self.x0 = np.zeros(self.n_states)
+
         # Generators
         for key in self.gen_mdls.keys():
             dm = self.gen_mdls[key]
+            dm_pf_map_idx = self.gen_pf_map_idx[:, 0] == key
+            v_g = self.v_g[dm_pf_map_idx]
+            s_g = self.s_g[dm_pf_map_idx]*self.s_n/dm.par['S_n']
             inputs_0 = dm.initialize(
                 self.x0[dm.idx].view(dtype=dm.dtypes),
-                self.v_g, self.s_g*self.s_n/self.S_n_gen, dm.par)
+                v_g, s_g, dm.par)
+            dm.e_q, dm.P_m = inputs_0
             self.e_q_0, self.P_m_0 = inputs_0
             self.e_q = self.e_q_0.copy()
             self.P_m = self.P_m_0.copy()
@@ -581,17 +640,26 @@ class PowerSystemModel:
         for key in self.avr_mdls.keys():
             dm = self.avr_mdls[key]
             if hasattr(dm, 'initialize'):
+                e_q_0 = np.zeros(dm.n_units, dtype=float)
+                for gen_key in dm.gen_mdl_list:
+                    e_q_0[dm.gen_mdl_3 == gen_key] = self.gen_mdls[gen_key].e_q[dm.gen_idx_2[gen_key]]
+
                 dm.initialize(
                     self.x0[dm.idx].view(dtype=dm.dtypes),
-                    self.e_q_0[dm.gen_idx], dm.par, dm.int_par)
+                    e_q_0, dm.par, dm.int_par)
 
         # GOV
         for key in self.gov_mdls.keys():
             dm = self.gov_mdls[key]
             if hasattr(dm, 'initialize'):
+                # P_m_0 = np.concatenate([self.gen_mdls[gen_key].P_m[dm.gen_idx_2[gen_key]] for gen_key in dm.gen_idx_2.keys()])
+                P_m_0 = np.zeros(dm.n_units, dtype=float)
+                for gen_key in dm.gen_mdl_list:
+                    P_m_0[dm.gen_mdl_3 == gen_key] = self.gen_mdls[gen_key].P_m[dm.gen_idx_2[gen_key]]
+
                 dm.initialize(
                     self.x0[dm.idx].view(dtype=dm.dtypes),
-                    self.P_m_0[dm.gen_idx], dm.par, dm.int_par)
+                    P_m_0, dm.par, dm.int_par)
 
         # PSS
         for key in self.pss_mdls.keys():
@@ -611,9 +679,12 @@ class PowerSystemModel:
         self.i_inj_q = np.zeros(self.n_bus_red, dtype=complex)
         for key in self.gen_mdls.keys():
             dm = self.gen_mdls[key]
-            i_inj_d_mdl, i_inj_q_mdl = dm.current_injections(x[dm.idx], dm.par, dm.state_idx)*self.I_n_gen/self.i_n[self.gen_bus_idx]
-            np.add.at(self.i_inj_d, self.gen_bus_idx_red, i_inj_d_mdl)
-            np.add.at(self.i_inj_q, self.gen_bus_idx_red, i_inj_q_mdl)
+            I_n = dm.par['S_n'] / (np.sqrt(3) * dm.par['V_n'])
+            i_inj_d_mdl, i_inj_q_mdl = dm.current_injections(
+                x[dm.idx].view(dtype=dm.dtypes),
+                dm.par)*I_n/self.i_n[dm.bus_idx]
+            np.add.at(self.i_inj_d, dm.bus_idx_red, i_inj_d_mdl)
+            np.add.at(self.i_inj_q, dm.bus_idx_red, i_inj_q_mdl)
 
         self.i_inj = self.i_inj_d + self.i_inj_q
         self.v_red = sp_linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
@@ -629,7 +700,10 @@ class PowerSystemModel:
         self.speed_dev = x[self.gen_mdls['GEN'].state_idx['speed']]
         for key in self.gov_mdls.keys():
             dm = self.gov_mdls[key]
-            input = -self.speed_dev[dm.gen_idx]
+            # input = -self.speed_dev[dm.gen_idx]
+
+            input = np.concatenate([-x[self.gen_mdls[gen_key].idx][self.gen_mdls[gen_key].state_idx['speed'][idx]] for gen_key, idx in dm.gen_idx_2.items()])
+            # input = np.concatenate([self.gen_mdls[gen_key].e_q_0[dm.gen_idx_2[gen_key]] for gen_key in dm.gen_idx_2.keys()])
             output = dm.update(
                 dx[dm.idx].view(dtype=dm.dtypes),
                 x[dm.idx].view(dtype=dm.dtypes),
@@ -638,15 +712,21 @@ class PowerSystemModel:
 
             # dm.apply(self, output)
             active_mdls = dm.active
-            active_gov_gen_idx = dm.gen_idx[active_mdls]
-            self.P_m[active_gov_gen_idx] = output[active_mdls]
-            self.p_m[active_gov_gen_idx] = (self.P_m[active_gov_gen_idx] * self.P_n_gen[active_gov_gen_idx] / self.s_n)
+            for gen_key, idx in dm.gen_idx_2.items():
+                mask = dm.gen_mdl_3 == gen_key
+                self.gen_mdls[gen_key].P_m[idx[active_mdls[mask]]] = output[active_mdls & mask]
+                # active_mdl_gen_idx = dm.gen_idx_2[gen_key][active_mdls[mask]]
+                # self.gen_mdls[gen_key].P_m[active_mdl_gen_idx] = output[active_mdls & mask]
+
+            # self.P_m[active_gov_gen_idx] = output[active_mdls]
+            # self.p_m[active_gov_gen_idx] = (self.P_m[active_gov_gen_idx] * self.P_n_gen[active_gov_gen_idx] / self.s_n)
 
         # PSS
-        self.speed = x[self.gen_mdls['GEN'].state_idx['speed']]
+        # self.speed = x[self.gen_mdls['GEN'].state_idx['speed']]
         for key in self.pss_mdls.keys():
             dm = self.pss_mdls[key]
-            input = self.speed[dm.gen_idx]
+            # input = self.speed[dm.gen_idx]
+            input = np.concatenate([x[self.gen_mdls[gen_key].idx][self.gen_mdls[gen_key].state_idx['speed'][idx]] for gen_key, idx in dm.gen_idx_2.items()])
             output = dm.update(
                 dx[dm.idx].view(dtype=dm.dtypes),
                 x[dm.idx].view(dtype=dm.dtypes),
@@ -655,13 +735,24 @@ class PowerSystemModel:
 
             # dm.apply(self, output)
             active_mdls = dm.active
-            self.v_pss[dm.gen_idx[active_mdls]] = output[active_mdls]
+            for gen_key, idx in dm.gen_idx_2.items():
+                mask = dm.gen_mdl_3 == gen_key
+                self.gen_mdls[gen_key].v_pss[idx[active_mdls[mask]]] = output[active_mdls & mask]
+
+            # active_mdls = dm.active
+            # self.v_pss[dm.gen_idx[active_mdls]] = output[active_mdls]
 
         # AVR
         self.v_g_dev = self.v_g_setp - abs(self.v_g)  # Used for validating AVR
         for key in self.avr_mdls.keys():
             dm = self.avr_mdls[key]
-            input = self.v_g_setp[dm.gen_idx] - abs(self.v_g[dm.gen_idx]) + self.v_pss[dm.gen_idx]
+
+            v_g_setp = np.concatenate([self.gen_mdls[gen_key].par['V'][idx] for gen_key, idx in dm.gen_idx_2.items()])
+            v_g = np.concatenate([self.v_red[self.gen_mdls[gen_key].bus_idx_red][idx] for gen_key, idx in dm.gen_idx_2.items()])
+            v_pss = np.concatenate([self.gen_mdls[gen_key].v_pss[idx] for gen_key, idx in dm.gen_idx_2.items()])
+            input = v_g_setp - abs(v_g) + v_pss
+            # input = self.v_g_setp[dm.gen_idx] - abs(self.v_g[dm.gen_idx]) + self.v_pss[dm.gen_idx]
+
             output = dm.update(
                 dx[dm.idx].view(dtype=dm.dtypes),
                 x[dm.idx].view(dtype=dm.dtypes),
@@ -670,15 +761,20 @@ class PowerSystemModel:
 
             # dm.apply(self, output)
             active_mdls = dm.active
-            self.e_q[dm.gen_idx[active_mdls]] = output[active_mdls]
+            for gen_key, idx in dm.gen_idx_2.items():
+                mask = dm.gen_mdl_3 == gen_key
+                self.gen_mdls[gen_key].e_q[idx[active_mdls[mask]]] = output[active_mdls & mask]
+            # active_mdls = dm.active
+            # self.e_q[dm.gen_idx[active_mdls]] = output[active_mdls]
 
         # Generators
         for key in self.gen_mdls.keys():
             dm = self.gen_mdls[key]
+            v_g = self.v_red[dm.bus_idx_red]
             dm.update(
                 dx[dm.idx].view(dtype=dm.dtypes),
                 x[dm.idx].view(dtype=dm.dtypes),
-                self.f, self.v_g, self.e_q, self.P_m, self.v_aux, dm.par)
+                self.f, v_g, dm.e_q, dm.P_m, dm.v_aux, dm.par)
             # dx[dm.idx] = dx_loc
 
         return dx

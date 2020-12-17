@@ -11,12 +11,16 @@ import dynpssimpy.utility_functions as dps_uf
 if __name__ == '__main__':
 
     # Load model
-    import ps_models.k2a as model_data
+    import ps_models.ieee39 as model_data
     # import ps_models.ieee39 as model_data
     # import ps_models.n44 as model_data
 
     [importlib.reload(mdl) for mdl in [dps, model_data]]
     model = model_data.load()
+
+    model['avr'] = {}
+    # model['gov'] = {}
+    model['pss'] = {}
 
     t_0 = time.time()
 
@@ -26,7 +30,7 @@ if __name__ == '__main__':
     ps.power_flow()
     ps.init_dyn_sim()
     ps.build_y_bus_red()
-    ps.ode_fun(0.0, ps.x0)
+    np.max(ps.ode_fun(0.0, ps.x0))
     t_end = 5
     x0 = ps.x0.copy()
     x0[ps.gen_mdls['GEN'].state_idx['angle'][0]] += 1
@@ -57,4 +61,3 @@ if __name__ == '__main__':
     ax[0].plot(result[('Global', 't')], result.xs(key='speed', axis='columns', level=1))
     ax[1].plot(result[('Global', 't')], result.xs(key='angle', axis='columns', level=1))
     plt.show()
-
