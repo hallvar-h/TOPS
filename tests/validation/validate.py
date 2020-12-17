@@ -81,7 +81,7 @@ class MyTestCase(unittest.TestCase):
 
         t = 0
         result_dict = defaultdict(list)
-        monitored_variables = ['e_q', 'v_g', 'v_g_dev', 'v_pss']
+        # monitored_variables = ['e_q', 'v_g', 'v_g_dev', 'v_pss']
 
         print('Running dynamic simulation')
         while t < t_end:
@@ -99,9 +99,9 @@ class MyTestCase(unittest.TestCase):
 
             # Store result variables
             result_dict['Global', 't'].append(sol.t)
-            for var in monitored_variables:
-                [result_dict[(gen_name, var)].append(var_) for i, (var_, gen_name) in
-                 enumerate(zip(getattr(ps, var), ps.generators['name']))]
+            # for var in monitored_variables:
+            #     [result_dict[(gen_name, var)].append(var_) for i, (var_, gen_name) in
+            #      enumerate(zip(getattr(ps, var), ps.generators['name']))]
 
             [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, sol.y)]
 

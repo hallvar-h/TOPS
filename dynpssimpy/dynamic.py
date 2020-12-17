@@ -558,12 +558,13 @@ class PowerSystemModel:
                 else:  # Do this for control models only
                     mdl.active = np.ones(len(data), dtype=bool)
                     mdl.int_par = np.array(np.zeros(len(data)), [(par, float) for par in mdl.int_par_list])
-                    mdl.gen_idx = dps_uf.lookup_strings(data['gen'], self.generators['name'])
+                    # mdl.gen_idx = dps_uf.lookup_strings(data['gen'], self.generators['name'])
                     mdl.gen_idx_2 = dict()
                     max_gen_key_len = max([len(key) for key in self.gen.keys()])
                     mdl.gen_mdl_3 = np.zeros(n_units, dtype='U'+str(max_gen_key_len))
                     mdl.gen_idx_3 = -np.ones(n_units, dtype=int)
                     mdl.gen_mdl_list = []
+                    mdl.gen_idx = dict()
                     for gen_key in self.gen.keys():
                         lookup, mask = dps_uf.lookup_strings(data['gen'], self.gen[gen_key]['name'], return_mask=True)
                         if len(lookup) > 0:
@@ -571,6 +572,8 @@ class PowerSystemModel:
                             mdl.gen_mdl_list.append(gen_key)
                             mdl.gen_idx_3[mask] = lookup
                             mdl.gen_mdl_3[mask] = gen_key
+                            mdl.gen_idx[gen_key] = [mask, lookup]
+
                     mdl.gen_mdl_list = np.array(mdl.gen_mdl_list)
 
 
@@ -641,8 +644,14 @@ class PowerSystemModel:
             dm = self.avr_mdls[key]
             if hasattr(dm, 'initialize'):
                 e_q_0 = np.zeros(dm.n_units, dtype=float)
-                for gen_key in dm.gen_mdl_list:
-                    e_q_0[dm.gen_mdl_3 == gen_key] = self.gen_mdls[gen_key].e_q[dm.gen_idx_2[gen_key]]
+                for gen_key, (mask, idx) in dm.gen_idx.items():
+                    # mask: Boolean mask to map controls to generators
+                    # idx: Points to which generators are controlled
+                    gen_mdl = self.gen_mdls[gen_key]
+                    e_q_0[mask] = gen_mdl.e_q[idx]
+
+                # for gen_key in dm.gen_mdl_list:
+                #     e_q_0[dm.gen_mdl_3 == gen_key] = self.gen_mdls[gen_key].e_q[dm.gen_idx_2[gen_key]]
 
                 dm.initialize(
                     self.x0[dm.idx].view(dtype=dm.dtypes),
@@ -652,10 +661,15 @@ class PowerSystemModel:
         for key in self.gov_mdls.keys():
             dm = self.gov_mdls[key]
             if hasattr(dm, 'initialize'):
-                # P_m_0 = np.concatenate([self.gen_mdls[gen_key].P_m[dm.gen_idx_2[gen_key]] for gen_key in dm.gen_idx_2.keys()])
                 P_m_0 = np.zeros(dm.n_units, dtype=float)
-                for gen_key in dm.gen_mdl_list:
-                    P_m_0[dm.gen_mdl_3 == gen_key] = self.gen_mdls[gen_key].P_m[dm.gen_idx_2[gen_key]]
+                for gen_key, (mask, idx) in dm.gen_idx.items():
+                    # mask: Boolean mask to map controls to generators
+                    # idx: Points to which generators are controlled
+                    gen_mdl = self.gen_mdls[gen_key]
+                    P_m_0[mask] = gen_mdl.P_m[idx]
+
+                # for gen_key in dm.gen_mdl_list:
+                #     P_m_0[dm.gen_mdl_3 == gen_key] = self.gen_mdls[gen_key].P_m[dm.gen_idx_2[gen_key]]
 
                 dm.initialize(
                     self.x0[dm.idx].view(dtype=dm.dtypes),
@@ -692,66 +706,66 @@ class PowerSystemModel:
 
         self.v_g = self.v_red[self.gen_bus_idx_red]
 
-        # Get updated dynamic model equations
+        # Calculate state derivatives
         dx = np.zeros(self.n_states)
 
-        # Controls
         # GOV
-        self.speed_dev = x[self.gen_mdls['GEN'].state_idx['speed']]
-        for key in self.gov_mdls.keys():
-            dm = self.gov_mdls[key]
-            # input = -self.speed_dev[dm.gen_idx]
+        # self.speed_dev = x[self.gen_mdls['GEN'].state_idx['speed']]
+        for key, dm in self.gov_mdls.items():
+            input = np.zeros(dm.n_units, dtype=float)
+            for gen_key, (mask, idx) in dm.gen_idx.items():
+                # mask: Boolean mask to map controls to generators
+                # idx: Points to which generators are controlled
+                gen_mdl = self.gen_mdls[gen_key]
+                x_loc = x[gen_mdl.idx]
+                input[mask] = -x_loc[gen_mdl.state_idx['speed'][idx]]
 
-            input = np.concatenate([-x[self.gen_mdls[gen_key].idx][self.gen_mdls[gen_key].state_idx['speed'][idx]] for gen_key, idx in dm.gen_idx_2.items()])
-            # input = np.concatenate([self.gen_mdls[gen_key].e_q_0[dm.gen_idx_2[gen_key]] for gen_key in dm.gen_idx_2.keys()])
             output = dm.update(
                 dx[dm.idx].view(dtype=dm.dtypes),
                 x[dm.idx].view(dtype=dm.dtypes),
                 input, dm.par, dm.int_par)
-            # dx[dm.idx] = dx_loc
 
-            # dm.apply(self, output)
-            active_mdls = dm.active
-            for gen_key, idx in dm.gen_idx_2.items():
-                mask = dm.gen_mdl_3 == gen_key
-                self.gen_mdls[gen_key].P_m[idx[active_mdls[mask]]] = output[active_mdls & mask]
-                # active_mdl_gen_idx = dm.gen_idx_2[gen_key][active_mdls[mask]]
-                # self.gen_mdls[gen_key].P_m[active_mdl_gen_idx] = output[active_mdls & mask]
+            for gen_key, (mask, idx) in dm.gen_idx.items():
+                gen_mdl = self.gen_mdls[gen_key]
+                gen_mdl.P_m[idx[dm.active[mask]]] = output[dm.active & mask]
 
             # self.P_m[active_gov_gen_idx] = output[active_mdls]
             # self.p_m[active_gov_gen_idx] = (self.P_m[active_gov_gen_idx] * self.P_n_gen[active_gov_gen_idx] / self.s_n)
 
         # PSS
         # self.speed = x[self.gen_mdls['GEN'].state_idx['speed']]
-        for key in self.pss_mdls.keys():
-            dm = self.pss_mdls[key]
-            # input = self.speed[dm.gen_idx]
-            input = np.concatenate([x[self.gen_mdls[gen_key].idx][self.gen_mdls[gen_key].state_idx['speed'][idx]] for gen_key, idx in dm.gen_idx_2.items()])
+        for key, dm in self.pss_mdls.items():
+            input = np.zeros(dm.n_units, dtype=float)
+            for gen_key, (mask, idx) in dm.gen_idx.items():
+                # mask: Boolean mask to map controls to generators
+                # idx: Points to which generators are controlled
+                gen_mdl = self.gen_mdls[gen_key]
+                x_loc = x[gen_mdl.idx]
+                input[mask] = x_loc[gen_mdl.state_idx['speed'][idx]]
+
             output = dm.update(
                 dx[dm.idx].view(dtype=dm.dtypes),
                 x[dm.idx].view(dtype=dm.dtypes),
                 input, dm.par, dm.int_par)
-            # dx[dm.idx] = dx_loc
 
-            # dm.apply(self, output)
-            active_mdls = dm.active
-            for gen_key, idx in dm.gen_idx_2.items():
-                mask = dm.gen_mdl_3 == gen_key
-                self.gen_mdls[gen_key].v_pss[idx[active_mdls[mask]]] = output[active_mdls & mask]
+            for gen_key, (mask, idx) in dm.gen_idx.items():
+                gen_mdl = self.gen_mdls[gen_key]
+                gen_mdl.v_pss[idx[dm.active[mask]]] = output[dm.active & mask]
 
-            # active_mdls = dm.active
-            # self.v_pss[dm.gen_idx[active_mdls]] = output[active_mdls]
 
         # AVR
-        self.v_g_dev = self.v_g_setp - abs(self.v_g)  # Used for validating AVR
+        # self.v_g_dev = self.v_g_setp - abs(self.v_g)  # Used for validating AVR
         for key in self.avr_mdls.keys():
             dm = self.avr_mdls[key]
-
-            v_g_setp = np.concatenate([self.gen_mdls[gen_key].par['V'][idx] for gen_key, idx in dm.gen_idx_2.items()])
-            v_g = np.concatenate([self.v_red[self.gen_mdls[gen_key].bus_idx_red][idx] for gen_key, idx in dm.gen_idx_2.items()])
-            v_pss = np.concatenate([self.gen_mdls[gen_key].v_pss[idx] for gen_key, idx in dm.gen_idx_2.items()])
-            input = v_g_setp - abs(v_g) + v_pss
-            # input = self.v_g_setp[dm.gen_idx] - abs(self.v_g[dm.gen_idx]) + self.v_pss[dm.gen_idx]
+            input = np.zeros(dm.n_units, dtype=float)
+            for gen_key, (mask, idx) in dm.gen_idx.items():
+                # mask: Boolean mask to map controls to generators
+                # idx: Points to which generators are controlled
+                gen_mdl = self.gen_mdls[gen_key]
+                v_g_setp = gen_mdl.par['V'][idx]
+                v_g = self.v_red[gen_mdl.bus_idx_red][idx]
+                v_pss = gen_mdl.v_pss[idx]
+                input[mask] = v_g_setp - abs(v_g) + v_pss
 
             output = dm.update(
                 dx[dm.idx].view(dtype=dm.dtypes),
@@ -760,12 +774,10 @@ class PowerSystemModel:
             # dx[dm.idx] = dx_loc
 
             # dm.apply(self, output)
-            active_mdls = dm.active
-            for gen_key, idx in dm.gen_idx_2.items():
-                mask = dm.gen_mdl_3 == gen_key
-                self.gen_mdls[gen_key].e_q[idx[active_mdls[mask]]] = output[active_mdls & mask]
-            # active_mdls = dm.active
-            # self.e_q[dm.gen_idx[active_mdls]] = output[active_mdls]
+            for gen_key, (mask, idx) in dm.gen_idx.items():
+                gen_mdl = self.gen_mdls[gen_key]
+                gen_mdl.e_q[idx[dm.active[mask]]] = output[dm.active & mask]
+
 
         # Generators
         for key in self.gen_mdls.keys():
