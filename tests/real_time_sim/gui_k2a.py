@@ -18,14 +18,14 @@ def main(rts):
 
     # Add Control Widgets
     line_outage_ctrl = gui.LineOutageWidget(rts)
-    excitation_ctrl = gui.GenCtrlWidget(rts)
+    # excitation_ctrl = gui.GenCtrlWidget(rts)
 
     console = PythonConsole()
     console.push_local_ns('rts', rts)
     console.push_local_ns('ts_plot', ts_plot)
     console.push_local_ns('phasor_plot', phasor_plot)
     console.push_local_ns('line_outage_ctrl', line_outage_ctrl)
-    console.push_local_ns('excitation_ctrl', excitation_ctrl)
+    # console.push_local_ns('excitation_ctrl', excitation_ctrl)
     console.show()
     console.eval_in_thread()
 
@@ -43,14 +43,14 @@ if __name__ == '__main__':
 
     importlib.reload(dps)
     ps = dps.PowerSystemModel(model=model)
-    ps.use_numba = True
+    # ps.use_numba = True
 
     ps.power_flow()
     ps.init_dyn_sim()
     ps.build_y_bus_red(ps.buses['name'])
     ps.ode_fun(0, ps.x0)
 
-    rts = dps_rts.RealTimeSimulator(ps, dt=10e-3, speed=0.5, solver=dps_uf.ModifiedEuler)
+    rts = dps_rts.RealTimeSimulator(ps, dt=10e-3, speed=1, solver=dps_uf.ModifiedEuler)
     rts.sol.n_it = 0
     rts.ode_fun(0, ps.x0)
 

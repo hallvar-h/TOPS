@@ -249,7 +249,7 @@ class PhasorPlot(QtWidgets.QWidget):
         plot_win_ph.setAspectLocked(True)
 
         angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = self.ps.e_q
+        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
         phasors = magnitude*np.exp(1j*angle)
 
         self.pl_ph = []
@@ -274,7 +274,7 @@ class PhasorPlot(QtWidgets.QWidget):
         # if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
         # Phasors:
         angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = self.ps.e_q
+        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
         phasors = magnitude * np.exp(1j * angle)
         for i, (pl_ph, phasor) in enumerate(zip(self.pl_ph, phasors[:, None]*self.phasor_0)):
             pl_ph.setData(phasor.real, phasor.imag)
@@ -299,7 +299,7 @@ class PhasorPlotFast(QtWidgets.QWidget):
         plot_win_ph.setAspectLocked(True)
 
         angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = self.ps.e_q
+        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
         phasors = magnitude*np.exp(1j*angle)
 
         self.pl_ph = []
@@ -325,7 +325,7 @@ class PhasorPlotFast(QtWidgets.QWidget):
         # if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
         # Phasors:
         angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = self.ps.e_q
+        magnitude = 1  # self.ps.gen_mdls['GEN'].input['E_f']
         phasors = magnitude * np.exp(1j * angle)
         # for i, (pl_ph, phasor) in enumerate(zip(self.pl_ph, phasors[:, None]*self.phasor_0)):
         phasors_points = np.kron(phasors, self.phasor_0)

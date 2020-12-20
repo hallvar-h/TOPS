@@ -12,15 +12,15 @@ if __name__ == '__main__':
 
     # Load model
     # import ps_models.k2a as model_data
-    import ps_models.ieee39 as model_data
+    import ps_models.k2a as model_data
     # import ps_models.n44 as model_data
 
     [importlib.reload(mdl) for mdl in [dps, model_data]]
     model = model_data.load()
 
-    model['avr'] = {}
+    # model['avr'] = {}
     # model['gov'] = {}
-    model['pss'] = {}
+    # model['pss'] = {}
 
     t_0 = time.time()
 
