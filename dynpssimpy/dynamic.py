@@ -27,7 +27,7 @@ class PowerSystemModel:
         self.pf_max_it = 10
         self.tol = 1e-8
 
-        # Get model data
+        # Get static data: Convert lists to np.arrays
         for td in ['buses', 'lines', 'loads', 'transformers', 'shunts']:
             if td in model and len(model[td]) > 0:
                 header = model[td][0]
@@ -42,6 +42,7 @@ class PowerSystemModel:
             else:
                 setattr(self, td, np.empty(0))
 
+        # Get dynamic data: Convert dicts with lists to dicts with np.arrays
         for td in ['gov', 'avr', 'pss', 'generators']:
             setattr(self, td, dict())
             if td in model and len(model[td]) > 0:
@@ -56,10 +57,7 @@ class PowerSystemModel:
                     dtypes = [(name_, dtype_) for name_, dtype_ in zip(header, col_dtypes)]
                     getattr(self, td)[key] = np.array(entries, dtype=dtypes)
 
-        # Would like to have self.gen or self.generators as a dict (like AVR, GOV and PSS-models)
-        # if isinstance(model[td], dict):
-        #     self.generators = self.generators['GEN']
-
+        # Add some potentially missing fields
         for key in self.generators.keys():
             for req_attr, default in zip(['PF_n', 'N_par'], [1, 1]):
                 if not req_attr in self.generators[key].dtype.names:
@@ -73,7 +71,14 @@ class PowerSystemModel:
         self.v_n = np.array(self.buses['V_n'])
         self.z_n = self.v_n ** 2 / self.s_n
         self.i_n = self.s_n / (np.sqrt(3) * self.v_n)
+        if 'slack_bus' in model:
+            self.slack_bus = model['slack_bus']
+        else:
+            self.slack_bus = None
+        self.n_bus = len(self.buses)
 
+        # If nominal gen. voltage or apparent power is zero, change to system base
+        # (Needs to be done after nominal bus voltages have been loaded (self.v_n)
         for key in self.generators.keys():
             fix_idx = self.generators[key]['V_n'] == 0
             gen_bus_idx = dps_uf.lookup_strings(self.generators[key]['bus'], self.buses['name'])
@@ -82,84 +87,42 @@ class PowerSystemModel:
             fix_idx = self.generators[key]['S_n'] == 0
             self.generators[key]['S_n'][fix_idx] = self.s_n
 
+        # This is for backwards compatibilty only. Should have only self.gen (dict) in the future.
         self.gen = self.generators
         self.generators = self.gen['GEN']
 
-        if 'slack_bus' in model:
-            self.slack_bus = model['slack_bus']
-        else:
-            self.slack_bus = None
-
-        self.n_bus = len(self.buses)
-        self.n_gen = len(self.generators)
-
-        self.e = np.empty((0, 0))
-
-        # Load flow
-        self.n_gen = sum([len(self.gen[key]) for key in self.gen.keys()])
-        self.v_g_setp = np.concatenate([self.gen[key]['V'] for key in self.gen.keys()])
-        self.P_g_setp = np.concatenate([self.gen[key]['P'] for key in self.gen.keys()])
-        self.n_par = np.concatenate([self.gen[key]['N_par'] for key in self.gen.keys()])
-        self.gen_bus_names = np.concatenate([self.gen[key]['bus'] for key in self.gen.keys()])
+        # Load flow data (concatenate data from all generator types)
+        self.n_gen = sum([len(gen) for gen in self.gen.values()])
+        self.v_g_setp = np.concatenate([gen['V'] for gen in self.gen.values()])
+        self.P_g_setp = np.concatenate([gen['P'] for gen in self.gen.values()])
+        self.n_par = np.concatenate([gen['N_par'] for gen in self.gen.values()])
+        self.gen_bus_names = np.concatenate([gen['bus'] for gen in self.gen.values()])
         self.gen_pf_map_idx = []
-        for key in self.gen.keys():
-            [self.gen_pf_map_idx.append((key, i)) for i in range(len(self.gen[key]))]
+        for key, gen in self.gen.items():
+            [self.gen_pf_map_idx.append((key, i)) for i in range(len(gen))]
         self.gen_pf_map_idx = np.array(self.gen_pf_map_idx)
+        self.gen_bus_idx = dps_uf.lookup_strings(self.gen_bus_names, self.buses['name'])
 
-        np.cumsum([len(self.gen[key]) for key in self.gen.keys()])
-        bus_names = self.buses['name']
-        self.gen_bus_idx = dps_uf.lookup_strings(self.gen_bus_names, bus_names)
-
-        self.v_g = np.empty(self.n_gen, dtype=complex)
-        self.i_inj = np.empty(self.n_gen, dtype=complex)
-        self.i_g = np.empty(self.n_gen, dtype=complex)
-        self.angle = np.empty(self.n_gen, dtype=complex)
-        self.v_pss = np.zeros(self.n_gen, dtype=float)
-        self.v_aux = np.zeros(self.n_gen, dtype=float)
-
-        # Remove duplicate buses
+        # Remove duplicate buses to get number of unique buses with generators
         _, idx = np.unique(self.gen_bus_idx, return_index=True)
         self.gen_bus_idx_unique = self.gen_bus_idx[np.sort(idx)]
-
         self.n_gen_bus = len(self.gen_bus_idx_unique)
-
-        # Get gen nom. voltage. If given as zero in input data, select bus nom. voltage.
-        self.V_n_gen = np.zeros(len(self.generators))
-        self.S_n_gen = np.zeros(len(self.generators))
-        self.P_n_gen = np.zeros(len(self.generators))
-
-        for i, gen in enumerate(self.generators):
-            if 'V_n' in self.generators.dtype.names and gen['V_n'] > 0:
-                self.V_n_gen[i] = gen['V_n']
-            else:
-                self.V_n_gen[i] = self.v_n[self.gen_bus_idx[i]]
-
-            if 'S_n' in self.generators.dtype.names and gen['S_n'] > 0:
-                self.S_n_gen[i] = gen['S_n']
-            else:
-                self.S_n_gen[i] = self.s_n
-
-            if 'PF_n' in self.generators.dtype.names:
-                self.P_n_gen[i] = gen['S_n']*gen['PF_n']
-            else:
-                self.P_n_gen[i] = self.S_n_gen[i]
-
-        self.I_n_gen = self.S_n_gen / (np.sqrt(3) * self.V_n_gen)
-        self.Z_n_gen = self.V_n_gen ** 2 / self.S_n_gen
-
-        # self.n_par = np.array(self.generators['N_par']) if 'N_par' in self.generators.dtype.names else np.ones(self.n_gen)
-
         self.reduced_bus_idx = self.gen_bus_idx_unique
-        self.y_bus = np.empty((self.n_bus, self.n_bus))  # Can not be built before power flow, since load admittances depend on it.
-        self.y_bus_lf = np.empty((self.n_bus, self.n_bus))
+
+        # Initialize bus admittance matrices
+        self.y_bus = np.empty((self.n_bus, self.n_bus), dtype=complex)
+        self.y_bus_lf = np.empty((self.n_bus, self.n_bus), dtype=complex)
         self.y_bus_lf[:] = np.nan
-        self.y_bus_red_full = np.empty((self.n_gen, self.n_gen))
+        self.y_bus_red_full = np.empty((self.n_gen, self.n_gen), dtype=complex)
         # self.y_bus_red_inv = np.empty((self.n_gen, self.n_gen))
 
+        # Initialize dynamic variables
+        self.v_g = np.empty(self.n_gen, dtype=complex)
+        self.i_inj = np.empty(self.n_gen, dtype=complex)
         self.time = 0.0
 
     def get_bus_idx(self, names):
-        # Get index of bus with given bus names
+        # Get index of buses with given bus names in full system
         if isinstance(names, str):
             names = [names]
 
@@ -169,11 +132,9 @@ class PowerSystemModel:
             if len(idx) > 0:
                 bus_idx[i] = idx
         return bus_idx
-        # return pd.concat([self.buses[self.buses['name'] == name] for bus in names])
 
     def get_bus_idx_red(self, names):
-        # sorter = np.argsort(self.reduced_bus_idx)
-        # return sorter[np.searchsorted(self.reduced_bus_idx, self.get_bus_idx(names), sorter=sorter)]
+        # Get index of buses with given bus names in reduced system
         idx_full = self.get_bus_idx(names)
         idx_red = -np.ones(len(names), dtype=int)
         for i, idx in enumerate(idx_full):
@@ -181,7 +142,6 @@ class PowerSystemModel:
                 idx_red_search = np.where(self.reduced_bus_idx == idx)[0]
                 if len(idx_red_search) > 0:
                     idx_red[i] = idx_red_search
-
         return idx_red
 
     def kron_reduction(self, y_bus, keep_buses):
@@ -199,6 +159,10 @@ class PowerSystemModel:
         return y_kk - y_rk.T.dot(np.linalg.inv(y_rr)).dot(y_rk)
 
     def read_admittance_data(self, element_type, element):
+        # Reads data on specified element and returns admittances (series and shunt)
+        # and indices in the admittance matrix where the admittances should be added.
+        # Currently only for lines and transformers (other elements are treated directly
+        # when building admittance matrices.
         buses = self.buses
         if element_type == 'line':
             line = element
@@ -244,7 +208,7 @@ class PowerSystemModel:
     def build_y_branch(self):
         # Build matrices for easy computation of branch (line and trafo) currents.
         # E.g. i_lines = self.v_to_i_lines*v_bus (full system, not reduced).
-        # NB: Experimental. Is not updated when y_bus is updated.
+        # NB: Is not necessarily updated when y_bus is updated.
 
         # Lines:
         n_elements = len(self.lines)
@@ -286,8 +250,7 @@ class PowerSystemModel:
         # If not type=='dyn', generator admittances and load admittances are not included.
         # Used for power flow calculation.
 
-        n_bus = len(self.buses)
-
+        n_bus = self.n_bus
         y_branch = np.zeros((n_bus, n_bus), dtype=complex)  # Branches = Trafos + Lines
         buses = self.buses
 
@@ -405,18 +368,16 @@ class PowerSystemModel:
         p_sum_loads_bus = np.empty(self.n_bus)
         q_sum_bus = np.empty(self.n_bus)
         q_sum_loads_bus = np.empty(self.n_bus)
-        self.gen_bus_idx
+
+        # Determine bus types and active and reactive load and generation
         for i, bus in enumerate(self.buses):
-            # gen_idx = self.generators['bus'] == bus['name']
             gen_idx = self.gen_bus_idx == i
-            # sum_gen = sum(self.generators[gen_idx]['P'] * self.n_par[gen_idx])
             sum_gen = sum(self.P_g_setp[gen_idx]*self.n_par[gen_idx])
 
             p_sum_loads_bus[i] = (sum(self.loads[self.loads['bus'] == bus['name']]['P']) / self.s_n) if len(self.loads) > 0 else 0
             p_sum_bus[i] = p_sum_loads_bus[i] - sum_gen / self.s_n
             q_sum_loads_bus[i] = (sum(self.loads[self.loads['bus'] == bus['name']]['Q']) / self.s_n) if len(self.loads) > 0 else 0
-            q_sum_bus[i] = q_sum_loads_bus[i]  # - 0*(sum(self.shunts[self.shunts['bus'] == bus['name']]['Q'])) / self.s_n
-            # print(p_sum_bus, q_sum_bus)
+            q_sum_bus[i] = q_sum_loads_bus[i]  # - (sum(self.shunts[self.shunts['bus'] == bus['name']]['Q'])) / self.s_n
             if any(i == self.gen_bus_idx):
                 bus_type[i] = 'PV'
             else:
@@ -427,11 +388,11 @@ class PowerSystemModel:
         else:
             bus_type[np.argmax(bus_type == 'PV')] = 'SL'  # Set the first generator as slack bus
 
+        # Indices of PV, PQ, PV+PQ and SL-buses
         pv_idx = np.where(bus_type == 'PV')[0]
         pq_idx = np.where(bus_type == 'PQ')[0]
         pvpq_idx = np.concatenate([pv_idx, pq_idx])
         sl_idx = np.where(bus_type == 'SL')
-        # self.slack_bus = self.buses.iloc[sl_idx].name.tolist()[0]
         self.slack_bus = self.buses[sl_idx]['name'][0]
 
         # Map x to angles and voltages
@@ -448,13 +409,12 @@ class PowerSystemModel:
 
         # Initial guess: Flat start
         phi_0 = np.zeros(self.n_bus)
-        v_0 = np.ones(self.n_bus)  # self.v_0
+        v_0 = np.ones(self.n_bus)
         v_0[self.gen_bus_idx] = self.v_g_setp
 
         x0 = np.zeros(2 * (n_bus - 1) - (n_gen_bus - 1))
         x0[idx_phi] = phi_0[pvpq_idx]
         x0[idx_v] = v_0[pq_idx]
-
         x = x0.copy()
 
         def pf_equations(x):
@@ -471,10 +431,11 @@ class PowerSystemModel:
         x = x0.copy()
         err = pf_equations(x)
         err_norm = max(abs(err))
-        # print(err_norm)
 
-        while (not converged and i < self.pf_max_it):
+        while not converged and i < self.pf_max_it:
             i = i + 1
+
+            # Numerical jacobian
             J = dps_uf.jacobian_num(pf_equations, x)
 
             # Update step
@@ -499,12 +460,13 @@ class PowerSystemModel:
     def init_dyn_sim(self):
 
         # Build reduced system
-        self.y_bus = self.build_y_bus()  # np.empty((self.n_bus, self.n_bus))
+        self.y_bus = self.build_y_bus()
         self.build_y_bus_red()
 
         # State variables:
         self.state_desc = np.empty((0, 2))
 
+        # Containers for dynamic models
         self.gen_mdls = dict()
         self.gov_mdls = dict()
         self.avr_mdls = dict()
@@ -527,6 +489,8 @@ class PowerSystemModel:
                 state_desc_mdl = np.vstack([np.repeat(names, n_states), np.tile(state_list, n_units)]).T
 
                 mdl.n_units = n_units
+                # Global indices of model states in global state vector.
+                # (x_global[mdl.idx] = x_local)
                 mdl.idx = slice(start_idx, start_idx + len(state_desc_mdl))  # Indices of all states belonging to model
                 # dtypes-attribute is defined to allow view to be created easily (with named fields)
                 # Allows syntax x['speed'] instead of x[state_idx['speed']]
@@ -545,7 +509,6 @@ class PowerSystemModel:
                     for fun in compile_these:
                         if hasattr(mdl, fun):
                             setattr(mdl, fun[1:], jit()(getattr(mdl, fun)))
-
                 else:
                     for fun in compile_these:
                         if hasattr(mdl, fun):
@@ -556,33 +519,21 @@ class PowerSystemModel:
                     mdl.bus_idx_red = self.get_bus_idx_red(data['bus'])
                     mdl.int_par['f'] = self.f
 
-                    # Generator inputs (temp.fix)
-                    # mdl.P_m = np.zeros(n_units, dtype=float)
-                    # mdl.e_q = np.zeros(n_units, dtype=float)
-                    # mdl.v_aux = np.zeros(n_units, dtype=float)
-                    # mdl.v_pss = np.zeros(n_units, dtype=float)
-
                 else:  # Do this for control models only
                     mdl.active = np.ones(len(data), dtype=bool)
-                    # mdl.gen_idx = dps_uf.lookup_strings(data['gen'], self.generators['name'])
-                    # mdl.gen_idx_2 = dict()
-                    # max_gen_key_len = max([len(key) for key in self.gen.keys()])
-                    # mdl.gen_mdl_3 = np.zeros(n_units, dtype='U'+str(max_gen_key_len))
-                    # mdl.gen_idx_3 = -np.ones(n_units, dtype=int)
-                    mdl.gen_mdl_list = []
+
+                    # Determine which generators are controlled (model and indices).
+                    # This information is stored as a dict with keys corresponding to generator types,
+                    # and values with lists: [mask, idx], where:
+                    # mask (np.array, bool): Boolean mask to select controls that act on the particular generator type
+                    # idx (np.array, int): Points to which generators of this type are controlled
                     mdl.gen_idx = dict()
                     for gen_key in self.gen.keys():
                         lookup, mask = dps_uf.lookup_strings(data['gen'], self.gen[gen_key]['name'], return_mask=True)
                         if len(lookup) > 0:
-                            # mdl.gen_idx_2[gen_key] = lookup
-                            # mdl.gen_mdl_list.append(gen_key)
-                            # mdl.gen_idx_3[mask] = lookup
-                            # mdl.gen_mdl_3[mask] = gen_key
                             mdl.gen_idx[gen_key] = [mask, lookup]
 
-                    # mdl.gen_mdl_list = np.array(mdl.gen_mdl_list)
-
-
+                # Local indices of states (starting on zero, ending on number of states of model)
                 mdl.state_idx = np.zeros((n_units,), dtype=[(state, int) for state in state_list])
                 for state in state_list:
                     mdl.state_idx[state] = np.where(state_desc_mdl[:, 1] == state)[0]
@@ -594,10 +545,7 @@ class PowerSystemModel:
         self.state_desc_der = self.state_desc.copy()
         self.state_desc_der[:, 1] = np.char.add(np.array(self.n_states * ['d_']), self.state_desc[:, 1])
 
-        self.e_q_0 = np.zeros(self.n_gen)
-        self.e_q = np.zeros(self.n_gen)
         # Choose first generator at slack bus as slack generator
-        # self.slack_generator = dps_uf.lookup_strings(self.slack_bus, self.generators['bus'])
         for gen_key, gen_mdl in self.gen_mdls.items():
             lookup = dps_uf.lookup_strings(self.slack_bus, gen_mdl.par['bus'])
             if not np.isnan(lookup) > 0:
@@ -606,35 +554,37 @@ class PowerSystemModel:
 
         self.slack_generator = np.where((self.gen_pf_map_idx == self.slack_generator_id).all(axis=1))[0][0]
 
-        self.p_m_setp = self.P_g_setp/self.s_n
+        self.p_g_setp = self.P_g_setp / self.s_n  # System base
         sum_load_sl = sum(self.loads[self.loads['bus'] == self.slack_bus]['P'])/self.s_n if len(self.loads) > 0 else 0  # Sum loads at slack bus
         sl_gen_idx = np.array(self.gen_bus_names == self.slack_bus)
 
         # The case with multiple generators at the slack bus where one or more are n_par in parallel has not been tested.
-        sum_gen_sl = sum((self.p_m_setp[sl_gen_idx]*self.n_par[sl_gen_idx])[1:])  # Sum other generation at slack bus (not slack gen)
-        self.p_m_setp[self.slack_generator] = self.s_0[self.get_bus_idx([self.slack_bus])].real - sum_gen_sl + sum_load_sl
-        self.p_m_setp[self.slack_generator] /= self.n_par[self.slack_generator]
+        sum_gen_sl = sum((self.p_g_setp[sl_gen_idx] * self.n_par[sl_gen_idx])[1:])  # Sum other generation at slack bus (not slack gen)
+        self.p_g_setp[self.slack_generator] = self.s_0[self.get_bus_idx([self.slack_bus])].real - sum_gen_sl + sum_load_sl
+        self.p_g_setp[self.slack_generator] /= self.n_par[self.slack_generator]
 
         # Distribute reactive power equally among generators on the same bus
         self.n_gen_per_bus = np.array([sum(self.gen_bus_idx == idx) for idx in np.arange(self.n_bus)])  # Not counting identical generators (given by N_par-parameter)!
         self.q_g = (self.s_0.imag + self.q_sum_loads_bus)[self.gen_bus_idx]/self.n_gen_per_bus[self.gen_bus_idx]
-
         self.q_g /= self.n_par
 
         # From Load Flow
         self.v_g = self.v_0[self.gen_bus_idx]
-        self.s_g = (self.p_m_setp + 1j*self.q_g)
+        self.s_g = (self.p_g_setp + 1j * self.q_g)
 
+        # Initialize global state vector
         self.x0 = np.zeros(self.n_states)
 
         # Generators
         for key, dm in self.gen_mdls.items():
             if hasattr(dm, 'initialize'):
+                # Get data from power flow solution
                 dm_pf_map_idx = self.gen_pf_map_idx[:, 0] == key
                 v_g = self.v_g[dm_pf_map_idx]
+                s_g = self.s_g[dm_pf_map_idx]*self.s_n/dm.par['S_n']
+                # Convert complex quantities to float
                 dm.input['V_t_abs'] = np.abs(v_g)
                 dm.input['V_t_angle'] = np.angle(v_g)
-                s_g = self.s_g[dm_pf_map_idx]*self.s_n/dm.par['S_n']
                 dm.output['P_e'] = s_g.real
                 dm.output['Q'] = s_g.imag
                 dm.initialize(
@@ -647,8 +597,6 @@ class PowerSystemModel:
         for key, dm in self.avr_mdls.items():
             if hasattr(dm, 'initialize'):
                 for gen_key, (mask, idx) in dm.gen_idx.items():
-                    # mask: Boolean mask to map controls to generators
-                    # idx: Points to which generators are controlled
                     gen_mdl = self.gen_mdls[gen_key]
                     dm.output['E_f'][mask] = gen_mdl.input['E_f'][idx]
 
@@ -681,14 +629,11 @@ class PowerSystemModel:
             if hasattr(dm, 'initialize'):
                 pass
 
-        # self.init_dyn_sim_backwards_compatibility()  # For backwards compatibility
-
     def ode_fun(self, t, x):
 
-        # self.ode_fun_backwards_compatibility(t, x)
         self.time = t
 
-        # Interfacing generators with system
+        # Interfacing models  with system (current injections)
         self.i_inj_d = np.zeros(self.n_bus_red, dtype=complex)
         self.i_inj_q = np.zeros(self.n_bus_red, dtype=complex)
         for key, dm in self.gen_mdls.items():
@@ -701,8 +646,6 @@ class PowerSystemModel:
 
         self.i_inj = self.i_inj_d + self.i_inj_q
         self.v_red = sp_linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
-
-
         self.v_g = self.v_red[self.gen_bus_idx_red]
 
         # Calculate state derivatives
@@ -750,7 +693,6 @@ class PowerSystemModel:
                 gen_mdl = self.gen_mdls[gen_key]
                 gen_mdl.input['v_pss'][idx[dm.active[mask]]] = dm.output['v_pss'][dm.active & mask]
 
-
         # AVR
         for key, dm in self.avr_mdls.items():
             input = np.zeros(dm.n_units, dtype=float)
@@ -769,7 +711,6 @@ class PowerSystemModel:
             for gen_key, (mask, idx) in dm.gen_idx.items():
                 gen_mdl = self.gen_mdls[gen_key]
                 gen_mdl.input['E_f'][idx[dm.active[mask]]] = dm.output['E_f'][dm.active & mask]
-
 
         # Generators
         for key, dm in self.gen_mdls.items():

@@ -18,14 +18,14 @@ def main(rts):
 
     # Add Control Widgets
     line_outage_ctrl = gui.LineOutageWidget(rts)
-    excitation_ctrl = gui.GenCtrlWidget(rts)
+    # excitation_ctrl = gui.GenCtrlWidget(rts)
 
     console = PythonConsole()
     console.push_local_ns('rts', rts)
     console.push_local_ns('ts_plot', ts_plot)
     console.push_local_ns('phasor_plot', phasor_plot)
     console.push_local_ns('line_outage_ctrl', line_outage_ctrl)
-    console.push_local_ns('excitation_ctrl', excitation_ctrl)
+    # console.push_local_ns('excitation_ctrl', excitation_ctrl)
     console.show()
     console.eval_in_thread()
 
@@ -57,8 +57,6 @@ if __name__ == '__main__':
         [['name', 'gen', 'K', 'T', 'T_1', 'T_2', 'T_3', 'T_4', 'H_lim']] +
         [['PSS'+str(i), gen_name, 50, 10.0, 0.5, 0.5, 0.05, 0.05, 0.03] for i, gen_name in enumerate(ps.generators['name'])]
     }
-
-    # Add generator controls?
 
     importlib.reload(dps)
     ps = dps.PowerSystemModel(model=model)

@@ -143,7 +143,6 @@ class GenCtrlWidget(QtWidgets.QWidget):
             self.ps.gov_mdls['TGOV1'].active[idx] = self.sender().isChecked()
             # print(ctrl, gen, self.sender().isChecked())
 
-
         if ctrl == 'PSS':
             idx = self.gen_to_pss_idx[gen_idx]
             self.ps.pss_mdls['STAB1'].active[idx] = self.sender().isChecked()
@@ -325,7 +324,7 @@ class PhasorPlotFast(QtWidgets.QWidget):
         # if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
         # Phasors:
         angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = 1  # self.ps.gen_mdls['GEN'].input['E_f']
+        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
         phasors = magnitude * np.exp(1j * angle)
         # for i, (pl_ph, phasor) in enumerate(zip(self.pl_ph, phasors[:, None]*self.phasor_0)):
         phasors_points = np.kron(phasors, self.phasor_0)
@@ -388,7 +387,6 @@ class TimeSeriesPlot(QtWidgets.QWidget):
                 plot_data = getattr(self.ts_keeper, plot)
                 for i, pl in enumerate(self.pl[plot]):
                     pl.setData(self.ts_keeper.time, plot_data[:, i])
-
 
 
 class TimeSeriesPlotFast(QtWidgets.QWidget):
