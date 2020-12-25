@@ -16,6 +16,9 @@ if __name__ == '__main__':
     ps_lin = dps_mdl.PowerSystemModelLinearization(ps)
     ps_lin.linearize()
 
+    # Alternatively:
+    # ps_lin = ps.linearize()
+
     # Plot eigenvalues
     dps_plt.plot_eigs(ps_lin.eigs)
 

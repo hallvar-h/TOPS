@@ -143,7 +143,6 @@ class GenCtrlWidget(QtWidgets.QWidget):
             self.ps.gov_mdls['TGOV1'].active[idx] = self.sender().isChecked()
             # print(ctrl, gen, self.sender().isChecked())
 
-
         if ctrl == 'PSS':
             idx = self.gen_to_pss_idx[gen_idx]
             self.ps.pss_mdls['STAB1'].active[idx] = self.sender().isChecked()
@@ -237,9 +236,7 @@ class PhasorPlot(QtWidgets.QWidget):
         self.ps = rts.ps
         self.dt = self.rts.dt
 
-        dt = self.dt
-        n_samples = 500
-        dt = 20e-3
+        self.dt
 
         self.colors = lambda i: pg.intColor(i, hues=9, values=1, maxValue=255, minValue=150, maxHue=360, minHue=0, sat=255, alpha=255)
         # Phasor diagram
@@ -251,13 +248,19 @@ class PhasorPlot(QtWidgets.QWidget):
         plot_win_ph.setAspectLocked(True)
 
         angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = self.ps.e_q
+        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
         phasors = magnitude*np.exp(1j*angle)
 
         self.pl_ph = []
+
         for i, phasor in enumerate(phasors[:, None]*self.phasor_0):
             pen = pg.mkPen(color=self.colors(i), width=2)
-            self.pl_ph.append(plot_win_ph.plot(phasor.real, phasor.imag, pen=pen))
+            pl_ph = pg.PlotCurveItem(phasor.real, phasor.imag, pen=pen)
+            plot_win_ph.addItem(pl_ph)
+            self.pl_ph.append(pl_ph)
+
+            # self.pl_ph.append(plot_win_ph.plot(phasor.real, phasor.imag, pen=pen))
+
         plot_win_ph.enableAutoRange('xy', False)
 
         self.graphWidget.show()
@@ -270,10 +273,62 @@ class PhasorPlot(QtWidgets.QWidget):
         # if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
         # Phasors:
         angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = self.ps.e_q
+        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
         phasors = magnitude * np.exp(1j * angle)
         for i, (pl_ph, phasor) in enumerate(zip(self.pl_ph, phasors[:, None]*self.phasor_0)):
             pl_ph.setData(phasor.real, phasor.imag)
+
+
+class PhasorPlotFast(QtWidgets.QWidget):
+    def __init__(self, rts, update_freq=50, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.rts = rts
+        self.ps = rts.ps
+        self.dt = self.rts.dt
+
+        self.dt
+
+        self.colors = lambda i: pg.intColor(i, hues=9, values=1, maxValue=255, minValue=150, maxHue=360, minHue=0, sat=255, alpha=255)
+        # Phasor diagram
+        self.graphWidget = pg.GraphicsLayoutWidget(show=True, title="Phasors")
+        # self.setCentralWidget(self.graphWidget)
+
+        self.phasor_0 = np.array([0, 1, 0.9, 1, 0.9, 1]) + 1j * np.array([0, 0, -0.1, 0, 0.1, 0])
+        plot_win_ph = self.graphWidget.addPlot(title='Phasors')
+        plot_win_ph.setAspectLocked(True)
+
+        angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
+        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
+        phasors = magnitude*np.exp(1j*angle)
+
+        self.pl_ph = []
+
+        # for i, phasor in enumerate(phasors[:, None]*self.phasor_0):
+        phasors_points = np.kron(phasors, self.phasor_0)
+        connect = np.tile(np.append(np.ones(len(phasors)-1, dtype=bool), 0), len(self.phasor_0))
+
+        self.pl_ph = pg.PlotCurveItem(phasors_points.real, phasors_points.imag, connect=connect)
+        plot_win_ph.addItem(self.pl_ph)
+
+            # self.pl_ph.append(plot_win_ph.plot(phasor.real, phasor.imag, pen=pen))
+
+        plot_win_ph.enableAutoRange('xy', False)
+
+        self.graphWidget.show()
+
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update)
+        self.timer.start(1000/update_freq)
+
+    def update(self):
+        # if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
+        # Phasors:
+        angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
+        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
+        phasors = magnitude * np.exp(1j * angle)
+        # for i, (pl_ph, phasor) in enumerate(zip(self.pl_ph, phasors[:, None]*self.phasor_0)):
+        phasors_points = np.kron(phasors, self.phasor_0)
+        self.pl_ph.setData(phasors_points.real, phasors_points.imag)
 
 
 class TimeSeriesPlot(QtWidgets.QWidget):
@@ -285,8 +340,6 @@ class TimeSeriesPlot(QtWidgets.QWidget):
         self.dt = self.rts.dt
 
         self.graphWidget = pg.GraphicsLayoutWidget(show=True, title="Live plot")
-        # self.graphWidget = pg.PlotWidget()
-        # self.setCentralWidget(self.graphWidget)
 
         n_samples = 500
 
@@ -301,13 +354,16 @@ class TimeSeriesPlot(QtWidgets.QWidget):
         for plot in self.plots:
             graphWidget = self.graphWidget.addPlot(title=plot)
             # p_1 = self.addPlot(title="Updating plot 1")
-            n_series = len(getattr(self.ps, plot))
+            n_series = len(rts.ps.gen_mdls['GEN'].state_idx[plot])
             setattr(self.ts_keeper, plot, np.zeros((n_samples, n_series)))
 
             pl_tmp = []
             for i in range(n_series):
                 pen = pg.mkPen(color=self.colors(i), width=2)
-                pl_tmp.append(graphWidget.plot(self.ts_keeper.time, np.zeros(n_samples), pen=pen))
+                # pl_tmp.append(graphWidget.plot(self.ts_keeper.time, np.zeros(n_samples), pen=pen))
+                pl_ph = pg.PlotCurveItem(self.ts_keeper.time, np.zeros(n_samples), pen=pen)
+                graphWidget.addItem(pl_ph)
+                pl_tmp.append(pl_ph)
 
             self.pl[plot] = pl_tmp
             self.graphWidget.nextRow()
@@ -356,7 +412,7 @@ class TimeSeriesPlotFast(QtWidgets.QWidget):
         for plot in self.plots:
             graphWidget = self.graphWidget.addPlot(title=plot)
             # p_1 = self.addPlot(title="Updating plot 1")
-            n_series = len(getattr(self.ps, plot))
+            n_series = len(rts.ps.gen_mdls['GEN'].state_idx[plot])
             setattr(self.ts_keeper, plot, np.zeros((n_samples, n_series)))
             connect = np.ones(n_samples*n_series, dtype=bool)
             connect[n_samples - 1:(n_samples * n_series):n_samples] = False
@@ -382,7 +438,7 @@ class TimeSeriesPlotFast(QtWidgets.QWidget):
                 setattr(self.ts_keeper, plot, np.vstack([getattr(self.ts_keeper, plot)[1:, :], new_data]))
                 plot_data = getattr(self.ts_keeper, plot)
 
-                n_series = len(getattr(self.ps, plot))
+                n_series = len(rts.ps.gen_mdls['GEN'].state_idx[plot])
 
                 x, y = np.tile(self.ts_keeper.time, n_series), plot_data.T.flatten()
                 # for i, pl in enumerate(self.pl[plot]):
@@ -478,7 +534,7 @@ if __name__ == '__main__':
     ps.build_y_bus_red()#ps.buses['name'])
     # ps.x0[ps.angle_idx][0] += 1e-3
     ps.ode_fun(0, ps.x0)
-    rts = dps_rts.RealTimeSimulator(ps, dt=5e-3, speed=0.25)
+    rts = dps_rts.RealTimeSimulator(ps, dt=5e-3, speed=1)
     rts.start()
 
     from threading import Thread
