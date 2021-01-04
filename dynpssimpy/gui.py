@@ -90,63 +90,43 @@ class GenCtrlWidget(QtWidgets.QWidget):
         self.ctrlWidget = QtWidgets.QWidget()
         self.ctrlWidget.setWindowTitle('Generator Controls')
 
-
-        # self.graphWidget_ctrl = pg.GraphicsLayoutWidget(show=True, title="Controls")
-        # layout_box = QtWidgets.QVBoxLayout()
         layout = QtWidgets.QGridLayout()
         self.sliders = []
-        avr_to_gen_idx = self.ps.avr_mdls['SEXS'].gen_idx if 'SEXS' in rts.ps.avr_mdls else np.zeros(0)
-        gov_to_gen_idx = self.ps.gov_mdls['TGOV1'].gen_idx if 'TGOV1' in rts.ps.gov_mdls else np.zeros(0)
-        pss_to_gen_idx = self.ps.pss_mdls['STAB1'].gen_idx if 'STAB1' in rts.ps.pss_mdls else np.zeros(0)
-        self.gen_to_avr_idx = map_idx_fun(avr_to_gen_idx, np.arange(self.ps.n_gen))
-        self.gen_to_gov_idx = map_idx_fun(gov_to_gen_idx, np.arange(self.ps.n_gen))
-        self.gen_to_pss_idx = map_idx_fun(pss_to_gen_idx, np.arange(self.ps.n_gen))
-        for i, gen in enumerate(self.ps.generators):
-            # y_0 = 1/np.conj(abs(self.ps.v_0[idx_bus]) ** 2 / s_load)
-            slider = QtWidgets.QSlider(QtCore.Qt.Horizontal, self.ctrlWidget)
-            slider.setMinimum(0)
-            slider.setMaximum(300)
-            slider.valueChanged.connect(lambda: self.updateExcitation())
-            slider.setAccessibleName(str(i))
-            slider.setValue(100*self.ps.e_q[i])
-            self.sliders.append(slider)
-            layout.addWidget(slider, i, 0)
-            for j, (ctrl, idx) in enumerate(zip(['AVR', 'GOV', 'PSS'], [avr_to_gen_idx, gov_to_gen_idx, pss_to_gen_idx])):
-                if i in idx:
-                    button = QtWidgets.QPushButton(ctrl)
-                    # button.setAccessibleName(str(i))
-                    button.setCheckable(True)
-                    button.setChecked(True)
-                    layout.addWidget(button, i, j+1)
-                    button.clicked.connect(lambda state, args_=(ctrl, i): self.updateActivation(args_[0], args_[1]))
-
-
-            # layout_box.addWidget(layout_box_H)
-            # layout.addSpacing(15)
+        k = 0
+        for gen_key, gen_mdl in self.ps.gen_mdls.items():
+            for i in range(len(gen_mdl.par)):
+                slider = QtWidgets.QSlider(QtCore.Qt.Horizontal, self.ctrlWidget)
+                slider.setMinimum(0)
+                slider.setMaximum(300)
+                slider.valueChanged.connect(lambda state, args_=(gen_key, i): self.updateExcitation(args_[0], args_[1]))
+                slider.setAccessibleName(gen_key + ' ' + str(i))
+                slider.setValue(100*gen_mdl.input['E_f'][i])
+                self.sliders.append(slider)
+                layout.addWidget(slider, k, 0)
+                for j, ctrl_type in enumerate(['avr_mdls', 'gov_mdls', 'pss_mdls']):
+                    for ctrl_key, ctrl_mdl in getattr(self.ps, ctrl_type).items():
+                        if gen_key in ctrl_mdl.gen_idx.keys():
+                            if i in ctrl_mdl.gen_idx[gen_key][1]:
+                                mask = ctrl_mdl.gen_idx[gen_key][0].copy()
+                                mask[mask] = ctrl_mdl.gen_idx[gen_key][1] == i
+                                gen_idx = np.argmax(mask)
+                                button = QtWidgets.QPushButton(ctrl_key)
+                                button.setCheckable(True)
+                                button.setChecked(True)
+                                layout.addWidget(button, k, j+1)
+                                button.clicked.connect(lambda state, args_=(ctrl_type, ctrl_key, gen_idx): self.updateActivation(args_[0], args_[1], args_[2]))
+                k += 1
 
         self.ctrlWidget.setLayout(layout)
         self.ctrlWidget.show()
 
-    def updateExcitation(self):
-        # print(int(self.sender().accessibleName()), self.sender().value())
-        self.ps.e_q[int(self.sender().accessibleName())] = self.sender().value()/100
+    def updateExcitation(self, gen_key, gen_idx):
+        self.ps.gen_mdls[gen_key].input['E_f'][gen_idx] = self.sender().value()/100
 
-    def updateActivation(self, ctrl, gen):
-        gen_idx = gen
-        if ctrl == 'AVR':
-            idx = self.gen_to_avr_idx[gen_idx]
-            self.ps.avr_mdls['SEXS'].active[idx] = self.sender().isChecked()
-            # print(ctrl, gen, self.sender().isChecked())
 
-        if ctrl == 'GOV':
-            idx = self.gen_to_gov_idx[gen_idx]
-            self.ps.gov_mdls['TGOV1'].active[idx] = self.sender().isChecked()
-            # print(ctrl, gen, self.sender().isChecked())
-
-        if ctrl == 'PSS':
-            idx = self.gen_to_pss_idx[gen_idx]
-            self.ps.pss_mdls['STAB1'].active[idx] = self.sender().isChecked()
-            # print(ctrl, gen, self.sender().isChecked())
+    def updateActivation(self, type, name, idx):
+        getattr(self.ps, type)[name].active[idx] = self.sender().isChecked()
+        print(type, name, idx, self.sender().isChecked())
 
 
 class LivePlotter(QtWidgets.QMainWindow):
@@ -236,7 +216,14 @@ class PhasorPlot(QtWidgets.QWidget):
         self.ps = rts.ps
         self.dt = self.rts.dt
 
-        self.dt
+        # if isinstance(gen_mdls, list):
+        #     self.gen_mdls = self.gen_mdls
+        # else:
+        #     if gen_mdls == 'all':
+        #         self.gen_mdls = list(self.ps.gen_mdls.keys())
+        #     else:
+        #         self.gen_mdls = [gen_mdls]
+
 
         self.colors = lambda i: pg.intColor(i, hues=9, values=1, maxValue=255, minValue=150, maxHue=360, minHue=0, sat=255, alpha=255)
         # Phasor diagram
@@ -247,8 +234,8 @@ class PhasorPlot(QtWidgets.QWidget):
         plot_win_ph = self.graphWidget.addPlot(title='Phasors')
         plot_win_ph.setAspectLocked(True)
 
-        angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
+        angle = np.concatenate([self.rts.x[gen_mdl.idx][gen_mdl.state_idx['angle']] for gen_mdl in self.ps.gen_mdls.values()])
+        magnitude = np.concatenate([gen_mdl.input['E_f'] for gen_mdl in self.ps.gen_mdls.values()])
         phasors = magnitude*np.exp(1j*angle)
 
         self.pl_ph = []
@@ -272,8 +259,8 @@ class PhasorPlot(QtWidgets.QWidget):
     def update(self):
         # if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
         # Phasors:
-        angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
+        angle = np.concatenate([self.rts.x[gen_mdl.idx][gen_mdl.state_idx['angle']] for gen_mdl in self.ps.gen_mdls.values()])
+        magnitude = np.concatenate([gen_mdl.input['E_f'] for gen_mdl in self.ps.gen_mdls.values()])
         phasors = magnitude * np.exp(1j * angle)
         for i, (pl_ph, phasor) in enumerate(zip(self.pl_ph, phasors[:, None]*self.phasor_0)):
             pl_ph.setData(phasor.real, phasor.imag)
@@ -297,8 +284,10 @@ class PhasorPlotFast(QtWidgets.QWidget):
         plot_win_ph = self.graphWidget.addPlot(title='Phasors')
         plot_win_ph.setAspectLocked(True)
 
-        angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
+        # angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
+        # magnitude = self.ps.gen_mdls['GEN'].input['E_f']
+        angle = np.concatenate([self.rts.x[gen_mdl.idx][gen_mdl.state_idx['angle']] for gen_mdl in self.ps.gen_mdls.values()])
+        magnitude = np.concatenate([gen_mdl.input['E_f'] for gen_mdl in self.ps.gen_mdls.values()])
         phasors = magnitude*np.exp(1j*angle)
 
         self.pl_ph = []
@@ -323,8 +312,10 @@ class PhasorPlotFast(QtWidgets.QWidget):
     def update(self):
         # if not np.isclose(self.ts_keeper.time[-1], self.ps.time):
         # Phasors:
-        angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
-        magnitude = self.ps.gen_mdls['GEN'].input['E_f']
+        # angle = self.rts.x[self.ps.gen_mdls['GEN'].state_idx['angle']]
+        # magnitude = self.ps.gen_mdls['GEN'].input['E_f']
+        angle = np.concatenate([self.rts.x[gen_mdl.idx][gen_mdl.state_idx['angle']] for gen_mdl in self.ps.gen_mdls.values()])
+        magnitude = np.concatenate([gen_mdl.input['E_f'] for gen_mdl in self.ps.gen_mdls.values()])
         phasors = magnitude * np.exp(1j * angle)
         # for i, (pl_ph, phasor) in enumerate(zip(self.pl_ph, phasors[:, None]*self.phasor_0)):
         phasors_points = np.kron(phasors, self.phasor_0)
@@ -354,7 +345,8 @@ class TimeSeriesPlot(QtWidgets.QWidget):
         for plot in self.plots:
             graphWidget = self.graphWidget.addPlot(title=plot)
             # p_1 = self.addPlot(title="Updating plot 1")
-            n_series = len(rts.ps.gen_mdls['GEN'].state_idx[plot])
+            # n_series = len(rts.ps.gen_mdls['GEN'].state_idx[plot])
+            n_series = sum([len(gen) for gen in self.ps.gen.values()])
             setattr(self.ts_keeper, plot, np.zeros((n_samples, n_series)))
 
             pl_tmp = []
@@ -382,7 +374,8 @@ class TimeSeriesPlot(QtWidgets.QWidget):
             for plot in self.plots:
                 old_data = getattr(self.ts_keeper, plot)[1:, :]
                 # new_data = getattr(self.ps, plot)
-                new_data = rts.x[rts.ps.gen_mdls['GEN'].state_idx[plot]]
+                # new_data = rts.x[rts.ps.gen_mdls['GEN'].state_idx[plot]]
+                new_data = np.concatenate([self.rts.x[gen_mdl.idx][gen_mdl.state_idx[plot]] for gen_mdl in self.ps.gen_mdls.values()])
                 setattr(self.ts_keeper, plot, np.vstack([old_data, new_data]))
                 plot_data = getattr(self.ts_keeper, plot)
                 for i, pl in enumerate(self.pl[plot]):
@@ -412,7 +405,9 @@ class TimeSeriesPlotFast(QtWidgets.QWidget):
         for plot in self.plots:
             graphWidget = self.graphWidget.addPlot(title=plot)
             # p_1 = self.addPlot(title="Updating plot 1")
-            n_series = len(rts.ps.gen_mdls['GEN'].state_idx[plot])
+            # n_series = len(rts.ps.gen_mdls['GEN'].state_idx[plot])
+            n_series = sum([len(gen) for gen in self.ps.gen.values()])
+
             setattr(self.ts_keeper, plot, np.zeros((n_samples, n_series)))
             connect = np.ones(n_samples*n_series, dtype=bool)
             connect[n_samples - 1:(n_samples * n_series):n_samples] = False
@@ -433,7 +428,8 @@ class TimeSeriesPlotFast(QtWidgets.QWidget):
             for plot in self.plots:
                 # old_data =
                 # new_data = getattr(self.ps, plot)
-                new_data = rts.x[rts.ps.gen_mdls['GEN'].state_idx[plot]]
+                # new_data = rts.x[rts.ps.gen_mdls['GEN'].state_idx[plot]]
+                new_data = np.concatenate([self.rts.x[gen_mdl.idx][gen_mdl.state_idx[plot]] for gen_mdl in self.ps.gen_mdls.values()])
 
                 setattr(self.ts_keeper, plot, np.vstack([getattr(self.ts_keeper, plot)[1:, :], new_data]))
                 plot_data = getattr(self.ts_keeper, plot)
