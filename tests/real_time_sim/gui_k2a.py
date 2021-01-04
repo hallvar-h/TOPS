@@ -18,14 +18,14 @@ def main(rts):
 
     # Add Control Widgets
     line_outage_ctrl = gui.LineOutageWidget(rts)
-    # excitation_ctrl = gui.GenCtrlWidget(rts)
+    gen_ctrl = gui.GenCtrlWidget(rts)
 
     console = PythonConsole()
     console.push_local_ns('rts', rts)
     console.push_local_ns('ts_plot', ts_plot)
     console.push_local_ns('phasor_plot', phasor_plot)
     console.push_local_ns('line_outage_ctrl', line_outage_ctrl)
-    # console.push_local_ns('excitation_ctrl', excitation_ctrl)
+    console.push_local_ns('gen_ctrl', gen_ctrl)
     console.show()
     console.eval_in_thread()
 
