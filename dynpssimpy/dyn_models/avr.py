@@ -5,18 +5,20 @@ class SEXS:
     def __init__(self):
         self.state_list = ['x', 'e_f']
         self.int_par_list = ['x_bias']
+        self.input_list = ['v_dev', 'v_pss']
+        self.output_list = ['E_f']
 
     @staticmethod
-    def initialize(x_0, output_0, p, int_par):
-        bias = 1 / p['K'] * output_0
+    def initialize(x_0, input, output, p, int_par):
+        bias = 1 / p['K'] * output['E_f']
         int_par['x_bias'] = bias
         x_0['x'][:] = (p['T_a'] - p['T_b']) * bias
-        x_0['e_f'][:] = output_0
+        x_0['e_f'][:] = output['E_f']
 
     @staticmethod
-    def _update(dx, x, input, p, int_par):
+    def _update(dx, x, input, output, p, int_par):
 
-        u = input + int_par['x_bias']
+        u = input['v_dev'] + input['v_pss'] + int_par['x_bias']
         v_1 = 1 / p['T_b'] * (p['T_a'] * u - x['x'])
 
         dx['x'][:] = v_1 - u
@@ -29,9 +31,7 @@ class SEXS:
         upper_lim_idx = (x['e_f'] >= p['E_max']) & (dx['e_f'] > 0)
         dx['e_f'][upper_lim_idx] *= 0
 
-        output = np.minimum(np.maximum(x['e_f'], p['E_min']), p['E_max'])
-
-        return output
+        output['E_f'][:] = np.minimum(np.maximum(x['e_f'], p['E_min']), p['E_max'])
 
 
 if __name__ == '__main__':
