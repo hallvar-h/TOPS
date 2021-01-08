@@ -2,9 +2,10 @@ import dynpssimpy.dynamic as dps
 from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-from scipy.integrate import RK45
+import dynpssimpy.utility_functions as dps_uf
 import importlib
+import sys
+import time
 
 
 if __name__ == '__main__':
@@ -21,20 +22,18 @@ if __name__ == '__main__':
     ps.pf_max_it = 100
     ps.power_flow()
     ps.init_dyn_sim()
-    ps.build_y_bus_red(ps.buses['name'])
 
+    # Solver
     t_end = 10
-    x0 = ps.x0.copy()
-    # x0[ps.angle_idx[0]] += 1
-    np.max(ps.ode_fun(0, ps.x0))
-
-    sol = RK45(ps.ode_fun, 0, x0, t_end, max_step=10e-3)
+    sol = dps_uf.ModifiedEuler(ps.ode_fun, 0, ps.x0, t_end, max_step=10e-3)
 
     t = 0
     result_dict = defaultdict(list)
+    t_0 = time.time()
+
     event_flag = True
     while t < t_end:
-        print(t)
+        sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
         # Simulate next step
         result = sol.step()
@@ -48,6 +47,8 @@ if __name__ == '__main__':
         # Store result
         result_dict['Global', 't'].append(sol.t)
         [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x)]
+
+    print('\nSimulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
     index = pd.MultiIndex.from_tuples(result_dict)
     result = pd.DataFrame(result_dict, columns=index)
