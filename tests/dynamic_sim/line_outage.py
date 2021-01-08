@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     event_flag = True
     while t < t_end:
-        sys.stdout.write('\rt={:.2f}s'.format(t))
+        sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
         # Simulate next step
         result = sol.step()

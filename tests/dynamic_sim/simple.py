@@ -35,7 +35,7 @@ if __name__ == '__main__':
     # Run simulation
     print('Running dynamic simulation')
     while t < t_end:
-        sys.stdout.write('\rt={:.2f}s'.format(t))
+        sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
         # Simulate next step
         result = sol.step()
