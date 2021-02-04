@@ -46,8 +46,8 @@ if __name__ == '__main__':
     ps.use_numba = False
 
     ps.power_flow()
-    ps.init_dyn_sim()
     ps.build_y_bus_red(ps.buses['name'])
+    ps.init_dyn_sim()
     ps.ode_fun(0, ps.x0)
 
     rts = dps_rts.RealTimeSimulator(ps, dt=5e-3, speed=1, solver=dps_uf.ModifiedEuler)

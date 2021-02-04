@@ -5,18 +5,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 import dynpssimpy.utility_functions as dps_uf
-
+import importlib
+importlib.reload(dps)
 
 if __name__ == '__main__':
 
     # Load model
-    import ps_models.k2a as model_data
+    import ps_models.ieee39 as model_data
     model = model_data.load()
 
     # Power system model
     ps = dps.PowerSystemModel(model=model)
     # ps.use_numba = True
     ps.power_flow()
+    ps.build_y_bus_red(ps.buses['name'])
     ps.init_dyn_sim()
     np.max(ps.ode_fun(0.0, ps.x0))
     t_end = 5

@@ -13,6 +13,7 @@ import dynpssimpy.dyn_models.gen as gen_lib
 import importlib
 from scipy import sparse as sp
 from scipy.sparse import linalg as sp_linalg
+from scipy.sparse import diags as sp_diags
 from scipy.integrate import RK45
 
 [importlib.reload(lib) for lib in [gen_lib, gov_lib, avr_lib, pss_lib]]
@@ -462,6 +463,9 @@ class PowerSystemModel:
         # Build reduced system
         self.y_bus = self.build_y_bus()
         self.build_y_bus_red()
+        self.v_red = self.v_0[self.reduced_bus_idx]
+        self.i_inj = np.zeros(len(self.reduced_bus_idx), dtype=complex)
+        self.s_inj = np.zeros(len(self.reduced_bus_idx), dtype=complex)
 
         # State variables:
         self.state_desc = np.empty((0, 2))
@@ -644,8 +648,35 @@ class PowerSystemModel:
             np.add.at(self.i_inj_d, dm.bus_idx_red, i_inj_d_mdl)
             np.add.at(self.i_inj_q, dm.bus_idx_red, i_inj_q_mdl)
 
+        self.i_inj[:] = self.i_inj_d + self.i_inj_q
+
+        # Solve network equations
+        # self.v_red = sp_linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
+        v_red = self.v_red.copy()
         self.i_inj = self.i_inj_d + self.i_inj_q
-        self.v_red = sp_linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
+
+        tol = 1e-10
+        max_it = 10
+        error = 10 * tol
+        it = 0
+
+        # v_red *= 0.1
+        y_bus = self.y_bus_red + self.y_bus_red_mod
+        t_tot = time.time()
+        t_spsolve_cum0 = 0
+        while error > tol and it < max_it:
+            s_v2_diag = np.conj(sp_diags(self.s_inj/v_red**2))
+            A = y_bus + s_v2_diag
+            b = np.conj(self.s_inj/v_red) + self.i_inj + s_v2_diag*v_red
+            v_red = sp_linalg.spsolve(A, b)
+            error = np.linalg.norm(y_bus.dot(v_red) - np.conj(self.s_inj/v_red) - self.i_inj)
+            it += 1
+
+        if error > tol:
+            print('Warning: Solution of algebraic equations did not converge.')
+
+        self.v_red[:] = v_red
+
         self.v_g = self.v_red[self.gen_bus_idx_red]
 
         # Calculate state derivatives
