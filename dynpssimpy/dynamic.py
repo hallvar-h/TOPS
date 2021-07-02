@@ -121,6 +121,8 @@ class PowerSystemModel:
         self.i_inj = np.empty(self.n_gen, dtype=complex)
         self.time = 0.0
 
+        self.gnd_buses_admittance = dict()
+
     def get_bus_idx(self, names):
         # Get index of buses with given bus names in full system
         if isinstance(names, str):
@@ -732,9 +734,8 @@ class PowerSystemModel:
             # transformer => transformers
             element_type += 's'
 
-        df = getattr(self, element_type)
         if element_type == 'lines':
-
+            df = getattr(self, element_type)
 
             line = df[dps_uf.lookup_strings(name, df['name'])]
 
@@ -750,7 +751,6 @@ class PowerSystemModel:
             elif action == 'disconnect':
                 sign = -1
 
-
             y_line = lil_matrix((self.n_bus,) * 2, dtype=complex)
             y_line[rows, cols] = data
             self.y_bus += sign*y_line
@@ -765,6 +765,18 @@ class PowerSystemModel:
                 y_line_red = lil_matrix((self.n_bus_red,) * 2, dtype=complex)
                 y_line_red[rows_red, cols_red] = data
                 self.y_bus_red += sign*y_line_red
+        elif element_type == 'bus':
+            if action == 'ground':
+                SMALL_IMPEDENCE = pow(10, -7)
+                gnd_addmittance = 1.0/SMALL_IMPEDENCE;
+                bus = dps_uf.lookup_strings(name, self.buses['name'])
+                self.gnd_buses_admittance[name] = self.y_bus[bus][bus]
+                self.y_bus[bus][bus] = gnd_addmittance # https://en.wikipedia.org/wiki/Nodal_admittance_matrix
+                self.build_y_bus_red()
+            elif action == 'unground':
+                bus = dps_uf.lookup_strings(name, self.buses['name'])
+                self.y_bus[bus][bus] = self.gnd_buses_admittance[name]
+                self.build_y_bus_red()
 
     def apply_inputs(self, input_desc, u):
         # NB: Experimental
