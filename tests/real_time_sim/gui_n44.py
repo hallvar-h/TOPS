@@ -10,10 +10,13 @@ import dynpssimpy.utility_functions as dps_uf
 
 
 def main(rts):
+    update_freq = 30
     pg.setConfigOptions(antialias=True)
     app = QtWidgets.QApplication(sys.argv)
-    phasor_plot = gui.PhasorPlotFast(rts, update_freq=30)
-    ts_plot = gui.TimeSeriesPlotFast(rts, ['speed', 'angle'], update_freq=30)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
+    phasor_plot = gui.PhasorPlotFast(rts, update_freq=update_freq)
+    ts_plot = gui.TimeSeriesPlotFast(rts, ['speed', 'angle'], update_freq=update_freq)  # , 'speed', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st'])
+    grid_plot = gui.GridPlot3D(rts, update_freq=update_freq, z_ax='abs_pu', rotating=False)  # , use_colors=True)
+    grid_plot_angle = gui.GridPlot3D(rts, update_freq=update_freq, z_ax='angle', rotating=False)  # , use_colors=True)
     # stats_plot = gui.SimulationStatsPlot(rts, update_freq=30)
 
     # Add Control Widgets
