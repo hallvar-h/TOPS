@@ -1,23 +1,43 @@
-import numpy as np
+from dynpssimpy.dyn_models.blocks import *
 
 
-class STAB1:
-    def __init__(self):
-        self.state_list = ['x_1', 'x_2', 'x_3']
-        self.int_par_list = []
-        self.input_list = ['speed']
-        self.output_list = ['v_pss']
+class PSS:
+    def connections(self):
+        return [
+            {
+                'input': 'input',
+                'source': {
+                    'container': 'gen',
+                    'mdl': '*',
+                    'id': self.par['gen'],
+                },
+                'output': 'speed',
+            },
+            {
+                'output': 'output',
+                'destination': {
+                    'container': 'gen',
+                    'mdl': '*',
+                    'id': self.par['gen'],
+                },
+                'input': 'v_pss',
+            }
+        ]
 
-    @staticmethod
-    def _update(dx, x, input, output, p, int_par):
-        u = input['speed']
 
-        v_1 = (p['K'] * u - x['x_1']) / p['T']
-        v_2 = 1 / p['T_3'] * (p['T_1'] * v_1 - x['x_2'])
-        v_3 = 1 / p['T_4'] * (p['T_2'] * v_2 - x['x_3'])
+class STAB1(DAEModel, PSS):
+    def add_blocks(self):
+        p = self.par
+        self.gain = Gain(K=p['K'])  # , input=self.input)
+        self.washout = Washout(T_w=p['T'])  # , input=self.input)
+        self.lead_lag_1 = LeadLag(T_1=p['T_1'], T_2=p['T_3'])  # , input=self.washout.output)
+        self.lead_lag_2 = LeadLag(T_1=p['T_2'], T_2=p['T_4'])  # , input=self.lead_lag_1.output)
+        self.limiter = Limiter(Min=-p['H_lim'], Max=p['H_lim'])  # , input=self.lead_lag_1.output)
 
-        output['v_pss'][:] = np.minimum(np.maximum(v_3, -p['H_lim']), p['H_lim'])
+        self.gain.input = lambda x, v: self.input(x, v)
+        self.washout.input = lambda x, v: self.gain.output(x, v)
+        self.lead_lag_1.input = lambda x, v: self.washout.output(x, v)
+        self.lead_lag_2.input = lambda x, v: self.lead_lag_1.output(x, v)
+        self.limiter.input = lambda x, v: self.lead_lag_2.output(x, v)
 
-        dx['x_1'][:] = v_1
-        dx['x_2'][:] = (p['T_1'] / p['T_3'] - 1) * v_1 - 1 / p['T_3'] * x['x_2']
-        dx['x_3'][:] = (p['T_2'] / p['T_4'] - 1) * v_2 - 1 / p['T_4'] * x['x_3']
+        self.output = lambda x, v: self.limiter.output(x, v)

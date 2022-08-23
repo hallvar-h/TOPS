@@ -9,6 +9,9 @@ def generate_plots(ps, result, pf_res, dt, choose_plots='all'):
     py_res_id = ['angle', 'speed', 'e_q_st', 'e_d_st']
     pf_res_id = ['s:phi', 's:speed', 'c:ussq', 'c:ussd']
 
+    gen_names = ps.gen['GEN'].par['name']
+    n_gen = len(gen_names)
+
     if choose_plots == 'all' or choose_plots == 'basic':
         fig, ax_4x1 = plt.subplots(4, 1, sharex=True, squeeze=False)
         fig.suptitle('DynPSSimPy vs DIgSILENT PowerFactory', fontsize=16)
@@ -23,7 +26,7 @@ def generate_plots(ps, result, pf_res, dt, choose_plots='all'):
         for ax_, py_res_id_, pf_res_id_, in zip(ax, py_res_id, pf_res_id):
             pl = []
             pl_pf = []
-            for i, gen_name in enumerate(ps.generators['name']):
+            for i, gen_name in enumerate(gen_names):
                 pl.append(
                     ax_.plot(result[('Global', 't')], result[(gen_name, py_res_id_)], color='C' + str(i), **kwargs)[0])
                 pl_pf.append(ax_.plot(pf_res['b:tnow'], pf_res[pf_res_id_][:, i], color='C' + str(i), **kwargs_pf)[0])
@@ -33,53 +36,53 @@ def generate_plots(ps, result, pf_res, dt, choose_plots='all'):
         legend_handles = np.vstack([
             [extra, *pl],
             [extra, *pl_pf],
-            [extra] * (1 + ps.n_gen),
+            [extra] * (1 + n_gen),
         ])
 
         # Define the labels
         legend_labels = np.vstack([
-            ['Python', *[''] * ps.n_gen],
-            ['PowerFactory', *[''] * ps.n_gen],
-            ['', *list(ps.generators['name'])],
+            ['Python', *[''] * n_gen],
+            ['PowerFactory', *[''] * n_gen],
+            ['', *list(gen_names)],
         ])
 
         # Create legend
-        fig.legend(legend_handles.T.flatten(), legend_labels.T.flatten(), loc='lower center', ncol=1 + ps.n_gen,
+        fig.legend(legend_handles.T.flatten(), legend_labels.T.flatten(), loc='lower center', ncol=1 + n_gen,
                    handletextpad=-1.6)
         fig.subplots_adjust(bottom=0.25)
 
     if choose_plots == 'all' or choose_plots == 'expanded':
-        fig, ax_4xN = plt.subplots(4, ps.n_gen, sharex=True, sharey='row', squeeze=False)
+        fig, ax_4xN = plt.subplots(4, ps.gen['GEN'].n_units, sharex=True, sharey='row', squeeze=False)
         fig.suptitle('DynPSSimPy vs DIgSILENT PowerFactory', fontsize=16)
         plt.subplots_adjust(wspace=0, hspace=0)
         y_labels = ['Angle', 'Speed', 'Subtransient\nq-axis voltage', 'Subtransient\nd-axis voltage']
         for ax_, label in zip(ax_4xN[:, 0], y_labels):
             ax_.set_ylabel(label)
 
-        for ax_, gen_name in zip(ax_4xN[-1, :], ps.generators['name']):
-            ax_.set_xlabel(gen_name)
+        for ax_, gen_name in zip(ax_4xN[-1, :], gen_names):
+                ax_.set_xlabel(gen_name)
 
         for ax_row, py_res_id_, pf_res_id_, in zip(ax_4xN, py_res_id, pf_res_id):
-            for i, (ax_, gen_name) in enumerate(zip(ax_row, ps.generators['name'])):
+            for i, (ax_, gen_name) in enumerate(zip(ax_row, gen_names)):
                 ax_.plot(result[('Global', 't')], result[(gen_name, py_res_id_)], color='C0')
                 ax_.plot(pf_res['b:tnow'], pf_res[pf_res_id_][:, i], color='C3')
 
     if choose_plots == 'all' or choose_plots == 'error':
 
-        fig, ax_4xN = plt.subplots(4, ps.n_gen, sharex=True, sharey='row', squeeze=False)
+        fig, ax_4xN = plt.subplots(4, n_gen, sharex=True, sharey='row', squeeze=False)
         fig.suptitle('Relative error', fontsize=16)
         plt.subplots_adjust(wspace=0, hspace=0)
         y_labels = ['Angle', 'Speed', 'Subtransient\nq-axis voltage', 'Subtransient\nd-axis voltage']
         for ax_, label in zip(ax_4xN[:, 0], y_labels):
             ax_.set_ylabel(label)
 
-        for ax_, gen_name in zip(ax_4xN[-1, :], ps.generators['name']):
+        for ax_, gen_name in zip(ax_4xN[-1, :], gen_names):
             ax_.set_xlabel(gen_name)
 
         # Computing the error
         error = 0.0
         for ax_row, py_res_id_, pf_res_id_, in zip(ax_4xN, py_res_id, pf_res_id):
-            for i, (ax_, gen_name) in enumerate(zip(ax_row, ps.generators['name'])):
+            for i, (ax_, gen_name) in enumerate(zip(ax_row, gen_names)):
                 pf_res_new = interp1d(pf_res['b:tnow'], pf_res[pf_res_id_][:, i], fill_value='extrapolate')
                 py_time = result[('Global', 't')]
                 py_res = result[(gen_name, py_res_id_)]
@@ -94,13 +97,14 @@ def compute_error(ps, result, pf_res, dt):
     py_res_id = ['angle', 'speed', 'e_q_st', 'e_d_st']
     pf_res_id = ['s:phi', 's:speed', 'c:ussq', 'c:ussd']
     error = 0.0
+    gen_names = ps.gen['GEN'].par['name']
     for py_res_id_, pf_res_id_, in zip(py_res_id, pf_res_id):
-        for i, gen_name in enumerate(ps.generators['name']):
+        for i, gen_name in enumerate(gen_names):
             pf_res_new = interp1d(pf_res['b:tnow'], pf_res[pf_res_id_][:, i], fill_value='extrapolate')
             py_time = result[('Global', 't')]
             py_res = result[(gen_name, py_res_id_)]
             error_ = py_res - pf_res_new(py_time)
-            error += sum(np.sqrt(error_**2))/(len(py_time)*ps.n_gen)
+            error += sum(np.sqrt(error_**2))/(len(py_time)*len(gen_names))
 
     return error
 

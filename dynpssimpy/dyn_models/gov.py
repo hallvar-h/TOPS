@@ -1,41 +1,53 @@
-import numpy as np
+from dynpssimpy.dyn_models.blocks import *
 
 
-class TGOV1:
-    def __init__(self):
-        self.state_list = ['x_1', 'x_2']
-        self.int_par_list = ['x_1_bias']
-        self.input_list = ['speed_dev']
-        self.output_list = ['P_m']
+class GOV:
+    def connections(self):
+        return [
+            {
+                'input': 'input',
+                'source': {
+                    'container': 'gen',
+                    'mdl': '*',
+                    'id': self.par['gen'],
+                },
+                'output': 'speed',
+            },
+            {
+                'output': 'output',
+                'destination': {
+                    'container': 'gen',
+                    'mdl': '*',
+                    'id': self.par['gen'],
+                },
+                'input': 'P_m',
+            }
+        ]
 
-    @staticmethod
-    def initialize(x_0, input, output, p, int_par):
-        v_2 = np.minimum(np.maximum(output['P_m'], p['V_min']), p['V_max'])
-        v_1 = v_2
-        v_3 = v_2
 
-        int_par['x_1_bias'] = p['R'] * v_1
 
-        x_0['x_1'][:] = v_2
-        x_0['x_2'][:] = p['T_2'] * v_2 - p['T_3'] * v_3
+class TGOV1(DAEModel, GOV):
+    def add_blocks(self):
+        p = self.par
+        self.droop = Gain(K=1/p['R'])
+        self.time_constant_lim = TimeConstantLims(T=p['T_1'], V_min=p['V_min'], V_max=p['V_max'])
+        self.lead_lag = LeadLag(T_1=p['T_2'], T_2=p['T_3'])
+        self.damping_gain = Gain(K=p['D_t'])
 
-    @staticmethod
-    def _update(dx, x, input, output, p, int_par):
+        self.droop.input = lambda x, v: -self.input(x, v) + self.int_par['bias']
+        self.time_constant_lim.input = lambda x, v: self.droop.output(x, v)
+        self.lead_lag.input = lambda x, v: self.time_constant_lim.output(x, v)
+        self.damping_gain.input = lambda x, v: self.input(x, v)
 
-        speed_dev = input['speed_dev']
-        v_1 = 1 / p['R'] * (speed_dev + int_par['x_1_bias'])
-        v_2 = np.minimum(np.maximum(x['x_1'], p['V_min']), p['V_max'])
-        v_3 = p['T_2'] / p['T_3'] * v_2 - 1 / p['T_3'] * x['x_2']
-        delta_p_m = v_3 - p['D_t'] * speed_dev
+        self.output = lambda x, v: self.lead_lag.output(x, v) - self.damping_gain.output(x, v)
 
-        output['P_m'][:] = delta_p_m
+    def int_par_list(self):
+        return ['bias']
 
-        dx['x_1'][:] = 1 / p['T_1'] * (v_1 - v_2)
-        dx['x_2'][:] = v_3 - v_2
-
-        # Lims on state variable x_1 (clamping)
-        lower_lim_idx = (x['x_1'] <= p['V_min']) & (dx['x_1'] < 0)
-        dx['x_1'][lower_lim_idx] *= 0
-
-        upper_lim_idx = (x['x_1'] >= p['V_max']) & (dx['x_1'] > 0)
-        dx['x_1'][upper_lim_idx] *= 0
+    def init_from_connections(self, x0, v0, output_0):
+        p = self.par
+        self.int_par['bias'] = self.droop.initialize(
+            x0, v0, self.time_constant_lim.initialize(
+                x0, v0, self.lead_lag.initialize(x0, v0, output_0['output'])
+            )
+        )
