@@ -1,5 +1,5 @@
 import unittest
-from tests.validation.validation_functions import generate_plots, load_pf_res, compute_error
+from tests.validation.validation_functions import load_pf_res, compute_error
 import pandas as pd
 from collections import defaultdict
 import dynpssimpy.dynamic as dps
@@ -11,7 +11,7 @@ class MyTestCase(unittest.TestCase):
     def test_k2a(self):
         # Test to compare simulation of K2A system with PowerFactory results.
         # Error should be bounded by specified value.
-        import ps_models.k2a_val as model_data
+        import dynpssimpy.ps_models.k2a_val as model_data
         model = model_data.load()
 
         ps = dps.PowerSystemModel(model=model)
@@ -59,7 +59,7 @@ class MyTestCase(unittest.TestCase):
     def test_ieee39(self):
         # Test to compare simulation of IEEE 39 bus system with PowerFactory results.
         # Error should be bounded by specified value.
-        import ps_models.ieee39 as model_data
+        import dynpssimpy.ps_models.ieee39 as model_data
         model = model_data.load()
 
         ps = dps.PowerSystemModel(model=model)
@@ -113,10 +113,10 @@ class MyTestCase(unittest.TestCase):
 
     def test_n44_init(self):
         # Test to verify that systems initialize properly.
-        import ps_models.sm_ib as model_data_smib
-        import ps_models.k2a as model_data_k2a
-        import ps_models.ieee39 as model_data_ieee39
-        import ps_models.n44 as model_data_n44
+        import dynpssimpy.ps_models.sm_ib as model_data_smib
+        import dynpssimpy.ps_models.k2a as model_data_k2a
+        import dynpssimpy.ps_models.ieee39 as model_data_ieee39
+        import dynpssimpy.ps_models.n44 as model_data_n44
 
         for model_data in [model_data_smib, model_data_k2a, model_data_ieee39, model_data_n44]:
             model = model_data.load()

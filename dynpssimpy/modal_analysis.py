@@ -1,6 +1,5 @@
 import numpy as np
 import dynpssimpy.utility_functions as utils
-import matplotlib.pyplot as plt
 
 
 class PowerSystemModelLinearization:
@@ -237,10 +236,10 @@ class PowerSystemModelLinearization:
 
 
 if __name__ == '__main__':
-
+    import matplotlib.pyplot as plt
     import dynpssimpy.plotting as dps_plt
     import dynpssimpy.dynamic as dps
-    import ps_models.k2a as model_data
+    import dynpssimpy.ps_models.k2a as model_data
 
     import importlib
     importlib.reload(dps)

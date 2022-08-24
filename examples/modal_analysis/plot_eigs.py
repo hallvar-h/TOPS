@@ -1,13 +1,12 @@
 import dynpssimpy.dynamic as dps
 import dynpssimpy.modal_analysis as dps_mdl
 import dynpssimpy.plotting as dps_plt
-import importlib
 import numpy as np
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
 
-    import ps_models.n44 as model_data
+    import dynpssimpy.ps_models.n44 as model_data
     model = model_data.load()
     # model['avr'] = {}
     # model['pss'] = {}

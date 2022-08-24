@@ -12,7 +12,7 @@ import pandas as pd
 if __name__ == '__main__':
 
     # Load model
-    import ps_models.k2a as model_data
+    import dynpssimpy.ps_models.k2a as model_data
     importlib.reload(model_data)
     model = model_data.load()
     # model['avr']['SEXS_mod'] = model['avr']['SEXS']

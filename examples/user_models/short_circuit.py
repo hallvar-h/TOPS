@@ -1,7 +1,6 @@
 import sys
 from collections import defaultdict
 import matplotlib.pyplot as plt
-import numpy as np
 import time
 import dynpssimpy.dynamic as dps
 import dynpssimpy.solvers as dps_sol
@@ -11,7 +10,7 @@ importlib.reload(dps)
 if __name__ == '__main__':
 
     # Load model
-    import ps_models.ieee39 as model_data
+    import dynpssimpy.ps_models.ieee39 as model_data
     importlib.reload(model_data)
     model = model_data.load()
     model['avr']['SEXS_mod'] = model['avr']['SEXS']
