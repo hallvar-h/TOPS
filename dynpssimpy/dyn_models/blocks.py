@@ -3,8 +3,10 @@ import numpy as np
 
 
 class PIRegulator(DAEModel):
+
     def add_blocks(self):
         self.integrator = Integrator(n_units=self.n_units)
+        self.integrator.input = lambda x, v: self.input(x, v)
 
     @output
     def output(self, x, v):

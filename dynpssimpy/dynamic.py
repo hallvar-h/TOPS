@@ -94,6 +94,7 @@ class PowerSystemModel:
             'load_flow_pv',
             'load_flow_adm',
             'dyn_const_adm',
+            'dyn_var_adm',
             'init_from_load_flow',
             'current_injections',
 
@@ -274,6 +275,7 @@ class PowerSystemModel:
                     init_val = np.zeros(mdl.n_units)
                     for c in conn:
                         input_fun = getattr(self.dyn_mdls_dict[c['container']][c['mdl']], c['input'])
+                        # input_fun = lambda x, v:  self.dyn_mdls_dict[c['container']][c['mdl']]._input_values[c['input']]
                         np.add.at(init_val, c['source_idx'], input_fun(None, None)[c['dest_idx']])
                     output_values[output_key] = init_val
 
@@ -314,7 +316,14 @@ class PowerSystemModel:
             bus_idx_red, i_inj_mdl = mdl.current_injections(x, None)
             np.add.at(i_inj, bus_idx_red, i_inj_mdl)
 
-        return sp_linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, i_inj)
+        y_var = np.zeros((self.n_bus,) * 2, dtype=complex)
+        for mdl in self.mdl_instructions['dyn_var_adm']:
+            data, (row_idx, col_idx) = mdl.dyn_var_adm()
+            sp_mat = sp.csr_matrix((data, (row_idx, col_idx)), shape=(self.n_bus,) * 2)
+            y_var += sp_mat.todense()
+        y_var = sp.csr_matrix(y_var)
+
+        return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
 
     def no_fun(self):
         # Interfacing models  with system (current injections)
