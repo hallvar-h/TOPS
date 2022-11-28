@@ -1,10 +1,11 @@
 import unittest
-from tests.validation.validation_functions import load_pf_res, compute_error
-import pandas as pd
+from validation_functions import load_pf_res, compute_error
+# import pandas as pd
 from collections import defaultdict
 import dynpssimpy.dynamic as dps
 from scipy.integrate import RK45
 import sys
+import pathlib
 
 
 class MyTestCase(unittest.TestCase):
@@ -22,7 +23,8 @@ class MyTestCase(unittest.TestCase):
         max_step = 5e-3
 
         # PowerFactory result
-        pf_res = load_pf_res('k2a/powerfactory_res.csv')
+        file_path = pathlib.Path(__file__).parent
+        pf_res = load_pf_res(str(file_path) + '/k2a/powerfactory_res.csv')
 
         # Python result
         x0 = ps.x0
@@ -50,8 +52,9 @@ class MyTestCase(unittest.TestCase):
             result_dict['Global', 't'].append(sol.t)
             [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, sol.y)]
 
-        index = pd.MultiIndex.from_tuples(result_dict)
-        result = pd.DataFrame(result_dict, columns=index)
+        # index = pd.MultiIndex.from_tuples(result_dict)
+        # result = pd.DataFrame(result_dict, columns=index)
+        result = result_dict
 
         error = compute_error(ps, result, pf_res, max_step)
         self.assertLessEqual(error, 0.02)
@@ -70,7 +73,8 @@ class MyTestCase(unittest.TestCase):
         max_step = 5e-3
 
         # PowerFactory result
-        pf_res = load_pf_res('ieee39/powerfactory_res.csv')
+        file_path = pathlib.Path(__file__).parent
+        pf_res = load_pf_res(str(file_path) + '/ieee39/powerfactory_res.csv')
         # pf_res = load_pf_res('tests/validation/ieee39/powerfactory_res.csv')
 
         x0 = ps.x0
@@ -105,9 +109,9 @@ class MyTestCase(unittest.TestCase):
 
             [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, sol.y)]
 
-        index = pd.MultiIndex.from_tuples(result_dict)
-        result = pd.DataFrame(result_dict, columns=index)
-
+        # index = pd.MultiIndex.from_tuples(result_dict)
+        # result = pd.DataFrame(result_dict, columns=index)
+        result = result_dict
         error = compute_error(ps, result, pf_res, max_step)
         self.assertLessEqual(error, 0.02)
 
