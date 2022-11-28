@@ -48,6 +48,7 @@ class PowerSystemModel:
         sys_data = {
             's_n': model['base_mva'],
             'f_n': model['f'],
+            'n_bus': self.n_bus,
             'bus_v_n': self.buses['V_n'],
             'bus_names': self.buses['name'],
             'red_to_full': None
@@ -266,21 +267,6 @@ class PowerSystemModel:
         # for mdl in self.dyn_mdls:
         #     mdl.sys_par['red_to_full'] = self.red_to_full
 
-        # Initialize state vector
-        self.mdl_connections_by_source = mdl_lib.utils.determine_connections(self.dyn_mdls_dict, order_by='output')
-        for mdl, connections in self.mdl_connections_by_source.items():
-            if hasattr(mdl, 'init_from_connections'):
-                output_values = np.zeros(mdl.n_units, [(field, float) for field in mdl.output_list()])
-                for output_key, conn in connections.items():
-                    init_val = np.zeros(mdl.n_units)
-                    for c in conn:
-                        input_fun = getattr(self.dyn_mdls_dict[c['container']][c['mdl']], c['input'])
-                        # input_fun = lambda x, v:  self.dyn_mdls_dict[c['container']][c['mdl']]._input_values[c['input']]
-                        np.add.at(init_val, c['source_idx'], input_fun(None, None)[c['dest_idx']])
-                    output_values[output_key] = init_val
-
-                mdl.init_from_connections(self.x_0, self.v_0, output_values)
-
         self.mdl_connections = mdl_lib.utils.determine_connections(self.dyn_mdls_dict)
         for mdl, connections in self.mdl_connections.items():
             for input_key, conn in connections.items():
@@ -292,6 +278,21 @@ class PowerSystemModel:
                         input[c['dest_idx']] = source_fun(x, v)[c['source_idx']]
                     return input
                 setattr(mdl, input_key, new_input_fun)
+        
+        # Initialize state vector
+        self.mdl_connections_by_source = mdl_lib.utils.determine_connections(self.dyn_mdls_dict, order_by='output')
+        for mdl, connections in self.mdl_connections_by_source.items():
+            if hasattr(mdl, 'init_from_connections'):
+                output_values = np.zeros(mdl.n_units, [(field, float) for field in mdl.output_list()])
+                for output_key, conn in connections.items():
+                    init_val = np.zeros(mdl.n_units)
+                    for c in conn:
+                        input_fun = getattr(self.dyn_mdls_dict[c['container']][c['mdl']], c['input'])
+                        input_fun = lambda x, v:  self.dyn_mdls_dict[c['container']][c['mdl']]._input_values[c['input']]
+                        np.add.at(init_val, c['source_idx'], input_fun(None, None)[c['dest_idx']])
+                    output_values[output_key] = init_val
+
+                mdl.init_from_connections(self.x_0, self.v_0, output_values)
 
     def state_derivatives(self, t, x, v_red):
 

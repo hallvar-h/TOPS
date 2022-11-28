@@ -14,7 +14,7 @@ class Line(DAEModel):
 
         self.bus_idx = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
         self.bus_idx_red = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
-        self.sys_par = sys_par  # {'s_n': 0, 'f_n': 50, 'bus_v_n': None}
+        self.sys_par = sys_par  # {'s_n': 0, 'f_n': 50, n_bus: None, 'bus_v_n': None}
 
     def bus_ref_spec(self):
         return {'from_bus': self.par['from_bus'], 'to_bus': self.par['to_bus']}
@@ -37,7 +37,6 @@ class Line(DAEModel):
             admittance = self.admittance[line_idx]
             shunt = self.shunt[line_idx]
 
-
             buses_in_red_sys = idx_from in ps.bus_idx_red and idx_to in ps.bus_idx_red
             data = np.array([admittance + shunt/2,
                              admittance + shunt/2,
@@ -54,19 +53,33 @@ class Line(DAEModel):
             else:
                 print('Line buses are not in reduced system, line event failed.')
 
+    def init_extras(self):
+        self.idx_from = self.bus_idx_red['from_bus']
+        self.idx_to = self.bus_idx_red['to_bus']
+        n_bus = self.sys_par['n_bus']
+
+        self.v_to_i_lines = np.zeros((self.n_units, n_bus), dtype=complex)
+        self.v_to_i_lines_rev = np.zeros((self.n_units, n_bus), dtype=complex)
+        self.lines_from_mat = np.zeros((self.n_units, n_bus), dtype=complex)
+        self.lines_to_mat = np.zeros((self.n_units, n_bus), dtype=complex)
+        for i, row in enumerate(self.par):
+            idx_from = self.idx_from[i]
+            idx_to = self.idx_to[i]
+            admittance = self.admittance[i]
+            shunt = self.shunt[i]
+
+            self.v_to_i_lines[i, [idx_from, idx_to]] = [admittance + shunt / 2, -admittance]
+            self.v_to_i_lines_rev[i, [idx_to, idx_from]] = [admittance + shunt / 2, -admittance]
+            self.lines_from_mat[i, idx_from] = 1
+            self.lines_to_mat[i, idx_to] = 1
+    
     def load_flow_adm(self):
-        # print('hei')
-        # buses = self.ref['buses']
-        # z_n = buses.z_n
-        # print(self.sys_par['bus_v_n'])
         z_n = self.sys_par['bus_v_n'] ** 2 / self.sys_par['s_n']
 
         data = self.data
-        # self.idx_from = dps_uf.lookup_strings(data['from_bus'], buses.data['name'])
-        # self.idx_to = dps_uf.lookup_strings(data['to_bus'], buses.data['name'])
         self.shunt = np.zeros(self.n_units, dtype=complex)
         self.admittance = np.zeros(self.n_units, dtype=complex)
-        lengths = data['length'] if 'length' in data.dtype.names else np.ones(self.n)
+        lengths = data['length'] if 'length' in data.dtype.names else np.ones(self.n_units)
         for i, line in enumerate(data):
             idx_from = self.bus_idx['from_bus'][i]
             idx_to = self.bus_idx['to_bus'][i]
@@ -102,13 +115,46 @@ class Line(DAEModel):
         data = np.array(
             [self.admittance + self.shunt/2, self.admittance + self.shunt/2, -self.admittance, -self.admittance])
 
+        self.init_extras()
+
         return data, (rows, cols)
 
+    def i_from(self, x, v):
+        v_full = v
+        return self.v_to_i_lines.dot(v_full)*self.connected
 
-    #     s_shunt = -1j * self.par['Q'] / self.sys_par['s_n']
-    #     z = np.conj(abs(1) ** 2 / s_shunt)
-    #     y_shunt = 1 / z
-    #     return y_shunt, (self.bus_idx_red['terminal'],) * 2
-    #
-    # def dyn_const_adm_(self):
-    #     return self.load_flow_adm()
+    def i_to(self, x, v):
+        v_full = v
+        return self.v_to_i_lines_rev.dot(v_full)*self.connected
+
+    def s_from(self, x, v):
+        v_full = v
+        return v_full[self.idx_from]*np.conj(self.i_from(x, v))
+
+    def s_to(self, x, v):
+        v_full = v
+        return v_full[self.idx_to]*np.conj(self.i_to(x, v))
+
+    def p_from(self, x, v):
+        return self.s_from(x, v).real
+
+    def p_to(self, x, v):
+        return self.s_to(x, v).real
+
+    def q_from(self, x, v):
+        return self.s_from(x, v).imag
+
+    def q_to(self, x, v):
+        return self.s_to(x, v).imag
+
+    def s_line(self, x, v):
+        return self.s_from(x, v) + self.s_to(x, v)
+
+    def p_line(self, x, v):
+        return self.s_line(x, v).real
+
+    def q_line(self, x, v):
+        return self.s_line(x, v).imag
+
+    def p_loss_tot(self, x, v):
+        return np.sum(np.abs(self.p_line(x, v)))

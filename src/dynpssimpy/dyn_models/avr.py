@@ -72,7 +72,6 @@ class SEXS(DAEModel, AVR):
 
 
 class SEXS_PI(DAEModel, AVR):
-    # Does not initialize properly. Probably need to make changes in dynamic.py to make this work.
     def input_list(self):
         return ['v_setp', 'v_t', 'v_pss']
 
@@ -96,7 +95,9 @@ class SEXS_PI(DAEModel, AVR):
     #     return ['bias']
 
     def init_from_connections(self, x0, v0, output_0):
-        self.v_setp_lag.initialize(x0, v0, np.ones(self.n_units))
+        # v_0 = np.ones(self.n_units)
+        v_0 = self.v_setp(x0, v0)
+        self.v_setp_lag.initialize(x0, v0, v_0)
         self.pi_regulator.initialize(
             x0, v0, self.tg_red.initialize(
                 x0, v0, self.gain.initialize(
