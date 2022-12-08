@@ -6,28 +6,15 @@ import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
 
-    import dynpssimpy.ps_models.n44 as model_data
+    import dynpssimpy.ps_models.k2a as model_data
     model = model_data.load()
-    # model['avr'] = {}
-    # model['pss'] = {}
-    # model['gov'] = {}
-
     ps = dps.PowerSystemModel(model=model)
-    # ps.avr = {}
-    # ps.gov = {}
-    # ps.pss = {}
-    # ps.setup()
-    # ps.build_y_bus('lf')
-    # ps.power_flow()
     ps.init_dyn_sim()
 
     # Perform system linearization
     ps_lin = dps_mdl.PowerSystemModelLinearization(ps)
     ps_lin.linearize()
     ps_lin.eigenvalue_decomposition()
-
-    # Alternatively:
-    # ps_lin = ps.linearize()
 
     # Plot eigenvalues
     dps_plt.plot_eigs(ps_lin.eigs)
