@@ -16,6 +16,22 @@ class Trafo(DAEModel):
     def bus_ref_spec(self):
         return {'from_bus': self.par['from_bus'], 'to_bus': self.par['to_bus']}
 
+    def init_extras(self):
+        # This is copied from lines:Line model, is not correct yet.
+        self.idx_from = self.bus_idx_red['from_bus']
+        self.idx_to = self.bus_idx_red['to_bus']
+        n_bus = self.sys_par['n_bus']
+
+        self.v_to_i = np.zeros((self.n_units, n_bus), dtype=complex)
+        self.v_to_i_rev = np.zeros((self.n_units, n_bus), dtype=complex)
+        self.from_mat = np.zeros((self.n_units, n_bus), dtype=complex)
+        self.to_mat = np.zeros((self.n_units, n_bus), dtype=complex)
+        for i, row in enumerate(self.par):
+            self.v_to_i[i, [self.idx_from[i], self.idx_to[i]]] = [self.admittance[i] + self.shunt[i]/2, -self.admittance[i]]
+            self.v_to_i_rev[i, [self.idx_to[i], self.idx_from[i]]] = [self.admittance[i] + self.shunt[i]/2, -self.admittance[i]]
+            self.from_mat[i, self.idx_from[i]] = 1
+            self.to_mat[i, self.idx_to[i]] = 1
+    
     def load_flow_adm(self):
         # print('hei')
         # buses = self.ref['buses']
@@ -56,5 +72,8 @@ class Trafo(DAEModel):
             -self.ratio_from*np.conj(self.ratio_to)*self.admittance,
             -np.conj(self.ratio_from)*self.ratio_to*self.admittance
         ])
+
+        # self.init_extras()
+
 
         return data, (rows, cols)

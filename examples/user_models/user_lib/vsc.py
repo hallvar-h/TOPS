@@ -29,7 +29,7 @@ class VSC(DAEModel):
         self.I_d = self.lag_p.output
         self.I_q = self.lag_q.output
 
-        self.I_inj = lambda x, v: (self.I_d(x, v) + 1j*self.I_q(x, v))*np.exp(1j*self.pll.output(x, v))
+        self.I_inj = lambda x, v: (self.I_d(x, v) - 1j*self.I_q(x, v))*np.exp(1j*self.pll.output(x, v))
 
     def input_list(self):
         return ['P_setp', 'Q_setp']

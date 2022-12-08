@@ -25,13 +25,13 @@ if __name__ == '__main__':
     model['vsc'] = {'VSC': [
         ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp'],
         # *[[f'VSC{i}', 0.1, 1, bus[0], 0.1, 0.1, 0.1, 0.1, 0.1, 0] for i, bus in enumerate(model['buses'][1:])],
-        ['VSC1',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        100,          0],
+        ['VSC1',    0.1,        1,      'B8',   0.01,        1e-12,        0.1,        0.1,        100,          100],
     ]}
     # model['avr'] = {}
     # model['pss'] = {}
     # model['gov'] = {}
 
-    import examples.user_models.user_lib as user_lib
+    import user_lib
     importlib.reload(user_lib)
 
     # Power system model
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 # if False:
     ps.init_dyn_sim()
 
-    print(max(abs(ps.state_derivatives(0, ps.x_0, ps.v_0))))
+    # print(max(abs(ps.state_derivatives(0, ps.x_0, ps.v_0))))
     print(max(abs(ps.ode_fun(0, ps.x_0))))
     # v_0_sol = ps.solve_algebraic(0, ps.x_0)
 
@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
 # if False:
 
-    t_end = 20
+    t_end = 3
     x_0 = ps.x_0.copy()
 
     # Solver
@@ -147,6 +147,7 @@ if __name__ == '__main__':
 
     plt.figure()
     plt.plot(result[('Global', 't')], result[('VSC', 'P')], '--', color=f'C{i}')
+    plt.show()
 
     # for i in range(ps.n_bus):
     #     plt.plot(result_dict[('Global', 't')], result_dict[(f'PLL{i}', 'output')], '--', color=f'C{i}')

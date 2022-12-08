@@ -58,20 +58,15 @@ class Line(DAEModel):
         self.idx_to = self.bus_idx_red['to_bus']
         n_bus = self.sys_par['n_bus']
 
-        self.v_to_i_lines = np.zeros((self.n_units, n_bus), dtype=complex)
-        self.v_to_i_lines_rev = np.zeros((self.n_units, n_bus), dtype=complex)
-        self.lines_from_mat = np.zeros((self.n_units, n_bus), dtype=complex)
-        self.lines_to_mat = np.zeros((self.n_units, n_bus), dtype=complex)
+        self.v_to_i = np.zeros((self.n_units, n_bus), dtype=complex)
+        self.v_to_i_rev = np.zeros((self.n_units, n_bus), dtype=complex)
+        self.from_mat = np.zeros((self.n_units, n_bus), dtype=complex)
+        self.to_mat = np.zeros((self.n_units, n_bus), dtype=complex)
         for i, row in enumerate(self.par):
-            idx_from = self.idx_from[i]
-            idx_to = self.idx_to[i]
-            admittance = self.admittance[i]
-            shunt = self.shunt[i]
-
-            self.v_to_i_lines[i, [idx_from, idx_to]] = [admittance + shunt / 2, -admittance]
-            self.v_to_i_lines_rev[i, [idx_to, idx_from]] = [admittance + shunt / 2, -admittance]
-            self.lines_from_mat[i, idx_from] = 1
-            self.lines_to_mat[i, idx_to] = 1
+            self.v_to_i[i, [self.idx_from[i], self.idx_to[i]]] = [self.admittance[i] + self.shunt[i]/2, -self.admittance[i]]
+            self.v_to_i_rev[i, [self.idx_to[i], self.idx_from[i]]] = [self.admittance[i] + self.shunt[i]/2, -self.admittance[i]]
+            self.from_mat[i, self.idx_from[i]] = 1
+            self.to_mat[i, self.idx_to[i]] = 1
     
     def load_flow_adm(self):
         z_n = self.sys_par['bus_v_n'] ** 2 / self.sys_par['s_n']
@@ -112,8 +107,12 @@ class Line(DAEModel):
 
         rows = np.array([idx_from, idx_to, idx_from, idx_to])
         cols = np.array([idx_from, idx_to, idx_to, idx_from])
-        data = np.array(
-            [self.admittance + self.shunt/2, self.admittance + self.shunt/2, -self.admittance, -self.admittance])
+        data = np.array([
+            self.admittance + self.shunt/2,
+            self.admittance + self.shunt/2,
+            -self.admittance,
+            -self.admittance
+        ])
 
         self.init_extras()
 
@@ -121,11 +120,11 @@ class Line(DAEModel):
 
     def i_from(self, x, v):
         v_full = v
-        return self.v_to_i_lines.dot(v_full)*self.connected
+        return self.v_to_i.dot(v_full)*self.connected
 
     def i_to(self, x, v):
         v_full = v
-        return self.v_to_i_lines_rev.dot(v_full)*self.connected
+        return self.v_to_i_rev.dot(v_full)*self.connected
 
     def s_from(self, x, v):
         v_full = v

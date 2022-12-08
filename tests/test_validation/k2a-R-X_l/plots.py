@@ -1,38 +1,32 @@
 from collections import defaultdict
-import tests.validation.validation_functions as val_fun
+import tests.test_validation.validation_functions as val_fun
 import dynpssimpy.dynamic as dps
 import importlib
 from scipy.integrate import RK45
 import pandas as pd
-import sys
 
 if __name__ == '__main__':
 
-    import dynpssimpy.ps_models.k2a_val as model_data
+    import dynpssimpy.ps_models.k2a as model_data
     model = model_data.load()
 
     [importlib.reload(mdl) for mdl in [model_data, dps]]
 
     ps = dps.PowerSystemModel(model=model)
-    # ps.avr['SEXS'].par['T_a'] = 2
-    # ps.avr['SEXS'].par['T_e'] = 0.1
-    # ps.gov['TGOV1'].par['T_1'] = 0.5
-    # ps.gov['TGOV1'].par['T_2'] = 1
-    # ps.gov['TGOV1'].par['T_3'] = 2
+    ps.avr['SEXS']['T_a'] = 2
+    ps.avr['SEXS']['T_e'] = 0.1
+    ps.gov['TGOV1']['T_1'] = 0.5
+    ps.gov['TGOV1']['T_2'] = 1
+    ps.gov['TGOV1']['T_3'] = 2
 
-    ps.setup()
-    # ps.build_y_bus('lf')
-    # ps.power_flow()
+    ps.power_flow()
     ps.init_dyn_sim()
-    # ps.ode_fun(0, ps.x0)
 
     t_end = 10
     max_step = 5e-3
 
     # PowerFactory result
-
-    # os.chdir()
-    pf_res = val_fun.load_pf_res('tests/validation/k2a/powerfactory_res.csv')
+    pf_res = val_fun.load_pf_res('tests/validation/k2a-R-X_l/powerfactory_res.csv')
 
     # Python result
     x0 = ps.x0
@@ -40,12 +34,10 @@ if __name__ == '__main__':
 
     t = 0
     result_dict = defaultdict(list)
-    sc_bus_idx = ps.gen['GEN'].bus_idx_red['terminal'][0]
-
 
     print('Running dynamic simulation')
     while t < t_end:
-        sys.stdout.write("\r%d%%" % (t / (t_end) * 100))
+        # print(t)
 
         # Simulate next step
         result = sol.step()
@@ -53,9 +45,9 @@ if __name__ == '__main__':
 
         if t>=1 and t<=1.1:
             # print('Event!')
-            ps.y_bus_red_mod[(sc_bus_idx,)*2] = 1e6
+            ps.y_bus_red_mod[0, 0] = 1e6
         else:
-            ps.y_bus_red_mod[(sc_bus_idx,)*2] = 0
+            ps.y_bus_red_mod[0, 0] = 0
 
         # Store result variables
         result_dict['Global', 't'].append(sol.t)

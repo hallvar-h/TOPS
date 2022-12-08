@@ -1,5 +1,5 @@
 from collections import defaultdict
-import tests.validation.validation_functions as val_fun
+import tests.test_validation.validation_functions as val_fun
 import sys
 sys.path.append(r'tests/validation')
 import dynpssimpy.dynamic as dps
