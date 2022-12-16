@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dynpssimpy"
+description = 'Dynamic power system simulation in Python'
+readme = "README.md"
+requires-python = ">=3.7"
+license = {file="LICENSE"}
+version = "0.2.0"
+keywords = []
+authors = [
+  { name = "Hallvar Haugdal", email = "hallvar.haugdal@sintef.no" },
+]
+classifiers = [
+	"Programming Language :: Python :: 3",
+	"Operating System :: OS Independent",
+]
+dependencies = [
+	"numpy",
+	"scipy",
+	"matplotlib",
+    "pandas"
+	]
+
+[project.urls]
+"Homepage" = "https://github.com/hallvar-h/DynPSSimPy"
+"Bug Tracker" = "https://github.com/hallvar-h/DynPSSimPy/issues"
