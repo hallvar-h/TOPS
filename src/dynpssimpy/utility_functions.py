@@ -65,8 +65,8 @@ def newton_rhapson_power_flow(y_bus, v_0, p_sum_bus, q_sum_bus, bus_types, tol, 
             converged = True
             # if print_output:
             #     print('Power flow converged.')
-        # if i == pf_max_it and print_output:
-        #     print('Power flow did not converge in {} iterations.'.format(pf_max_it))
+        if i == pf_max_it:
+            print('Warning: Power flow did not converge in {} iterations.'.format(pf_max_it))
 
     v_sol = x_to_v(x)
     s_sol = v_sol * np.conj(y_bus.dot(v_sol))

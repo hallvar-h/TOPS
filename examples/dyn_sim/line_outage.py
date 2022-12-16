@@ -26,8 +26,6 @@ if __name__ == '__main__':
     t_end = 10
     x_0 = ps.x_0.copy()
 
-    plt.plot(x_0)
-
     # Solver
     sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x_0, t_end, max_step=5e-3)
 
