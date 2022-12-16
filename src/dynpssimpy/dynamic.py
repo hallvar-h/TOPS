@@ -28,7 +28,9 @@ class PowerSystemModel:
 
         self.y_bus_lf = None
         self.power_flow_ready = False
+        
         self.setup_ready = False
+        self.initialization_ready = False
 
         if 'transformers' in model:
             model['trafos'] = model['transformers']
@@ -105,6 +107,7 @@ class PowerSystemModel:
         ]}
 
     def setup(self):
+        assert not self.setup_ready
 
         for mdl in self.dyn_mdls:
             for key, fun_list in self.mdl_instructions.items():
@@ -132,6 +135,8 @@ class PowerSystemModel:
                 lookup, mask  = dps_uf.lookup_strings(bus_idx, self.bus_idx_red, return_mask=True)
                 mdl.bus_idx_red[identifier][mask] = lookup
                 mdl.bus_idx_red[identifier][~mask] = -99999
+
+        self.setup_ready = True
 
     def build_y_bus(self, type='dyn'):
 
@@ -199,7 +204,7 @@ class PowerSystemModel:
         bus_type[sl_idx] = 'SL'
 
         phi_0 = np.zeros(self.n_bus)
-        self.v_0, self.s_0 = dps_uf.newton_rhapson_power_flow(self.y_bus_lf, v_pv, p_pv + p_pq, q_pq, bus_type,
+        self.v_0, self.s_0, converged = dps_uf.newton_rhapson_power_flow(self.y_bus_lf, v_pv, p_pv + p_pq, q_pq, bus_type,
                                                               self.pf_tol, self.pf_max_it)
 
         pv_units_per_bus = np.zeros(self.n_bus, dtype=int)
@@ -222,6 +227,9 @@ class PowerSystemModel:
                 # p[unit_idx] /= mdl.par['n_par'][unit_idx]
 
             self.load_flow_soln[mdl] = (p + 1j * q) * self.s_n
+        
+        if converged:
+            self.power_flow_ready = True
 
     def kron_reduction(self, y_bus, keep_buses):
         remove_buses = list(set(range(self.n_bus)) - set(keep_buses))
@@ -237,6 +245,9 @@ class PowerSystemModel:
         return y_kk - y_rk.T.dot(np.linalg.inv(y_rr)).dot(y_rk)
 
     def init_dyn_sim(self):
+        if self.initialization_ready:
+            return
+
         if not self.power_flow_ready:
             self.power_flow()
 
@@ -293,6 +304,9 @@ class PowerSystemModel:
                     output_values[output_key] = init_val
 
                 mdl.init_from_connections(self.x_0, self.v_0, output_values)
+
+    
+        self.initialization_ready = True
 
     def state_derivatives(self, t, x, v_red):
 
