@@ -1,12 +1,13 @@
 import numpy as np
 
 import dynpssimpy.utility_functions as dps_uf
-import dynpssimpy.dynamic as dps
-
 import dynpssimpy.dyn_models as mdl_lib
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
 from scipy.sparse import diags as sp_diags
+
+import json
+import os
 
 import importlib
 importlib.reload(mdl_lib)
@@ -14,7 +15,29 @@ importlib.reload(mdl_lib)
 
 class PowerSystemModel:
     def __init__(self, model, user_mdl_lib=None):
-        model = model.copy()
+        file_is_json = isinstance(model, str) and model[-5:] == '.json'
+        if file_is_json:
+            try:
+                # Try to open specified path directly
+                with open(model) as f:
+                    data = f.read()
+                model_data = json.loads(data)
+            except IOError:
+                try:
+                    # Try to see if the specified model is available in the ps_models folder of the module
+                    current_folder = os.path.dirname(os.path.abspath(__file__))
+                    model_file_path = os.path.join(current_folder, 'ps_models', model)
+                    with open(model_file_path) as f:
+                        data = f.read()
+                    model_data = json.loads(data)
+                except IOError:
+                    print('Power System Model Data File not found. Aborting.')
+                    return
+
+        elif isinstance(model, dict):
+            model_data = model
+        
+        model = model_data.copy()
         self.model = model
 
         self.perform_kron_reduction = False
