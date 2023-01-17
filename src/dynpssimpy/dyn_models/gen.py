@@ -187,17 +187,32 @@ class GEN(DAEModel):
         i_dq = self.i(x, v)*np.exp(1j*(np.pi/2 - self.angle(x, v)))
         return i_dq.imag
 
-    # def p_e_2(self, x, v):
-    #     return (self.e_q_st(x, v) * self.i_q(x, v) + self.e_d_st(x, v) * self.i_d(x, v))/self.par['PF_n']  # - (x_d_st - x_q_st) * i_d * i_q
+    # def p_e(self, x, v):
+        # return (self.e_q_st(x, v) * self.i_q(x, v) + self.e_d_st(x, v) * self.i_d(x, v))/self.par['PF_n']  # - (x_d_st - x_q_st) * i_d * i_q
 
     def s_e(self, x, v):
+        # Apparent power in p.u. (generator base units)
         return self.v_t(x, v)*np.conj(self.i(x, v))
 
     def p_e(self, x, v):
+        # Active power in p.u. (generator base units)
         return self.s_e(x, v).real
 
     def q_e(self, x, v):
+        # Reactive power in p.u. (generator base units)
         return self.s_e(x, v).imag
+
+    def S_e(self, x, v):
+        # Apparent power in MVA
+        return self.s_e(x, v)*self.par['S_n']
+
+    def P_e(self, x, v):
+        # Active power in MW
+        return self.p_e(x, v)*self.par['S_n']
+
+    def Q_e(self, x, v):
+        # Reactive power in MVAr
+        return self.q_e(x, v)*self.par['S_n']
 
 
     # def initialize(self, x0, v0, output_0):
