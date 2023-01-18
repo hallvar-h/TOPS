@@ -31,12 +31,12 @@ if __name__ == '__main__':
 
     # Run simulation
     while t < t_end:
-        # sys.stdout.write("\r%d%%" % (t/(t_end)*100))
+        sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
         # Short circuit
         if t >= 1:
-            ps.loads['DynamicLoad'].set_input('g_load', [1, 2])
-            ps.loads['DynamicLoad'].set_input('b_load', [-0.1, -0.1])
+            ps.loads['DynamicLoad'].set_input('g_setp', [1, 2])
+            ps.loads['DynamicLoad'].set_input('b_setp', [-0.1, -0.1])
 
         # Simulate next step
         result = sol.step()

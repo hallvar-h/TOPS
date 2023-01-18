@@ -57,7 +57,7 @@ class DynamicLoad(DAEModel):
         self.sys_par = sys_par  # {'s_n': 0, 'f_n': 50, 'bus_v_n': None}
 
     def input_list(self):
-        return ['g_load', 'b_load']
+        return ['g_setp', 'b_setp']
     
     def bus_ref_spec(self):
         return {'terminal': self.par['bus']}
@@ -73,8 +73,14 @@ class DynamicLoad(DAEModel):
         s_load = (self.par['P'] + 1j * self.par['Q']) / self.sys_par['s_n']
         z_load = np.conj(abs(self.v_0) ** 2 / s_load)
         y_load = 1/z_load
-        self._input_values['g_load'] = y_load.real
-        self._input_values['b_load'] = y_load.imag
+        self._input_values['g_setp'] = y_load.real
+        self._input_values['b_setp'] = y_load.imag
+
+    def g_load(self, x, v):
+        return self.g_setp(x, v)
+
+    def b_load(self, x, v):
+        return self.b_setp(x, v)
 
     def y_load(self, x, v):
         return self.g_load(x, v) + 1j*self.b_load(x, v)
@@ -97,27 +103,29 @@ class DynamicLoad(DAEModel):
 
 class DynamicLoadFiltered(DynamicLoad):
     """Dynamic load where the input is filtered using a low pass filter."""
-    def input_list(self):
-        return ['g_load', 'b_load']
 
     def add_blocks(self):
         p = self.par
         self.lpf_g = TimeConstant(T=p['T_g'])
-        self.lpf_g.input = lambda x, v: self.g_load(x, v)
+        self.lpf_g.input = lambda x, v: self.g_setp(x, v)
 
         self.lpf_b = TimeConstant(T=p['T_b'])
-        self.lpf_b.input = lambda x, v: self.b_load(x, v)
+        self.lpf_b.input = lambda x, v: self.b_setp(x, v)
+
+    
+    def g_load(self, x, v):
+        return self.lpf_g.output(x, v)
+
+    def b_load(self, x, v):
+        return self.lpf_b.output(x, v)
 
     def init_from_load_flow(self, x_0, v_0, S):
         self.v_0 = v_0[self.bus_idx['terminal']]
         s_load = (self.par['P'] + 1j * self.par['Q']) / self.sys_par['s_n']
         z_load = np.conj(abs(self.v_0) ** 2 / s_load)
         y_load = 1/z_load
-        self._input_values['g_load'] = y_load.real
-        self._input_values['b_load'] = y_load.imag
+        self._input_values['g_setp'] = y_load.real
+        self._input_values['b_setp'] = y_load.imag
 
         self.lpf_g.initialize(x_0, v_0, y_load.real)
         self.lpf_b.initialize(x_0, v_0, y_load.imag)
-    
-    def y_load(self, x, v):
-        return self.lpf_g.output(x, v) + 1j*self.lpf_b.output(x, v)
