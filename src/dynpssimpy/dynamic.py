@@ -87,14 +87,14 @@ class PowerSystemModel:
                 category = val
                 for mdl_key, mdl_data_raw in category.items():
                     if hasattr(user_mdl_lib, category_key) and hasattr(getattr(user_mdl_lib, category_key), mdl_key):
-                        print('User model: {}, {}'.format(category_key, mdl_key))
+                        # print('User model: {}, {}'.format(category_key, mdl_key))
                         mdl_class = getattr(getattr(user_mdl_lib, category_key), mdl_key)
                     elif hasattr(mdl_lib, category_key) and hasattr(getattr(mdl_lib, category_key), mdl_key):
-                        print('Standard model: {}, {}'.format(category_key, mdl_key))
+                        # print('Standard model: {}, {}'.format(category_key, mdl_key))
                         mdl_class = getattr(getattr(mdl_lib, category_key), mdl_key)
 
                     else:
-                        print('Model {}:{} not found in model library.'.format(category_key, mdl_key))
+                        print('Warning: Model {}:{} not found in model library.'.format(category_key, mdl_key))
                         continue
 
                     mdl_data = dps_uf.structured_array_from_list(mdl_data_raw[0], mdl_data_raw[1:])
@@ -230,6 +230,8 @@ class PowerSystemModel:
         self.v_0, self.s_0, converged = dps_uf.newton_rhapson_power_flow(self.y_bus_lf, v_pv, p_pv + p_pq, q_pq, bus_type,
                                                               self.pf_tol, self.pf_max_it)
 
+        self.v0 = self.v_0
+
         pv_units_per_bus = np.zeros(self.n_bus, dtype=int)
         for mdl in self.mdl_instructions['load_flow_pv']:
             bus_idx = mdl.load_flow_pv()[0]
@@ -356,7 +358,7 @@ class PowerSystemModel:
 
         y_var = np.zeros((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['dyn_var_adm']:
-            data, (row_idx, col_idx) = mdl.dyn_var_adm()
+            data, (row_idx, col_idx) = mdl.dyn_var_adm(x, None)
             sp_mat = sp.csr_matrix((data, (row_idx, col_idx)), shape=(self.n_bus,) * 2)
             y_var += sp_mat.todense()
         y_var = sp.csr_matrix(y_var)
