@@ -115,7 +115,6 @@ class DynamicLoadFiltered(DynamicLoad):
         self.lpf_b = TimeConstant(T=p['T_b'])
         self.lpf_b.input = lambda x, v: self.b_setp(x, v)
 
-    
     def g_load(self, x, v):
         return self.lpf_g.output(x, v)
 

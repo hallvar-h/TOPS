@@ -20,19 +20,16 @@ if __name__ == '__main__':
     ps = dps.PowerSystemModel(model=model)
     ps.init_dyn_sim()
 
-    load_state_idx_g = ps.loads['DynamicLoadFiltered'].lpf_g.state_idx_global['x']
-    load_state_idx_b = ps.loads['DynamicLoadFiltered'].lpf_b.state_idx_global['x']
+    gen_speed_state_idx = ps.gen['GEN'].state_idx_global['speed']
 
-    t_end = 20
+    t_end = 30
     # Solver
-    sol = EulerDAE_SDE(ps.state_derivatives, ps.solve_algebraic, 0, ps.x_0, t_end, max_step=5e-3, dim_w = 2)
+    sol = EulerDAE_SDE(ps.state_derivatives, ps.solve_algebraic, 0, ps.x_0, t_end, max_step=5e-3, dim_w = 4)
 
     def b_func(t, x, v):
         mat = np.zeros((len(sol.x), sol.dim_w))
-        mat[load_state_idx_g[0], 0] = 0.1
-        mat[load_state_idx_b[0], 0] = 0.1
-        mat[load_state_idx_g[1], 1] = 0.1
-        mat[load_state_idx_b[1], 1] = 0.1
+        for i, idx in enumerate(gen_speed_state_idx):
+            mat[idx, i] = 1e-3
         return mat
 
     # plt.imshow(b_func(*[None]*3))
@@ -81,6 +78,6 @@ if __name__ == '__main__':
 
     cov_mat = np.cov(angle_speed_mat)
     cov_mat_angle = np.cov(gen_angle_np[[0, 2], :])
-    np.linalg.det(cov_mat_angle)
+    print(np.linalg.det(cov_mat_angle))
 
-    # np.linalg.inv()
+    np.linalg.inv(cov_mat_angle)
