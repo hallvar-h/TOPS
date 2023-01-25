@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # model['pss'] = {}
     # model['gov'] = {}
 
-    import examples.user_models.user_lib as user_lib
+    import user_lib as user_lib
 
     # Power system model
     ps = dps.PowerSystemModel(model=model, user_mdl_lib=user_lib)

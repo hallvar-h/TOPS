@@ -15,27 +15,16 @@ if __name__ == '__main__':
     import dynpssimpy.ps_models.k2a as model_data
     importlib.reload(model_data)
     model = model_data.load()
-    # model['avr']['SEXS_mod'] = model['avr']['SEXS']
-    # del(model['avr']['SEXS'])
+    
     model['pll'] = {'PLL1':[
         ['name', 'T_filter', 'bus'],
         *[[f'PLL{i}', 0.1, bus[0]] for i, bus in enumerate(model['buses'][1:])],
     ]}
 
-    # model['pll'] = {'VSC': [
-    #     ['name', 'T_pll', 'bus'],
-    #     *[[f'PLL{i}', 0.1, bus[0]] for i, bus in enumerate(model['buses'][1:])],
-    # ]}
-    # model['avr'] = {}
-    # model['pss'] = {}
-    # model['gov'] = {}
-
-    import examples.user_models.user_lib as user_lib
+    import user_lib as user_lib
 
     # Power system model
     ps = dps.PowerSystemModel(model=model, user_mdl_lib=user_lib)
-
-# if False:
     ps.init_dyn_sim()
 
     print(max(abs(ps.state_derivatives(0, ps.x_0, ps.v_0))))
@@ -99,11 +88,6 @@ if __name__ == '__main__':
     for i in range(ps.n_bus):
         plt.plot(result_dict[('Global', 't')], result_dict[(f'PLL{i}', 'output')], '-', color=f'C{i}')
         plt.plot(result_dict[('Global', 't')], np.angle(result_dict[('v', f'{i}')]), '--', color=f'C{i}')
-
-    # state = 'angle'
-    # for i, gen in enumerate(ps.gen['GEN'].par['name']):
-    #     plt.plot(result_dict[('Global', 't')], result[(gen, f'{state}')], color=f'C{i}', alpha=0.5)
-    # plt.show()
 
     # plt.figure()
     fig, ax = plt.subplots(4)
