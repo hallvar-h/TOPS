@@ -21,7 +21,7 @@ if __name__ == '__main__':
         *[[f'PLL{i}', 0.1, bus[0]] for i, bus in enumerate(model['buses'][1:])],
     ]}
 
-    import user_lib as user_lib
+    import examples.user_models.user_lib as user_lib
 
     # Power system model
     ps = dps.PowerSystemModel(model=model, user_mdl_lib=user_lib)
@@ -37,10 +37,8 @@ if __name__ == '__main__':
 
     # Initialize simulation
     t = 0
-    result_dict = defaultdict(list)
+    res = defaultdict(list)
     t_0 = time.time()
-
-    event_flag = True
 
     sc_bus_idx = ps.gen['GEN'].bus_idx_red['terminal'][0]
 
@@ -60,42 +58,17 @@ if __name__ == '__main__':
         t = sol.t
         v = sol.v
 
-        dx = ps.ode_fun(0, ps.x_0)
-
-        # Store result
-        result_dict['Global', 't'].append(sol.t)
-        [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x)]
-        [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc_der, dx)]
-
-        [result_dict[('v', f'{i}')].append(v) for i, v in enumerate(ps.red_to_full.dot(v))]
-
-        [result_dict[(f'PLL{i}', 'output')].append(output) for i, output in enumerate(ps.pll['PLL1'].output(x, v).copy())]
-        [result_dict[(f'PLL{i}', 'freq_est')].append(output) for i, output in enumerate(ps.pll['PLL1'].freq_est(x, v).copy())]
-        # result_dict[('PLL1', 'output')].append(ps.pll['PLL1'].output(x, v))
+        res['t'].append(sol.t)
+        res['PLL_freq_est'].append(ps.pll['PLL1'].freq_est(x, v).copy())
+        res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
-    index = pd.MultiIndex.from_tuples(result_dict)
-    result = pd.DataFrame(result_dict, columns=index)
-
-    plt.figure()
-    state = 'speed'
-    for i, gen in enumerate(ps.gen['GEN'].par['name']):
-        plt.plot(result_dict[('Global', 't')], result_dict[(gen, f'{state}')], color=f'C{i}', alpha=0.5)
-
-
-    plt.figure()
-    for i in range(ps.n_bus):
-        plt.plot(result_dict[('Global', 't')], result_dict[(f'PLL{i}', 'output')], '-', color=f'C{i}')
-        plt.plot(result_dict[('Global', 't')], np.angle(result_dict[('v', f'{i}')]), '--', color=f'C{i}')
-
-    # plt.figure()
-    fig, ax = plt.subplots(4)
-    for i in range(4):
-        ax[i].plot(result_dict[('Global', 't')], result_dict[(f'PLL{i}', 'freq_est')], '--', color=f'C{i}')
-        # plt.plot(result_dict[('Global', 't')], np.angle(result_dict[('v', f'{i}')]), '-', color=f'C{i}')
-
-    state = 'speed'
-    for i, gen in enumerate(ps.gen['GEN'].par['name']):
-        ax[i].plot(result_dict[('Global', 't')], result[(gen, f'{state}')], color=f'C{i}')
+    fig, ax = plt.subplots(4, sharex=True)
+    for i, (pll_freq_est, gen_speed) in enumerate(zip(np.array(res['PLL_freq_est']).T, np.array(res['gen_speed']).T)):
+        ax[i].plot(res['t'], pll_freq_est, color=f'C{i}', linestyle='--', label=f'PLL freq est Bus {i+1}')
+        ax[i].plot(res['t'], gen_speed, color=f'C{i}', label=f'Gen {i+1} speed')
+        ax[i].set_ylabel(f'Bus {i}')
+        ax[i].legend()
+    ax[-1].set_xlabel('Time [s]')
     plt.show()

@@ -6,7 +6,6 @@ import dynpssimpy.dynamic as dps
 import dynpssimpy.solvers as dps_sol
 import importlib
 importlib.reload(dps)
-import pandas as pd
 import importlib
 
 if __name__ == '__main__':
