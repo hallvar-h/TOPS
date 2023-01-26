@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     # Initialize simulation
     t = 0
-    result_dict = defaultdict(list)
+    res = defaultdict(list)
     t_0 = time.time()
 
     sc_bus_idx = ps.gen['GEN'].bus_idx_red['terminal'][0]
@@ -45,19 +45,19 @@ if __name__ == '__main__':
         # Simulate next step
         result = sol.step()
         x = sol.y
+        v = sol.v
         t = sol.t
 
         dx = ps.ode_fun(0, ps.x_0)
 
         # Store result
-        result_dict['Global', 't'].append(sol.t)
-        [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x)]
-        [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc_der, dx)]
+        res['t'].append(t)
+        res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
     plt.figure()
-    state = 'speed'
-    for i, gen in enumerate(ps.gen['GEN'].par['name']):
-        plt.plot(result_dict[('Global', 't')], result_dict[(gen, f'{state}')], color=f'C{i}', alpha=0.5)
+    plt.plot(res['t'], res['gen_speed'])
+    plt.xlabel('Time [s]')
+    plt.ylabel('Gen. speed')
     plt.show()

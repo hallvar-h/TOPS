@@ -71,7 +71,7 @@ def newton_rhapson_power_flow(y_bus, v_0, p_sum_bus, q_sum_bus, bus_types, tol, 
     v_sol = x_to_v(x)
     s_sol = v_sol * np.conj(y_bus.dot(v_sol))
 
-    return v_sol, s_sol
+    return v_sol, s_sol, converged
 
 
 def remove_recarray_field(a, field):
