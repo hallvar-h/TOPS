@@ -118,7 +118,7 @@ class ConstCurrentLoad(DAEModel):
 #        return np.sqrt(3)*V*self.I_q(x, v)
 
     def load_flow_pq(self):
-        return self.bus_idx['terminal'], -self.par['P'], -self.par['Q']
+        return self.bus_idx['terminal'], self.par['P'], self.par['Q']
 
     def init_from_load_flow(self, x_0, v_0, S):
         # self._input_values['P_setp'] = self.par['P']
