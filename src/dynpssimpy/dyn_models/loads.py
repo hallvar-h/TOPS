@@ -88,7 +88,7 @@ class DynamicLoad(DAEModel):
         return self.s(x, v).imag
 
 
-class ConstCurrentLoad(DAEModel):
+class ConstCurrentLoadPLL(DAEModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -102,7 +102,7 @@ class ConstCurrentLoad(DAEModel):
         p = self.par
         self.pll = PLL1(T_filter=self.par['T_pll'], bus=p['bus'])
 
-        self.I_inj = lambda x, v: (self.Id_setp(x, v) - 1j*self.Iq_setp(x, v))*np.exp(1j*self.pll.output(x, v))
+        self.I_inj = lambda x, v: - (self.Id_setp(x, v) - 1j*self.Iq_setp(x, v))*np.exp(1j*self.pll.output(x, v))
 
     def input_list(self):
         return ['Id_setp', 'Iq_setp']
@@ -134,6 +134,18 @@ class ConstCurrentLoad(DAEModel):
         self._input_values['Iq_setp'] = I_q_0
 
     def current_injections(self, x, v):
-        i_n = self.sys_par['s_n'] / (np.sqrt(3) * self.sys_par['bus_v_n'])
+        self.i_n = self.sys_par['s_n'] / (np.sqrt(3) * self.sys_par['bus_v_n'])
         # self.P(x, v)
-        return self.bus_idx_red['terminal'], self.I_inj(x, v)/i_n[self.bus_idx_red['terminal']]
+        return self.bus_idx_red['terminal'], self.I_inj(x, v)/self.i_n[self.bus_idx_red['terminal']]
+
+    def i_d(self, x, v):
+        # Actual d axis current (might differ from set-point due to inaccurate voltage angle)
+        v_angle = np.angle(v[self.bus_idx_red['terminal']])
+        i_dq = self.I_inj(x, v)*np.exp(1j*(-v_angle))
+        return -i_dq.real
+
+    def i_q(self, x, v):
+        # Actual q axis current (might differ from set-point due to inaccurate voltage angle)
+        v_angle = np.angle(v[self.bus_idx_red['terminal']])
+        i_dq = self.I_inj(x, v)*np.exp(1j*(-v_angle))
+        return i_dq.imag
