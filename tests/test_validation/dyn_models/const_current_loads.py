@@ -90,8 +90,8 @@ if __name__ == '__main__':
         res['I_inj'].append(ps.loads['ConstCurrentLoadPLL'].I_inj(x, v).copy())
         res['Id_setp'].append(ps.loads['ConstCurrentLoadPLL'].Id_setp(x, v).copy())
         res['Iq_setp'].append(ps.loads['ConstCurrentLoadPLL'].Iq_setp(x, v).copy())
-        res['Id'].append(ps.loads['ConstCurrentLoadPLL'].i_d(x, v).copy())
-        res['Iq'].append(ps.loads['ConstCurrentLoadPLL'].i_q(x, v).copy())
+        res['Id'].append(ps.loads['ConstCurrentLoadPLL'].I_d(x, v).copy())
+        res['Iq'].append(ps.loads['ConstCurrentLoadPLL'].I_q(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 

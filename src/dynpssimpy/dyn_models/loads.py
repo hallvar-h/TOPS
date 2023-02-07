@@ -121,31 +121,39 @@ class ConstCurrentLoadPLL(DAEModel):
         return self.bus_idx['terminal'], self.par['P'], self.par['Q']
 
     def init_from_load_flow(self, x_0, v_0, S):
-        # self._input_values['P_setp'] = self.par['P']
-        # self._input_values['Q_setp'] = self.par['Q']
 
-        v_n = self.sys_par['bus_v_n'][self.bus_idx_red['terminal']]
+        self.v_n = self.sys_par['bus_v_n'][self.bus_idx_red['terminal']]
+        self.i_n = self.sys_par['s_n']/(np.sqrt(3)*self.v_n)
 
-        V_0 = v_0[self.bus_idx_red['terminal']]*v_n
+        V_0 = v_0[self.bus_idx_red['terminal']]*self.v_n
 
+        # Set-points for d- and q-axis currents determined from load flow and active- and rective power.
         I_d_0 = self.par['P']/(abs(V_0)*np.sqrt(3))
         I_q_0 = self.par['Q']/(abs(V_0)*np.sqrt(3))
         self._input_values['Id_setp'] = I_d_0
         self._input_values['Iq_setp'] = I_q_0
 
     def current_injections(self, x, v):
-        self.i_n = self.sys_par['s_n'] / (np.sqrt(3) * self.sys_par['bus_v_n'])
+        # Current injections applied to system
         # self.P(x, v)
-        return self.bus_idx_red['terminal'], self.I_inj(x, v)/self.i_n[self.bus_idx_red['terminal']]
+        return self.bus_idx_red['terminal'], self.I_inj(x, v)/self.i_n
+
+    def I_d(self, x, v):
+        # Actual d-axis current
+        v_angle = np.angle(v[self.bus_idx_red['terminal']])
+        I_dq = self.I_inj(x, v)*np.exp(1j*(-v_angle))
+        return -I_dq.real
+
+    def I_q(self, x, v):
+        # Actual q axis current
+        v_angle = np.angle(v[self.bus_idx_red['terminal']])
+        I_dq = self.I_inj(x, v)*np.exp(1j*(-v_angle))
+        return I_dq.imag
 
     def i_d(self, x, v):
-        # Actual d axis current (might differ from set-point due to inaccurate voltage angle)
-        v_angle = np.angle(v[self.bus_idx_red['terminal']])
-        i_dq = self.I_inj(x, v)*np.exp(1j*(-v_angle))
-        return -i_dq.real
+        # Actual d-axis current, system p.u. base
+        self.I_d(x, v)/self.i_n
 
     def i_q(self, x, v):
-        # Actual q axis current (might differ from set-point due to inaccurate voltage angle)
-        v_angle = np.angle(v[self.bus_idx_red['terminal']])
-        i_dq = self.I_inj(x, v)*np.exp(1j*(-v_angle))
-        return i_dq.imag
+        # Actual q-axis current, system p.u. base
+        self.I_q(x, v)/self.i_n
