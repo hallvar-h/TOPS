@@ -62,9 +62,6 @@ if __name__ == '__main__':
 
         dx = ps.ode_fun(0, ps.x_0)
 
-        for mdl in ps.dyn_mdls:
-            mdl.reset_outputs()
-
         # Store result
         res['t'].append(sol.t)
         res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())

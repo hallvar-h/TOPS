@@ -89,14 +89,14 @@ def get_submodules(mdl):
 def output(f):
     @functools.wraps(f)
     def wrap(self, *args):
-        if not self._output_ready[f.__name__]:
-            # print('Output not ready, calculating output')
-            self._output_values[f.__name__] = f(self, *args)
-            self._output_ready[f.__name__] = True
+        if self._store_output:
+            if not self._output_ready[f.__name__]:
+                # print('Output not ready, calculating output')
+                self._output_values[f.__name__] = f(self, *args)
+                self._output_ready[f.__name__] = True
+            return self._output_values[f.__name__]
         else:
-            pass
-            # print('Output ready')
-        return self._output_values[f.__name__]
+            return f(self, *args)
     return wrap
 
 
@@ -154,6 +154,7 @@ class DAEModel:
         self._output_ready = np.zeros(1, dtype=[(var, bool) for var in self.output_list()])
         self._output_values = np.zeros(self.n_units, dtype=[(var, float) for var in self.output_list()])
         self._input_values = np.zeros(self.n_units, dtype=[(var, float) for var in self.input_list()])
+        self._store_output = False
         [self.disconnect_input(inp) for inp in self.input_list()]
 
         self.int_par = np.zeros(self.n_units, dtype=[(var, float) for var in self.int_par_list()])
