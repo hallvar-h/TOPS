@@ -33,15 +33,9 @@ class Trafo(DAEModel):
             self.to_mat[i, self.idx_to[i]] = 1
     
     def load_flow_adm(self):
-        # print('hei')
-        # buses = self.ref['buses']
-        # z_n = buses.z_n
-        # print(self.sys_par['bus_v_n'])
         z_n = self.sys_par['bus_v_n'] ** 2 / self.sys_par['s_n']
 
         data = self.data
-        # self.idx_from = dps_uf.lookup_strings(data['from_bus'], buses.data['name'])
-        # self.idx_to = dps_uf.lookup_strings(data['to_bus'], buses.data['name'])
         self.admittance = np.zeros(self.n_units, dtype=complex)
         self.ratio_from = np.zeros(self.n_units, dtype=complex)
         self.ratio_to = np.zeros(self.n_units, dtype=complex)
@@ -77,3 +71,6 @@ class Trafo(DAEModel):
 
 
         return data, (rows, cols)
+
+    def dyn_const_adm(self):
+        return self.load_flow_adm()

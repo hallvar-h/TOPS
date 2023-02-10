@@ -21,7 +21,7 @@ if __name__ == '__main__':
         *[[f'PLL{i}', 0.1, bus[0]] for i, bus in enumerate(model['buses'][1:])],
     ]}
 
-    import examples.user_models.user_lib as user_lib
+    import user_lib as user_lib
 
     # Power system model
     ps = dps.PowerSystemModel(model=model, user_mdl_lib=user_lib)

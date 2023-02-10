@@ -161,7 +161,7 @@ class PowerSystemModel:
 
         self.setup_ready = True
 
-    def build_y_bus(self, type='dyn'):
+    def build_y_bus_lf(self):
 
         y_lf = np.zeros((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['load_flow_adm']:
@@ -170,19 +170,20 @@ class PowerSystemModel:
                                    shape=(self.n_bus,) * 2)
             y_lf += sp_mat.todense()
 
-        if type == 'dyn':
-            y_dyn = np.zeros((self.n_bus,) * 2, dtype=complex)
-            for mdl in self.mdl_instructions['dyn_const_adm']:
-                data, (row_idx, col_idx) = mdl.dyn_const_adm()
-                sp_mat = sp.csr_matrix((data, (row_idx, col_idx)), shape=(self.n_bus,) * 2)
-                y_dyn += sp_mat.todense()
+        self.y_bus_lf = y_lf
+        return y_lf
 
-        if type == 'dyn':
-            self.y_bus_dyn = y_lf + y_dyn
-            return y_lf + y_dyn
-        else:
-            self.y_bus_lf = y_lf
-            return y_lf
+    def build_y_bus_dyn(self):
+
+        y_dyn = np.zeros((self.n_bus,) * 2, dtype=complex)
+        for mdl in self.mdl_instructions['dyn_const_adm']:
+            data, (row_idx, col_idx) = mdl.dyn_const_adm()
+            sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
+            y_dyn += sp_mat.todense()
+
+        self.y_bus_dyn = y_dyn
+        return y_dyn
+
 
     def power_flow(self, print_output=False):
 
@@ -190,7 +191,7 @@ class PowerSystemModel:
             self.setup()
 
         if self.y_bus_lf is None:
-            self.build_y_bus('lf')
+            self.build_y_bus_lf()
 
         bus_type = np.array(['PQ'] * self.n_bus, dtype='<U2')
 
@@ -293,7 +294,7 @@ class PowerSystemModel:
             mdl.init_from_load_flow(self.x_0, self.v_0, mdl_lf_soln)
 
         # Build reduced system
-        self.y_bus_dyn = self.build_y_bus('dyn')
+        self.y_bus_dyn = self.build_y_bus_dyn()
         self.y_bus_red_full = self.kron_reduction(self.y_bus_dyn, self.bus_idx_red)
         self.y_bus_red = sp.csr_matrix(self.y_bus_red_full)
         self.y_bus_red_mod = sp.csr_matrix(self.y_bus_red_full)*0

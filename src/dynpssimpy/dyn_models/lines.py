@@ -118,6 +118,9 @@ class Line(DAEModel):
 
         return data, (rows, cols)
 
+    def dyn_const_adm(self):
+        return self.load_flow_adm()
+
     def i_from(self, x, v):
         v_full = v
         return self.v_to_i.dot(v_full)*self.connected
