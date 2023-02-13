@@ -39,6 +39,22 @@ class Integrator(DAEModel):
         input_value = output_value
         return input_value
 
+    
+class Integrator2(Integrator):
+    """
+    Same as Integrator, but with time constant.
+    """
+    @output
+    def output(self, x, v):
+        X = self.local_view(x)
+        return X['x_i']/self.par['T']
+
+    def initialize(self, x0, v0, output_value):
+        X0 = self.local_view(x0)
+        X0['x_i'][:] = output_value*self.par['T']
+        input_value = output_value*self.par['T']
+        return input_value
+
 
 class Gain(DAEModel):
     @output
@@ -143,3 +159,18 @@ class LeadLag(DAEModel):
         X = self.local_view(x)
 
         dX['x'][:] = (self.par['T_1']/self.par['T_2'] - 1)*self.input(x, v) - 1/self.par['T_2']*X['x']
+
+
+class PIRegulator2(DAEModel):
+    def state_list(self):
+        return ['x']
+
+    @output
+    def output(self, x, v):
+        X = self.local_view(x)
+        return 1/self.par['T_2']*(self.par['T_1']*self.input(x, v) + X['x'])
+
+    def state_derivatives(self, dx, x, v):
+        dX = self.local_view(dx)
+        X = self.local_view(x)
+        dX['x'][:] = self.input(x, v)
