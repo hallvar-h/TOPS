@@ -8,6 +8,7 @@ class Trafo(DAEModel):
         self.data = data
         self.par = data
         self.n_units = len(data)
+        self.connected = np.ones(self.n_units, dtype=bool)
 
         self.bus_idx = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
         self.bus_idx_red = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
@@ -17,10 +18,12 @@ class Trafo(DAEModel):
         return {'from_bus': self.par['from_bus'], 'to_bus': self.par['to_bus']}
 
     def init_extras(self):
-        # This is copied from lines:Line model, is not correct yet.
+        # This is copied from lines:Line model, is not correct yet (tap ratios not taken into account)
         self.idx_from = self.bus_idx_red['from_bus']
         self.idx_to = self.bus_idx_red['to_bus']
         n_bus = self.sys_par['n_bus']
+        
+        self.shunt = np.zeros(self.n_units)  # Quick fix
 
         self.v_to_i = np.zeros((self.n_units, n_bus), dtype=complex)
         self.v_to_i_rev = np.zeros((self.n_units, n_bus), dtype=complex)
@@ -67,10 +70,18 @@ class Trafo(DAEModel):
             -np.conj(self.ratio_from)*self.ratio_to*self.admittance
         ])
 
-        # self.init_extras()
+        self.init_extras()
 
 
         return data, (rows, cols)
 
     def dyn_const_adm(self):
         return self.load_flow_adm()
+
+    def i_from(self, x, v):
+        v_full = v
+        return self.v_to_i.dot(v_full)*self.connected
+
+    def i_to(self, x, v):
+        v_full = v
+        return self.v_to_i_rev.dot(v_full)*self.connected
