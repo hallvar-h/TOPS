@@ -63,12 +63,21 @@ if __name__ == '__main__':
         res['t'].append(t)
         res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
         res['v'].append(v.copy())
+        res['trafo_current_from'].append(ps.trafos['DynTrafo'].i_from(x, v).copy())
+        res['trafo_current_to'].append(ps.trafos['DynTrafo'].i_to(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
     plt.figure()
-    plt.plot(res['t'], np.abs(res['v']))
-    plt.xlabel('Time [s]')
-    plt.ylabel('Bus voltage')
+    fig, ax = plt.subplots(2, sharex=True)
+    ax[0].plot(res['t'], np.abs(res['v']))
+    ax[0].set_xlabel('Time [s]')
+    ax[0].set_ylabel('Bus voltage')
+
+    ax[1].plot(res['t'], np.abs(res['trafo_current_from']), color='C0')
+    ax[1].plot(res['t'], np.abs(res['trafo_current_to']), color='C1', linestyle=':')
+    ax[1].set_xlabel('Time [s]')
+    ax[1].set_ylabel('Trafo current')
+    
     plt.show()
     

@@ -26,10 +26,8 @@ class Trafo(DAEModel):
         n_elements = len(self.par)
         self.v_to_i = np.zeros((n_elements, n_bus), dtype=complex)
         self.v_to_i_rev = np.zeros((n_elements, n_bus), dtype=complex)
-        self.from_mat = np.zeros((n_elements, n_bus), dtype=complex)
-        self.to_mat = np.zeros((n_elements, n_bus), dtype=complex)
-        for i, element in enumerate(self.par):
-
+        
+        for i in range(self.n_units):
             # This might not be correct for phase shifting transformers (conj in the right place?)
             shunt_from = self.ratio_from_0[i] * np.conj(self.ratio_from_0[i]) * self.admittance[i]
             shunt_to = self.ratio_to_0[i] * np.conj(self.ratio_to_0[i]) * self.admittance[i]
@@ -38,8 +36,6 @@ class Trafo(DAEModel):
 
             self.v_to_i[i, [self.idx_from[i], self.idx_to[i]]] = [shunt_from, -adm_from_to]
             self.v_to_i_rev[i, [self.idx_to[i], self.idx_from[i]]] = [shunt_to, -adm_to_from]
-            self.from_mat[i, self.idx_from[i]] = 1
-            self.to_mat[i, self.idx_to[i]] = 1
     
     def load_flow_adm(self):
         z_n = self.sys_par['bus_v_n'] ** 2 / self.sys_par['s_n']
@@ -130,7 +126,6 @@ class Trafo(DAEModel):
 
     
 class DynTrafo(Trafo):
-    # Note: Some result variables that are inherited are not correct
     def input_list(self):
         return ['ratio_from', 'ratio_to']
     
@@ -142,8 +137,8 @@ class DynTrafo(Trafo):
         self.ratio_from_0 = self.par['ratio_from']
         self.ratio_to_0 = self.par['ratio_to']
 
-        idx_from = self.bus_idx['from_bus']
-        idx_to = self.bus_idx['to_bus']
+        self.idx_from = idx_from = self.bus_idx['from_bus']
+        self.idx_to = idx_to = self.bus_idx['to_bus']
 
         for i, trafo in enumerate(self.par):
 
@@ -163,7 +158,6 @@ class DynTrafo(Trafo):
             -np.conj(self.ratio_from_0)*self.ratio_to_0*self.admittance
         ])
 
-        # self.init_extras()
         self.rows = rows
         self.cols = cols
     
@@ -187,3 +181,23 @@ class DynTrafo(Trafo):
         ])
 
         return data, (self.rows, self.cols)
+    
+    def i_from(self, x, v):
+        v_full = v
+        v_from = v_full[self.idx_from]
+        v_to = v_full[self.idx_to]
+
+        shunt_from = self.ratio_from(x, v)*np.conj(self.ratio_from(x, v))*self.admittance
+        adm_from_to = self.ratio_from(x, v)*np.conj(self.ratio_to(x, v))*self.admittance
+
+        return v_from*shunt_from - v_to*adm_from_to
+
+    def i_to(self, x, v):
+        v_full = v
+        v_from = v_full[self.idx_from]
+        v_to = v_full[self.idx_to]
+        
+        shunt_to = self.ratio_to(x, v) * np.conj(self.ratio_to(x, v)) * self.admittance
+        adm_to_from = np.conj(self.ratio_from(x, v)) * self.ratio_to(x, v) * self.admittance
+
+        return v_to*shunt_to - v_from*adm_to_from
