@@ -361,8 +361,8 @@ class PowerSystemModel:
 
         y_var = np.zeros((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['dyn_var_adm']:
-            data, (row_idx, col_idx) = mdl.dyn_var_adm()
-            sp_mat = sp.csr_matrix((data, (row_idx, col_idx)), shape=(self.n_bus,) * 2)
+            data, (row_idx, col_idx) = mdl.dyn_var_adm(x, None)
+            sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
             y_var += sp_mat.todense()
         y_var = sp.csr_matrix(y_var)
 
