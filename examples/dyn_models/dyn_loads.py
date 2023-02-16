@@ -21,7 +21,7 @@ if __name__ == '__main__':
     ps.init_dyn_sim()
     print(max(abs(ps.state_derivatives(0, ps.x_0, ps.v_0))))
 
-    t_end = 10
+    t_end = 20
     x_0 = ps.x_0.copy()
 
     # Solver
@@ -35,13 +35,13 @@ if __name__ == '__main__':
     sc_bus_idx = ps.gen['GEN'].bus_idx_red['terminal'][0]
 
     # Run simulation
-    event_flag = True
     while t < t_end:
         sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
-        if 1 <= t and event_flag:
+        if 1 <= t:
             ps.loads['DynamicLoad'].set_input('g_setp', 1.3, 0)
-            event_flag = False
+        if 10 <= t:
+            ps.loads['DynamicLoad'].set_input('b_setp', -0.2, 1)
 
         # Simulate next step
         result = sol.step()
