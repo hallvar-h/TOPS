@@ -70,7 +70,7 @@ class DynamicLoad(DAEModel):
         z_load = np.conj(abs(self.v_0) ** 2 / s_load)
         self.y_load = 1/z_load
 
-    def dyn_var_adm(self):
+    def dyn_var_adm(self, x, v):
         return self.y_load, (self.bus_idx_red['terminal'],)*2
 
     def i(self, x, v):
