@@ -40,7 +40,7 @@ if __name__ == '__main__':
         sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
         if 1 <= t and event_flag:
-            ps.loads['DynamicLoad'].y_load += 0.1
+            ps.loads['DynamicLoad'].set_input('g_setp', 1.3, 0)
             event_flag = False
 
         # Simulate next step
