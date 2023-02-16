@@ -58,8 +58,6 @@ if __name__ == '__main__':
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
-    plt.figure()
-    fig, ax = plt.subplots(2, sharex=True)
     fig = plt.figure()
     plt.plot(res['t'], np.abs(res['v']))
     plt.xlabel('Time [s]')
