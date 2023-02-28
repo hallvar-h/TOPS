@@ -6,6 +6,7 @@ import dynpssimpy.dynamic as dps
 import dynpssimpy.solvers as dps_sol
 import importlib
 importlib.reload(dps)
+import importlib
 
 if __name__ == '__main__':
 
@@ -14,11 +15,18 @@ if __name__ == '__main__':
     importlib.reload(model_data)
     model = model_data.load()
 
+    model['vsc'] = {'VSC': [
+        ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp',   ],
+        ['VSC1',    0.1,        1,      'B8',   0.01,        1e-12,        0.1,        0.1,        100,          100],
+    ]}
+
     # Power system model
     ps = dps.PowerSystemModel(model=model)
     ps.init_dyn_sim()
+    print(max(abs(ps.ode_fun(0, ps.x_0))))
 
-    print(max(abs(ps.state_derivatives(0, ps.x_0, ps.v_0))))
+    x0 = ps.x_0
+    v0 = ps.v_0
 
     t_end = 10
     x_0 = ps.x_0.copy()
@@ -31,33 +39,32 @@ if __name__ == '__main__':
     res = defaultdict(list)
     t_0 = time.time()
 
-    event_flag = True
-
     # Run simulation
     while t < t_end:
         sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
-        # Short circuit
-        if t > 1 and event_flag:
-            event_flag = False
-            ps.lines['Line'].event(ps, ps.lines['Line'].par['name'][0], 'disconnect')
+        if t > 1:
+            ps.vsc['VSC'].set_input('P_setp', 500)
 
         # Simulate next step
         result = sol.step()
         x = sol.y
-        v = sol.v
         t = sol.t
+        v = sol.v
 
         dx = ps.ode_fun(0, ps.x_0)
 
         # Store result
-        res['t'].append(t)
+        res['t'].append(sol.t)
         res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
+        res['VSC_power'].append(ps.vsc['VSC'].P(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
     plt.figure()
     plt.plot(res['t'], res['gen_speed'])
-    plt.xlabel('Time [s]')
-    plt.ylabel('Gen. speed')
+    plt.show()
+
+    plt.figure()
+    plt.plot(res['t'], res['VSC_power'])
     plt.show()

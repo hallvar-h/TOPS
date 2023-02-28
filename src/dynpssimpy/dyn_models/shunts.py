@@ -24,6 +24,6 @@ class Shunt(DAEModel):
         z = np.conj(abs(1) ** 2 / s_shunt)
         y_shunt = 1 / z
         return y_shunt, (self.bus_idx['terminal'],) * 2
-    #
-    # def dyn_const_adm_(self):
-    #     return self.load_flow_adm()
+    
+    def dyn_const_adm(self):
+        return self.load_flow_adm()

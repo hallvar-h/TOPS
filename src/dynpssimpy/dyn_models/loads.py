@@ -104,7 +104,8 @@ class DynamicLoad(DAEModel):
 class DynamicLoadFiltered(DynamicLoad):
     """Dynamic load where the input is filtered using a low pass filter. 
     
-    The load is an admittance which is determined by the output of the low pass filter.
+    The load is an admittance which is determined by the output of two low pass filters,
+    one for G (conductance) and one for B (susceptance).
     """
 
     def add_blocks(self):

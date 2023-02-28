@@ -10,23 +10,13 @@ importlib.reload(dps)
 if __name__ == '__main__':
 
     # Load model
-    import dynpssimpy.ps_models.ieee39 as model_data
+    import dynpssimpy.ps_models.k2a as model_data
     importlib.reload(model_data)
     model = model_data.load()
-    model['avr']['SEXS_mod'] = model['avr']['SEXS']
-    del(model['avr']['SEXS'])
-    # model['avr'] = {}
-    # model['pss'] = {}
-    # model['gov'] = {}
-
-    import examples.user_models.user_lib as user_lib
 
     # Power system model
-    ps = dps.PowerSystemModel(model=model, user_mdl_lib=user_lib)
-
-# if False:
+    ps = dps.PowerSystemModel(model=model)
     ps.init_dyn_sim()
-
     print(max(abs(ps.state_derivatives(0, ps.x_0, ps.v_0))))
 
     t_end = 10
@@ -37,10 +27,8 @@ if __name__ == '__main__':
 
     # Initialize simulation
     t = 0
-    result_dict = defaultdict(list)
+    res = defaultdict(list)
     t_0 = time.time()
-
-    event_flag = True
 
     sc_bus_idx = ps.gen['GEN'].bus_idx_red['terminal'][0]
 
@@ -57,19 +45,23 @@ if __name__ == '__main__':
         # Simulate next step
         result = sol.step()
         x = sol.y
+        v = sol.v
         t = sol.t
 
         dx = ps.ode_fun(0, ps.x_0)
 
         # Store result
-        result_dict['Global', 't'].append(sol.t)
-        [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x)]
-        [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc_der, dx)]
+        res['t'].append(t)
+        res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
+        res['trafo_current_from'].append(ps.trafos['Trafo'].i_from(x, v).copy())
+        res['trafo_current_to'].append(ps.trafos['Trafo'].i_to(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
     plt.figure()
-    state = 'speed'
-    for i, gen in enumerate(ps.gen['GEN'].par['name']):
-        plt.plot(result_dict[('Global', 't')], result_dict[(gen, f'{state}')], color=f'C{i}', alpha=0.5)
+    import numpy as np
+    plt.plot(res['t'], res['trafo_current_from'], color='C0')
+    plt.plot(res['t'], -np.array(res['trafo_current_to']), color='C1', linestyle=':')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Gen. speed')
     plt.show()
