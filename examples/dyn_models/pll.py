@@ -16,10 +16,16 @@ if __name__ == '__main__':
     importlib.reload(model_data)
     model = model_data.load()
 
-    model['pll'] = {'PLL2':[
-        ['name',        'K_p', 'K_i',   'bus'],
-        *[[f'PLL{i}',   100,    10,    bus[0]] for i, bus in enumerate(model['buses'][1:])],
-    ]}
+    model['pll'] = {
+        'PLL1':[
+           ['name',        'T_filter',   'bus'],
+            *[[f'PLL{i}',   0.1,        bus[0]] for i, bus in enumerate(model['buses'][1:])],
+        ],
+        'PLL2':[
+            ['name',        'K_p', 'K_i',   'bus'],
+            *[[f'PLL{i}',   10,    1,    bus[0]] for i, bus in enumerate(model['buses'][1:])],
+            ]
+    }
 
 
     # Power system model
@@ -67,7 +73,8 @@ if __name__ == '__main__':
         res['t'].append(sol.t)
         res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
         res['v_angle'].append(np.angle(sol.v).copy())
-        res['PLL'].append(ps.pll['PLL2'].output(x, v).copy())
+        res['PLL1'].append(ps.pll['PLL1'].output(x, v).copy())
+        res['PLL2'].append(ps.pll['PLL2'].output(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
@@ -78,10 +85,11 @@ if __name__ == '__main__':
 
     n_plt = 4
     fig, ax = plt.subplots(n_plt, sharex=True)
-    for i, (pll_angle_est, v_angle) in enumerate(zip(np.array(res['PLL']).T, np.array(res['v_angle']).T)):
+    for i, (pll_1, pll_2, v_angle) in enumerate(zip(np.array(res['PLL1']).T, np.array(res['PLL2']).T, np.array(res['v_angle']).T)):
         if i >= n_plt:
             break 
-        ax[i].plot(res['t'], pll_angle_est, color=f'C{i}', linestyle='--', label=f'PLL angle est Bus {i+1}')
+        ax[i].plot(res['t'], pll_1, color=f'C{i}', linestyle='--', label=f'PLL 1 angle est Bus {i+1}')
+        ax[i].plot(res['t'], pll_2, color=f'C{i}', linestyle=':', label=f'PLL 2 angle est Bus {i+1}')
         ax[i].plot(res['t'], v_angle, color=f'C{i}', label=f'Voltage {i+1} angle')
         ax[i].set_ylabel(f'Bus {i}')
         ax[i].legend()
