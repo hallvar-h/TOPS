@@ -113,7 +113,7 @@ class DynMdl:
 
 class DAEModel:
     """Base class for dynamic models"""
-    def __init__(self, par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs):
+    def __init__(self, par=None, sys_par=None, first_state_idx=0, n_units=None, map=None, **kwargs):
         # type(self)._ids = count(0)
         # self.id = next(type(self)._ids)
 
@@ -124,7 +124,13 @@ class DAEModel:
             self.par = dps_uf.structured_array_from_list(names=['name'], entries=[(name,)]*n_units)
 
         else:
-            self.par = par if par is not None else self.parse_input_data(**kwargs)
+            if par is not None and map is not None:
+                self.par = self.get_parameter_subset(par, map)
+            elif par is not None and map is None:
+                self.par = par
+            else:
+                self.par = self.parse_input_data(**kwargs)
+
         self.sys_par = sys_par
 
         self.n_units = len(self.par)
@@ -236,6 +242,22 @@ class DAEModel:
             names = np.array(names, dtype=[('name', names.dtype)])
             old_par = dps_uf.remove_recarray_field(mdl.par, 'name')
             mdl.par = dps_uf.combine_recarrays(names, old_par)
+
+    @staticmethod
+    def get_parameter_subset(par, map):
+        par_subset = par[list(map.keys())]
+
+        new_dtypes = []
+        new_names = []
+        formats = []
+        offsets = []
+        for nam, (fmt, offs) in par_subset.dtype.fields.items():
+            new_names.append(map[nam])
+            formats.append(fmt)
+            offsets.append(offs)
+
+        new_dtypes = np.dtype({'names': new_names, 'formats': formats, 'offsets': offsets, 'itemsize': par_subset.dtype.itemsize})
+        return par_subset.view(dtype=new_dtypes)
 
     def parse_input_data(self, **kwargs):
         """Read parameters from kwargs"""

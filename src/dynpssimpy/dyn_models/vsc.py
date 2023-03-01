@@ -13,7 +13,8 @@ class VSC(DAEModel):
 
     def add_blocks(self):
         p = self.par
-        self.pll = PLL1(T_filter=self.par['T_pll'], bus=p['bus'])
+        # self.pll = PLL1(T_filter=self.par['T_pll'], bus=p['bus'])
+        self.pll = PLL1(p, map={'T_pll': 'T_filter'})  # T_filter=self.par['T_pll'], bus=p['bus'])
 
         self.pi_p = PIRegulator(K_p=p['P_K_p'], K_i=p['P_K_i'])
         self.pi_p.input = lambda x, v: self.P_setp(x, v) - self.P(x, v)
