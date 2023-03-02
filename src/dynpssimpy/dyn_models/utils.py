@@ -332,11 +332,14 @@ def auto_init(mdl, x0, v0, output_0):
 
     err_best = 1e6
     for init_conditions in [np.ones(n_sol), np.zeros(n_sol), np.random.randn(n_sol)]:
-        sol = least_squares(ode_fun_mdl, init_conditions)
-        err = np.linalg.norm(ode_fun_mdl(sol['x']))
-        if err < err_best:
-            x_sol_best = sol['x']
-            err_best = err
+        try:
+            sol = least_squares(ode_fun_mdl, init_conditions)
+            err = np.linalg.norm(ode_fun_mdl(sol['x']))
+            if err < err_best:
+                x_sol_best = sol['x']
+                err_best = err
+        except ValueError:
+            continue
 
     x_sol_all = x0.copy()
     for idx, idx_local in zip(state_idx, state_idx_local):
