@@ -438,6 +438,7 @@ class PowerSystemModel:
             return sp_linalg.spsolve(y_bus, self.i_inj)
         '''
 
+
     def ode_fun(self, t, x):
         '''
         Can be integrated with any ODE-integration method (e.g. Euler, Runge-Kutta etc.)
