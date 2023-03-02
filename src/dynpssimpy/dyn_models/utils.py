@@ -330,12 +330,20 @@ def auto_init(mdl, x0, v0, output_0):
     x_test = np.concatenate([x0[:n_states], mdl.int_par['bias']])
     x_test[:] = 1
 
-    sol = least_squares(ode_fun_mdl, np.ones(n_sol))
-    x_sol = sol['x']
-    ode_fun_mdl(x_sol)
+    err_best = 1e6
+    for init_conditions in [np.ones(n_sol), np.zeros(n_sol), np.random.randn(n_sol)]:
+        sol = least_squares(ode_fun_mdl, init_conditions)
+        err = np.linalg.norm(ode_fun_mdl(sol['x']))
+        if err < err_best:
+            x_sol_best = sol['x']
+            err_best = err
+
     x_sol_all = x0.copy()
     for idx, idx_local in zip(state_idx, state_idx_local):
-        x_sol_all[idx] = x_sol[idx_local]
+        x_sol_all[idx] = x_sol_best[idx_local]
+
+    
+    mdl.int_par[:] = x_sol_best[int_par_idx]
         
     assert np.linalg.norm(mdl.output(x_sol_all, v0) - output_0) < 1e-6
     # assert max(abs(ps.state_derivatives(0, x_sol_all, ps.v_0))) < 1e-6
