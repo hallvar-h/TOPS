@@ -369,6 +369,8 @@ class PowerSystemModel:
         return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
 
     def no_fun(self):
+        pass
+        '''
         # Interfacing models  with system (current injections)
         self.i_inj_d = np.zeros(self.n_bus_red, dtype=complex)
         self.i_inj_q = np.zeros(self.n_bus_red, dtype=complex)
@@ -435,6 +437,8 @@ class PowerSystemModel:
             return v_red
         else:
             return sp_linalg.spsolve(y_bus, self.i_inj)
+        '''
+
 
     def ode_fun(self, t, x):
         '''

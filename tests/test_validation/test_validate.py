@@ -1,5 +1,5 @@
 import unittest
-from validation_functions import load_pf_res, compute_error
+from .validation_functions import load_pf_res, compute_error
 # import pandas as pd
 from collections import defaultdict
 import dynpssimpy.dynamic as dps
