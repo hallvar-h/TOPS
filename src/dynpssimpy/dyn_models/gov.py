@@ -46,6 +46,7 @@ class TGOV1(DAEModel, GOV):
         return ['bias']
 
     def init_from_connections(self, x0, v0, output_0):
+        # auto_init(self, x0, v0, output_0['output'])
         p = self.par
         self.int_par['bias'] = self.droop.initialize(
             x0, v0, self.time_constant_lim.initialize(
