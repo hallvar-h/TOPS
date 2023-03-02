@@ -2,6 +2,7 @@ import numpy as np
 import inspect
 import functools
 import dynpssimpy.utility_functions as dps_uf
+from scipy.optimize import least_squares
 
 
 def determine_connections(dyn_mdls, order_by='input'):
@@ -272,3 +273,70 @@ class DAEModel:
 #         def input(self, x, v):
 #             return self._input_values[input_name]
 #         setattr(type(self), input_name, input)
+
+
+def auto_init(mdl, x0, v0, output_0):
+    submodules = get_submodules(mdl)
+    n_states_all = len(x0)
+    
+    # Find states belonging to model:
+    state_idx = []
+    state_idx_local = []
+    n_states = 0
+    start_idx = 0
+    for submodule in submodules:
+        state_list = submodule.state_list()
+        if len(state_list) > 0:
+            state_idx.append(submodule.idx)
+            n_states_mdl = submodule.idx.stop - submodule.idx.start
+            n_states += n_states_mdl
+            state_idx_local.append(slice(start_idx, start_idx + n_states_mdl))
+            start_idx += n_states_mdl
+    
+    init_val = 1
+    n_int_par = len(mdl.int_par_list())
+    n_units = mdl.n_units
+    n_sol = n_states + n_int_par*n_units
+    int_par_idx = slice(n_states, None)
+    x_test = np.ones(n_sol)
+
+    def ode_fun_mdl(x_test):
+        int_par = x_test[int_par_idx]
+        mdl.int_par[:] = int_par
+        x_all_test = np.zeros_like(x0)
+        for idx, idx_local in zip(state_idx, state_idx_local):
+            x_all_test[idx] = x_test[idx_local]
+        
+        dx_all = np.zeros(n_states_all)
+        for submodule in submodules:
+            submodule.reset_outputs()
+            submodule._store_output = True
+
+        dx_all = np.zeros(n_states_all)
+        for submodule in submodules:
+            if hasattr(submodule, 'state_derivatives'):
+                submodule.state_derivatives(dx_all, x_all_test, v0)
+
+        for submodule in submodules:
+            submodule._store_output = False
+
+        dx_mdl = []
+        for idx in state_idx:
+            dx_mdl.append(dx_all[idx])
+
+        output_err = mdl.output(x_all_test, v0) - output_0
+        return np.concatenate(dx_mdl + [output_err])
+
+    x_test = np.concatenate([x0[:n_states], mdl.int_par['bias']])
+    x_test[:] = 1
+
+    sol = least_squares(ode_fun_mdl, np.ones(n_sol))
+    x_sol = sol['x']
+    ode_fun_mdl(x_sol)
+    x_sol_all = x0.copy()
+    for idx, idx_local in zip(state_idx, state_idx_local):
+        x_sol_all[idx] = x_sol[idx_local]
+        
+    assert np.linalg.norm(mdl.output(x_sol_all, v0) - output_0) < 1e-6
+    # assert max(abs(ps.state_derivatives(0, x_sol_all, ps.v_0))) < 1e-6
+    x0[:] = x_sol_all

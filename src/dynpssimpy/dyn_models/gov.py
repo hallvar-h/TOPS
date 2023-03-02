@@ -1,4 +1,5 @@
 from dynpssimpy.dyn_models.blocks import *
+from dynpssimpy.dyn_models.utils import auto_init
 
 
 class GOV:
@@ -82,7 +83,8 @@ class HYGOV(DAEModel, GOV):
         return ['bias']
     
     def init_from_connections(self, x0, v0, output_0):
-        pass
+        auto_init(self, x0, v0, output_0['output'])
+        # input_0 = self.auto_init(x0, v0, output_0)
         # p = self.par
         # self.int_par['bias'] = self.droop.initialize(
         #     x0, v0, self.time_constant_lim.initialize(
