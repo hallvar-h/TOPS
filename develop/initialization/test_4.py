@@ -43,7 +43,7 @@ if __name__ == '__main__':
     auto_init(mdl, x0, v0, output_0)    
     print(max(abs(ps.state_derivatives(0, ps.x_0, ps.v_0))))
 
-    t_end = 10
+    t_end = 20
     # x_0 = ps.x_0.copy()
 
     # Solver
@@ -54,17 +54,16 @@ if __name__ == '__main__':
     res = defaultdict(list)
     t_0 = time.time()
 
-    sc_bus_idx = ps.gen['GEN'].bus_idx_red['terminal'][0]
+    load_bus_idx = ps.loads['Load'].bus_idx_red['terminal'][0]
+    y_load_0 = ps.loads['Load'].y_load.real[0]
 
     # Run simulation
     while t < t_end:
         sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
         # Short circuit
-        if t >= 1 and t <= 1.05:
-            ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 1e6
-        else:
-            ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 0
+        if t > 1:
+            ps.y_bus_red_mod[(load_bus_idx,) * 2] = y_load_0*0.1
 
         # Simulate next step
         result = sol.step()
