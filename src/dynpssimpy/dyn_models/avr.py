@@ -1,4 +1,5 @@
 from dynpssimpy.dyn_models.blocks import *
+from dynpssimpy.dyn_models.utils import auto_init
 
 
 class AVR:
@@ -61,6 +62,7 @@ class SEXS(DAEModel, AVR):
         return ['bias']
 
     def init_from_connections(self, x0, v0, output_0):
+        # auto_init(self, x0, v0, output_0['output'])
         self.int_par['bias'] = \
             self.tg_red.initialize(
                 x0, v0, self.gain.initialize(
