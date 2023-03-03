@@ -37,7 +37,7 @@ class Integrator(DAEModel):
         X0 = self.local_view(x0)
         X0['x_i'][:] = output_value
         input_value = output_value
-        return input_value
+        return input_value*0
 
     
 class Integrator2(Integrator):
@@ -53,7 +53,7 @@ class Integrator2(Integrator):
         X0 = self.local_view(x0)
         X0['x_i'][:] = output_value*self.par['T']
         input_value = output_value*self.par['T']
-        return input_value
+        return input_value*0
 
 
 class Gain(DAEModel):
@@ -174,3 +174,8 @@ class PIRegulator2(DAEModel):
         dX = self.local_view(dx)
         X = self.local_view(x)
         dX['x'][:] = self.input(x, v)
+
+    def initialize(self, x0, v0, output_value):
+        X = self.local_view(x0)
+        X['x'] = self.par['T_2']/self.par['T_1']*output_value
+        return np.zeros(self.n_units)

@@ -60,7 +60,7 @@ class HYGOV(DAEModel, GOV):
     def add_blocks(self):
         p = self.par
         self.time_constant_1 = TimeConstant(T=p['T_f'])
-        self.pi_reg = PIRegulator2(T_1=p['T_r'], T_2=p['T_r']*p['r'])
+        self.pi_reg = PIRegulator2(T_1=p['T_r'], T_2=p['T_r']*p['r'])  # This should have limits!
         self.gain = Gain(K=p['R'])
         self.time_constant_2 = TimeConstant(T=p['T_g'])
         self.gain_A_t = Gain(K=p['A_t'])
@@ -82,7 +82,13 @@ class HYGOV(DAEModel, GOV):
         return ['bias']
     
     def init_from_connections(self, x0, v0, output_0):
-        pass
+        p = self.par
+        q_p = self.gain_A_t.initialize(x0, v0, output_0['output'])
+        q = q_p + p['q_nl']
+        self.integrator.initialize(x0, v0, q)
+        self.time_constant_2.initialize(x0, v0, q)
+        self.pi_reg.initialize(x0, v0, q)
+        self.time_constant_1.initialize(x0, v0, q*0)
         # p = self.par
         # self.int_par['bias'] = self.droop.initialize(
         #     x0, v0, self.time_constant_lim.initialize(
