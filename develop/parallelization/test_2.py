@@ -19,7 +19,7 @@ def state_derivatives_mod(self, t, x, v_red):
         mdl._store_output = True
 
     dx = np.zeros(self.n_states)
-    for mdl in self.mdl_instructions['state_derivatives']:
+    for mdl in self.mdl_instructions['state_derivatives'][0:1]:
         mdl.state_derivatives(dx, x, v_red)
 
     for mdl in self.dyn_mdls:
@@ -33,8 +33,8 @@ if __name__ == '__main__':
     sys.path.append(r'C:\Users\hallvarh\Coding\dynpssimpy\develop_untracked\neweps_n44_model')
 
     # Load model
-    # import dynpssimpy.ps_models.ieee39 as model_data
-    import n44_new as model_data
+    import dynpssimpy.ps_models.ieee39 as model_data
+    # import n44_new as model_data
     importlib.reload(model_data)
     model = model_data.load()
 
@@ -45,33 +45,18 @@ if __name__ == '__main__':
 
 
     state_derivatives_mod(ps, 0, ps.x_0, ps.v_0)
+    x = ps.x_0
+    v = ps.v_0
 
     self = ps
-
-    import multiprocessing as mp
-    pool = mp.Pool(3)
     
-    for mdl in self.dyn_mdls:
-        mdl.reset_outputs()
-        mdl._store_output = True
-
-    dx = np.zeros(self.n_states)
-
-    for mdl in self.mdl_instructions['state_derivatives']:
-        mdl.state_derivatives(dx, x, v_red)
-
-    for mdl in self.dyn_mdls:
-        mdl._store_output = False
-
-if False:
-
-    n_fev = 100
+    n_fev = 1000
     t_0 = time.time()
     for _ in range(n_fev):
         _ = ps.state_derivatives(0, ps.x_0, ps.v_0)
     print(time.time() - t_0)
 
-    n_fev = 100
+
     t_0 = time.time()
     for _ in range(n_fev):
         _ = state_derivatives_mod(ps, 0, ps.x_0, ps.v_0)
