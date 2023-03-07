@@ -98,7 +98,7 @@ class TimeConstant(DAEModel):
         X = self.local_view(x)
         return X['x']
 
-    def initialize(self, x0, v0,output_value):
+    def initialize(self, x0, v0, output_value):
         X0 = self.local_view(x0)
         X0['x'][:] = output_value
         return output_value
@@ -108,6 +108,14 @@ class TimeConstant(DAEModel):
         X = self.local_view(x)
 
         dX['x'][:] = 1/self.par['T']*(self.input(x, v) - X['x'])
+
+
+class TimeConstantGain(TimeConstant):
+    def output(self, x, v):
+        return self.par['K']*super().output(x, v)
+    
+    def initialize(self, x0, v0, output_value):
+        return super().initialize(x0, v0, output_value/self.par['K'])
 
 
 class TimeConstantLims(DAEModel):
