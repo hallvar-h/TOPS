@@ -362,14 +362,16 @@ class PowerSystemModel:
 
         y_var = np.zeros((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['dyn_var_adm']:
-            data, (row_idx, col_idx) = mdl.dyn_var_adm()
-            sp_mat = sp.csr_matrix((data, (row_idx, col_idx)), shape=(self.n_bus,) * 2)
+            data, (row_idx, col_idx) = mdl.dyn_var_adm(x, None)
+            sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
             y_var += sp_mat.todense()
         y_var = sp.csr_matrix(y_var)
 
         return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
 
     def no_fun(self):
+        pass
+        '''
         # Interfacing models  with system (current injections)
         self.i_inj_d = np.zeros(self.n_bus_red, dtype=complex)
         self.i_inj_q = np.zeros(self.n_bus_red, dtype=complex)
@@ -436,6 +438,8 @@ class PowerSystemModel:
             return v_red
         else:
             return sp_linalg.spsolve(y_bus, self.i_inj)
+        '''
+
 
     def ode_fun(self, t, x):
         '''

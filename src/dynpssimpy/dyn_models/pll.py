@@ -6,8 +6,6 @@ class PLL1(DAEModel):
 
         self.bus_idx = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
         self.bus_idx_red = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
-    # def input_list(self):
-    #     return ['v']
 
     def bus_ref_spec(self):
         return {'terminal': self.par['bus']}
@@ -35,3 +33,32 @@ class PLL1(DAEModel):
     def init_from_load_flow(self, x_0, v_0, S):
         output_value = np.angle(v_0[self.bus_idx_red['terminal']])
         self.filter.initialize(x_0, v_0, output_value)
+
+
+class PLL2(PLL1):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.bus_idx = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
+        self.bus_idx_red = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
+
+    def bus_ref_spec(self):
+        return {'terminal': self.par['bus']}
+    
+    def add_blocks(self):
+        p = self.par
+        self.pi = PIRegulator(K_p=p['K_p'], K_i=p['K_i'])
+        self.integrator = Integrator(n_units=self.n_units)
+
+        self.v_measured = lambda x, v: v[self.bus_idx_red['terminal']]
+        self.phi = self.integrator.output
+        self.pi.input = lambda x, v: -self.v_measured(x, v).real*np.sin(self.phi(x, v)) + self.v_measured(x, v).imag*np.cos(self.phi(x, v))
+        self.integrator.input = self.pi.output
+
+        self.output = self.phi
+
+    def init_from_load_flow(self, x_0, v_0, S):
+        output_value = np.angle(v_0[self.bus_idx_red['terminal']])
+        # self.pi.initialize(
+        x_0, v_0, self.integrator.initialize(x_0, v_0, output_value)
+        # 
