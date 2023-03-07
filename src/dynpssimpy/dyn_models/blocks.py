@@ -90,6 +90,16 @@ class Washout(DAEModel):
 
 
 class TimeConstant(DAEModel):
+    '''
+            ______________	
+           |               |
+           |       1       |
+    u ---->|  -----------  |----> y
+           |    1 + s*T    |
+           |_______________|
+
+
+    '''
     def state_list(self):
         return ['x']
 
@@ -106,7 +116,7 @@ class TimeConstant(DAEModel):
     def state_derivatives(self, dx, x, v):
         dX = self.local_view(dx)
         X = self.local_view(x)
-
+        # Check if T=0?
         dX['x'][:] = 1/self.par['T']*(self.input(x, v) - X['x'])
 
 
@@ -119,6 +129,18 @@ class TimeConstantGain(TimeConstant):
 
 
 class TimeConstantLims(DAEModel):
+    '''
+	                 ___ V_max
+            ________/_____	
+           |               |
+           |       1       |
+    u ---->|  -----------  |----> y
+           |   1 + s*T_2   |
+           |_______________|
+               ___/
+          V_min
+
+    '''
     def state_list(self):
         return ['x']
 
@@ -145,8 +167,45 @@ class TimeConstantLims(DAEModel):
         upper_lim_idx = (X['x'] >= self.par['V_max']) & (dX['x'] > 0)
         dX['x'][upper_lim_idx] *= 0
 
+class TimeConstantGainLims(TimeConstantLims):
+    '''
+	                 ___ V_max
+            ________/_____	
+           |               |
+           |       K       |
+    u ---->|  -----------  |----> y
+           |   1 + s*T_2   |
+           |_______________|
+               ___/
+          V_min
+
+    '''
+    def state_derivatives(self, dx, x, v):
+        dX = self.local_view(dx)
+        X = self.local_view(x)
+
+        dX['x'][:] = 1/self.par['T']*(self.par['K']*self.input(x, v) - X['x'])
+
+        # Lims on state variable (clamping)
+        lower_lim_idx = (X['x'] <= self.par['V_min']) & (dX['x'] < 0)
+        dX['x'][lower_lim_idx] *= 0
+
+        upper_lim_idx = (X['x'] >= self.par['V_max']) & (dX['x'] > 0)
+        dX['x'][upper_lim_idx] *= 0
+    
+    def initialize(self, x0, v0, output_value):
+        return super().initialize(x0, v0, output_value/self.par['K'])
 
 class LeadLag(DAEModel):
+    '''
+            _______________
+           |               |
+           |   1 + s*T_1   |
+    u ---->|  -----------  |----> y
+           |   1 + s*T_2   |
+           |_______________|
+     
+    '''
     def state_list(self):
         return ['x']
 
@@ -187,3 +246,43 @@ class PIRegulator2(DAEModel):
         X = self.local_view(x0)
         X['x'] = self.par['T_2']/self.par['T_1']*output_value
         return np.zeros(self.n_units)
+    
+
+class WashoutGain(DAEModel):
+    '''
+            _______________
+           |               |
+           |      s*K      |
+    u ---->|  -----------  |----> y
+           |    1 + s*T    |
+           |_______________|
+     
+    sK/(1+sT) = y/u
+    u*sK = y + sTy
+    s(Ku - Ty) = y
+    x = Ku - Ty
+    sx = y
+    y = 1/T(Ku - x)
+    '''
+    def state_list(self):
+        return ['x']
+
+    @output
+    def output(self, x, v):
+        X = self.local_view(x)
+        return 1/self.par['T_w']*(self.par['K']*self.input(x, v) - X['x'])
+
+    def state_derivatives(self, dx, x, v):
+        dX = self.local_view(dx)
+        dX['x'][:] = self.output(x, v)
+
+    # def initialize(self, x0, v0, output_value):
+        # dx = 0 => x = Ku
+        # pass
+
+
+class Saturation(DAEModel):
+    @output
+    def output(self, x, v):
+        return self.input(x, v)
+    
