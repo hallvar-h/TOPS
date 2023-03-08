@@ -40,7 +40,6 @@ if __name__ == '__main__':
     # PowerFactory result
 
     # os.chdir()
-    __file__ = r'C:\Users\hallvarh\Coding\dynpssimpy\tests\test_validation\plots_k2a_ieesgo.py'
     file_path = pathlib.Path(__file__).parent
     pf_res = val_fun.load_pf_res(str(file_path) + '/k2a_ieesgo/powerfactory_res.csv')
 
