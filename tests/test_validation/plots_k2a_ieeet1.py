@@ -37,15 +37,22 @@ if __name__ == '__main__':
     from dynpssimpy.dyn_models.utils import auto_init
     output_0 = ps.gen['GEN']._input_values['E_f'][0:1]
     mdl = ps.avr['IEEET1']
+
+    mdl.output(x, v)
+    mdl.v_error(x, v)
+    mdl.time_constant_gain_Ka_Ta.output(x, v)
+    mdl.time_constant_gain_Ke_Te.output(x, v)
+    mdl.time_constant_gain_Ke_Te.output(x, v)
     
     auto_init(mdl, x0, v0, output_0)
 
-    t_end = 2
+    t_end = 15
     max_step = 5e-3
 
     # PowerFactory result
 
     # os.chdir()
+    __file__ = r'/Users/hallvar/Koding/DynPSSimPy/tests/test_validation/plots_k2a_ieeet1.py'
     file_path = pathlib.Path(__file__).parent
     pf_res = val_fun.load_pf_res(str(file_path) + '/k2a_ieeet1/powerfactory_res.csv')
 

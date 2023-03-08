@@ -119,14 +119,15 @@ class IEEET1(DAEModel, AVR):
         p = self.par
         self.time_constant_Tr = TimeConstant(T=p['T_r'])
         self.time_constant_gain_Ka_Ta = TimeConstantGainLims(K=p['K_a'], T=p['T_a'], V_min=p['V_rmin'], V_max=p['V_rmax'])
-        self.time_constant_gain_Ke_Te = TimeConstantGain(K=1/p['K_e'], T=p['T_e']/p['K_e'])
-        # self.saturation = Saturation(E_1=p['E_1'], Se_1=p['S_e1'], E_2=p['E_2'], Se_2=p['S_e2'])
+        self.time_constant_gain_Ke_Te = TimeConstantVar(K=p['K_e'], T=p['T_e'])
+        # self.saturation = Saturation(E_1=p['E_1'], S_e1=p['S_e1'], E_2=p['E_2'], S_e2=p['S_e2'])
         self.diff_Kf_Tf = WashoutGain(K=p['K_f'], T_w=p['T_f'])
         
         self.time_constant_Tr.input = lambda x, v: self.v_t(x, v)
         self.v_error = lambda x, v: self.v_setp(x, v) - self.time_constant_Tr.output(x, v) + self.v_pss(x, v) + self.int_par['bias']
         self.time_constant_gain_Ka_Ta.input = lambda x, v: self.v_error(x, v) - self.diff_Kf_Tf.output(x, v)
         self.time_constant_gain_Ke_Te.input = lambda x, v: self.time_constant_gain_Ka_Ta.output(x, v) # + self.saturation.output(x, v)
+        self.diff_Kf_Tf.input = self.time_constant_gain_Ke_Te.output
         # self.saturation.input = lambda x, v: self.time_constant_gain_Ke_Te.output(x, v)*0
         
         self.output = self.time_constant_gain_Ke_Te.output
