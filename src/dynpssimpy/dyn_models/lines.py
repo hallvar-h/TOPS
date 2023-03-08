@@ -60,13 +60,9 @@ class Line(DAEModel):
 
         self.v_to_i = np.zeros((self.n_units, n_bus), dtype=complex)
         self.v_to_i_rev = np.zeros((self.n_units, n_bus), dtype=complex)
-        self.from_mat = np.zeros((self.n_units, n_bus), dtype=complex)
-        self.to_mat = np.zeros((self.n_units, n_bus), dtype=complex)
-        for i, row in enumerate(self.par):
+        for i in range(self.n_units):
             self.v_to_i[i, [self.idx_from[i], self.idx_to[i]]] = [self.admittance[i] + self.shunt[i]/2, -self.admittance[i]]
             self.v_to_i_rev[i, [self.idx_to[i], self.idx_from[i]]] = [self.admittance[i] + self.shunt[i]/2, -self.admittance[i]]
-            self.from_mat[i, self.idx_from[i]] = 1
-            self.to_mat[i, self.idx_to[i]] = 1
     
     def load_flow_adm(self):
         z_n = self.sys_par['bus_v_n'] ** 2 / self.sys_par['s_n']
@@ -117,6 +113,9 @@ class Line(DAEModel):
         self.init_extras()
 
         return data, (rows, cols)
+
+    def dyn_const_adm(self):
+        return self.load_flow_adm()
 
     def i_from(self, x, v):
         v_full = v
