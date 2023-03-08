@@ -56,6 +56,9 @@ class TGOV1(DAEModel, GOV):
 
 
 class HYGOV(DAEModel, GOV):
+    '''
+    Implementation of the HYGOV model. Some limiters are missing.
+    '''
     def int_par_list(self):
         return ['bias']
 
