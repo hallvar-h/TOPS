@@ -46,15 +46,15 @@ if __name__ == '__main__':
     
     auto_init(mdl, x0, v0, output_0)
 
-    t_end = 15
+    t_end = 5
     max_step = 5e-3
 
     # PowerFactory result
 
     # os.chdir()
-    # __file__ = r'/Users/hallvar/Koding/DynPSSimPy/tests/test_validation/plots_k2a_ieeet1.py'
+    # __file__ = r'/Users/hallvar/Koding/DynPSSimPy/tests/test_validation/plots_k2a_scrx.py'
     file_path = pathlib.Path(__file__).parent
-    pf_res = val_fun.load_pf_res(str(file_path) + '/k2a_ieeet1/powerfactory_res_.csv')
+    pf_res = val_fun.load_pf_res(str(file_path) + '/k2a_scrx/powerfactory_res.csv')
 
     # Python result
     x0 = ps.x0
