@@ -21,11 +21,12 @@ if __name__ == '__main__':
 
     model['avr'] = {
         'SEXS': [model['avr']['SEXS'][0], *model['avr']['SEXS'][2:]],
-        'IEEET1': [
-            ['name',        'gen',     'T_r',  'K_a',	   'T_a',  'K_e',  'T_e',      'K_f',      'T_f',  'E_1',      'S_e1',     'E_2',      'S_e2',     'V_rmin','V_rmax'],													
-            ['IEEET1-1',    'G1',	    0.01,	 800,	    0.04,   1,	    0.44,       0.0667,	    2,	    6.5,        0.054,	    8,	        0.202,	    -4.05,	    5.32],
+        'SCRX': [
+            ['name',    'gen',  'T_b',  'T_a',      'K',    'T_e',  'C_switch', 'rc_rfd', 'E_min',    'E_max'],
+            ['SCRX-1',  'G1',   13,     3.30005,    61,     0.05,   0,           0,         0,          4],
         ]
     }
+
 
     ps = dps.PowerSystemModel(model=model)
     ps.init_dyn_sim()
@@ -33,26 +34,29 @@ if __name__ == '__main__':
 
     ps.gen['GEN'].P_m(ps.x_0, ps.v_0)
     x, v = x0, v0 = ps.x_0, ps.v_0
-    ps.avr['IEEET1'].output(ps.x_0, ps.v_0)
+    # ps.avr['IEEET1'].output(ps.x_0, ps.v_0)
     from dynpssimpy.dyn_models.utils import auto_init
     output_0 = ps.gen['GEN']._input_values['E_f'][0:1]
-    mdl = ps.avr['IEEET1']
+    mdl = ps.avr['SCRX']
 
     mdl.output(x, v)
+    mdl.v_t(x, v)
     mdl.v_error(x, v)
-    mdl.time_constant_gain_Ka_Ta.output(x, v)
-    mdl.time_constant_gain_Ke_Te.output(x, v)
-    mdl.time_constant_gain_Ke_Te.output(x, v)
+    mdl.time_constant_gain_K_Te.input(x, v)
+    mdl.lead_lag_Tb_Ta.input(x, v)
+    mdl.time_constant_gain_K_Te.output(x, v)
+    # mdl.time_constant_gain_Ke_Te.output(x, v)
+    # mdl.time_constant_gain_Ke_Te.output(x, v)
     
-    auto_init(mdl, x0, v0, output_0)
+    # auto_init(mdl, x0, v0, output_0)
 
-    t_end = 5
+    t_end = 15
     max_step = 5e-3
 
     # PowerFactory result
 
     # os.chdir()
-    # __file__ = r'/Users/hallvar/Koding/DynPSSimPy/tests/test_validation/plots_k2a_scrx.py'
+    __file__ = r'/Users/hallvar/Koding/DynPSSimPy/tests/test_validation/plots_k2a_scrx.py'
     file_path = pathlib.Path(__file__).parent
     pf_res = val_fun.load_pf_res(str(file_path) + '/k2a_scrx/powerfactory_res.csv')
 
