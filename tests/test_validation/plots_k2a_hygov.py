@@ -25,7 +25,7 @@ if __name__ == '__main__':
     ps = dps.PowerSystemModel(model=model)
     ps.init_dyn_sim()
 
-    t_end = 2
+    t_end = 30
     max_step = 5e-3
 
     # PowerFactory result

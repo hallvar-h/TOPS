@@ -100,13 +100,20 @@ class TimeConstant(DAEModel):
 
 
     '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.zero_idx = self.par['T']==0
+    
     def state_list(self):
         return ['x']
 
     @output
     def output(self, x, v):
         X = self.local_view(x)
-        return X['x']
+        out = X['x']
+        if np.any(self.zero_idx):
+            out[self.zero_idx] = self.input(x, v)[self.zero_idx]
+        return out
 
     def initialize(self, x0, v0, output_value):
         X0 = self.local_view(x0)
@@ -116,8 +123,9 @@ class TimeConstant(DAEModel):
     def state_derivatives(self, dx, x, v):
         dX = self.local_view(dx)
         X = self.local_view(x)
-        # Check if T=0?
-        dX['x'][:] = 1/self.par['T']*(self.input(x, v) - X['x'])
+        
+        coeff = ~self.zero_idx/(self.par['T']+self.zero_idx)  # 1/T if T is not zero, 0 otherw
+        dX['x'][:] = coeff*(self.input(x, v) - X['x'])
 
 
 class TimeConstantVar(TimeConstant):
