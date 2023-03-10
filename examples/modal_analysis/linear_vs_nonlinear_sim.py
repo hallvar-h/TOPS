@@ -20,7 +20,7 @@ if __name__ == '__main__':
     ps = dps.PowerSystemModel(model=model)
     ps.init_dyn_sim()
     np.max(abs(ps.ode_fun(0.0, ps.x0)))
-    t_end = 5
+    t_end = 2
     dt = 1e-3
 
     x0 = ps.x0.copy()
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     result_dict_lin = defaultdict(list)
     t_0 = time.time()
 
-    dist_magn = 1e1
+    dist_magn = 1e-6
 
     # Run simulation
     while t < t_end:
@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
         result_dict_lin['Global', 't'].append(t_lin)
         [result_dict_lin[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x_lin)]
-        result_dict_lin['Linear output'].append(y0 + c.dot(x_lin))
+        result_dict_lin['Linear output'].append(y0 + c.dot(x_lin - x0))
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
@@ -97,4 +97,9 @@ if __name__ == '__main__':
     for result_, style, color in zip([result, result_lin], ['-', '--'], ['C0', 'C1']):
         ax[0].plot(result_[('Global', 't')], result_.xs(key='speed', axis='columns', level=1), linestyle=style, color=color)
         ax[1].plot(result_[('Global', 't')], result_.xs(key='angle', axis='columns', level=1), linestyle=style, color=color)
+    plt.show()
+
+    fig, ax = plt.subplots(1)
+    ax.plot(result_dict[('Global', 't')], result_dict['Non-linear output'], 'C0')
+    ax.plot(result_dict_lin[('Global', 't')], result_dict_lin['Linear output'], 'C1')
     plt.show()
