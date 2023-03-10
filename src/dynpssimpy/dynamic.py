@@ -230,6 +230,7 @@ class PowerSystemModel:
         phi_0 = np.zeros(self.n_bus)
         self.v_0, self.s_0, converged = dps_uf.newton_rhapson_power_flow(self.y_bus_lf, v_pv, p_pv + p_pq, q_pq, bus_type,
                                                               self.pf_tol, self.pf_max_it)
+        self.v0 = self.v_0
 
         pv_units_per_bus = np.zeros(self.n_bus, dtype=int)
         for mdl in self.mdl_instructions['load_flow_pv']:
