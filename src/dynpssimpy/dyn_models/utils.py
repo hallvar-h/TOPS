@@ -339,7 +339,6 @@ def auto_init(mdl, x0, v0, output_0):
                 x_sol_best = sol['x']
                 err_best = err
         except ValueError:
-            print('Fail')
             continue
 
     x_sol_all = x0.copy()
