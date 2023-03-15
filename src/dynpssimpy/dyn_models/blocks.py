@@ -54,6 +54,21 @@ class Integrator2(Integrator):
         X0['x_i'][:] = output_value*self.par['T']
         input_value = output_value*self.par['T']
         return input_value*0
+    
+class IntegratorK(Integrator):
+    """
+    Same as Integrator, but with gain.
+    """
+    @output
+    def output(self, x, v):
+        X = self.local_view(x)
+        return X['x_i']*self.par['K']
+
+    def initialize(self, x0, v0, output_value):
+        X0 = self.local_view(x0)
+        X0['x_i'][:] = output_value/self.par['K']
+        input_value = output_value/self.par['K']
+        return input_value*0
 
 
 class Gain(DAEModel):
