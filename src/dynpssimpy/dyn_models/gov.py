@@ -3,6 +3,9 @@ from dynpssimpy.dyn_models.utils import auto_init
 
 
 class GOV:
+    def input_list(self):
+        return ['input', 'P_n_gen']
+    
     def connections(self):
         return [
             {
@@ -13,6 +16,15 @@ class GOV:
                     'id': self.par['gen'],
                 },
                 'output': 'speed',
+            },
+            {
+                'input': 'P_n_gen',
+                'source': {
+                    'container': 'gen',
+                    'mdl': '*',
+                    'id': self.par['gen'],
+                },
+                'output': 'P_nom',
             },
             {
                 'output': 'output',
@@ -27,7 +39,7 @@ class GOV:
 
 
 
-class TGOV1(DAEModel, GOV):
+class TGOV1(GOV, DAEModel):
     def add_blocks(self):
         p = self.par
         self.droop = Gain(K=1/p['R'])
@@ -55,7 +67,7 @@ class TGOV1(DAEModel, GOV):
         )
 
 
-class HYGOV(DAEModel, GOV):
+class HYGOV(GOV, DAEModel):
     '''
     Implementation of the HYGOV model. Some limiters are missing.
     '''
@@ -95,7 +107,7 @@ class HYGOV(DAEModel, GOV):
         # self.time_constant_1.initialize(x0, v0, q*0)
 
 
-class IEESGO(DAEModel, GOV):
+class IEESGO(GOV, DAEModel):
     def int_par_list(self):
         return ['bias']
 
@@ -108,7 +120,7 @@ class IEESGO(DAEModel, GOV):
 
         self.gain_1_minus_k2 = Gain(K=1-p['K_2'])
         self.time_constant_gain_k2_t5 = TimeConstantGain(K=p['K_2'], T=p['T_5'])
-        self.gain_1_minus_k3 = Gain(K=1-p['K_2'])
+        self.gain_1_minus_k3 = Gain(K=1-p['K_3'])
         self.time_constant_gain_k3_t6 = TimeConstantGain(K=p['K_3'], T=p['T_6'])
 
         self.lead_lag.input = lambda x, v: self.input(x, v)
@@ -124,7 +136,8 @@ class IEESGO(DAEModel, GOV):
         def output_sum(x, v):
             return self.gain_1_minus_k2.output(x, v) + self.gain_1_minus_k3.output(x, v) + self.time_constant_gain_k3_t6.output(x, v)
         
-        self.output = output_sum
+        P_n = p['P_N']
+        self.output = lambda x, v: output_sum(x, v)*(P_n/self.P_n_gen(x, v) + 1*(P_n==0))
     
     def init_from_connections(self, x0, v0, output_0):
         auto_init(self, x0, v0, output_0['output'])

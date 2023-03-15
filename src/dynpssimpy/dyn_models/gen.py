@@ -213,6 +213,11 @@ class GEN(DAEModel):
     def Q_e(self, x, v):
         # Reactive power in MVAr
         return self.q_e(x, v)*self.par['S_n']
+    
+    def P_nom(self, x, v):
+        # Nominal active power (can be used in governor models)
+        PF_n = self.par['cosphi_n'] if 'cosphi_n' in self.par.dtype.names else 1
+        return self.par['S_n']*PF_n
 
 
     # def initialize(self, x0, v0, output_0):
