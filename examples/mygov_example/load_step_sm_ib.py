@@ -10,18 +10,10 @@ importlib.reload(dps)
 if __name__ == '__main__':
 
     # Load model
-    import dynpssimpy.ps_models.k2a as model_data
-    importlib.reload(model_data)
+    import sm_ib_mygov as model_data
+
     model = model_data.load()
-    model['gov'] = {
-        'TGOV1': model['gov']['TGOV1'],
-        'MYGOV': [
-        ['name',  'gen',    'K_w',      'K',    'R' ],
-        ['GOV1',  'G1',     1,          1,      0.05],
-        # ['GOV2',  'G2',     1,          1,      0.05],
-        # ['GOV3',  'G3',     1,          1,      0.05],
-        # ['GOV4',  'G4',     1,          1,      0.05],
-    ]}
+    model['gov'] = {'MYGOV': model['gov']['MYGOV']}
 
     import user_lib
 
@@ -29,8 +21,9 @@ if __name__ == '__main__':
     ps = dps.PowerSystemModel(model=model, user_mdl_lib=user_lib)
     ps.init_dyn_sim()
     print(max(abs(ps.state_derivatives(0, ps.x_0, ps.v_0))))
-    t_end = 20
+    t_end = 10
     x_0 = ps.x_0.copy()
+
 
     # Solver
     sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x_0, t_end, max_step=5e-3)
@@ -49,7 +42,7 @@ if __name__ == '__main__':
 
         # Short circuit
         if t > 1:
-            ps.y_bus_red_mod[(load_bus_idx,) * 2] = y_load_0*0.1
+            ps.y_bus_red_mod[(load_bus_idx,) * 2] = y_load_0*0.5
 
         # Simulate next step
         result = sol.step()
@@ -62,11 +55,13 @@ if __name__ == '__main__':
         # Store result
         res['t'].append(t)
         res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
+        res['gen_angle'].append(ps.gen['GEN'].angle(x, v).copy())
+        res['gov_output'].append(ps.gov['MYGOV'].output(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
     plt.figure()
-    plt.plot(res['t'], res['gen_speed'])
+    plt.plot(res['t'], res['gen_angle'])
     plt.xlabel('Time [s]')
-    plt.ylabel('Gen. speed')
+    plt.ylabel('Gen. angle')
     plt.show()
