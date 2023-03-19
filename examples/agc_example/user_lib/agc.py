@@ -1,5 +1,4 @@
 from dynpssimpy.dyn_models.utils import DAEModel
-from dynpssimpy.dyn_models.gov import GOV
 from dynpssimpy.dyn_models.blocks import *
 from dynpssimpy.dyn_models.utils import auto_init
 
@@ -19,9 +18,9 @@ class AGC1(DAEModel):
             {
                 'input': 'P_tie',
                 'source': {
-                    'container': 'gen',
+                    'container': 'line',
                     'mdl': '*',
-                    'id': self.par['gen'],
+                    'id': self.par['line'],
                 },
                 'output': 'P_from',
             },
