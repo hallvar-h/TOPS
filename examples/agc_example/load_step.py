@@ -10,12 +10,17 @@ importlib.reload(dps)
 if __name__ == '__main__':
 
     # Load model
-    import sm_ib_mygov as model_data
+    try:
+        import k2a_agc as model_data
+        import user_lib
+    except:
+        import examples.agc_example.k2a_agc as model_data
+        import examples.agc_example.user_lib as user_lib
 
     model = model_data.load()
-    model['gov'] = {'MYGOV': model['gov']['MYGOV']}
+    model['agc'] = {}
 
-    import user_lib
+
 
     # Power system model
     ps = dps.PowerSystemModel(model=model, user_mdl_lib=user_lib)
