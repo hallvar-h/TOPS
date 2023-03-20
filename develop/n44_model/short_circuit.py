@@ -15,9 +15,9 @@ if __name__ == '__main__':
     try:
         import n44_new as model_data
     except ModuleNotFoundError:
-        import develop_untracked.neweps_n44_model.n44_new as model_data
+        import develop.n44_model.n44_new as model_data
 
-    importlib.reload(model_data)
+    # importlib.reload(model_data)
     model = model_data.load()
     # model['avr'] = {}
     # model['gov'] = {}
@@ -26,8 +26,17 @@ if __name__ == '__main__':
 
     # Power system model
     ps = dps.PowerSystemModel(model=model)
+    # ps.gen['GEN'].par['H'] *= 2
+    # ps.loads['Load'].par['P'] *= 0.8
+    # ps.gen['GEN'].par['P'] *= 0.8
     ps.init_dyn_sim()
-    lf_sol_gen = next(iter(ps.load_flow_soln.values()))
+    # overload_idx = [True]
+    # while np.any(overload_idx):
+    #     overload_idx = abs(ps.load_flow_soln[ps.gen['GEN']])/ps.gen['GEN'].par['S_n'] > 1
+    #     ps.gen['GEN'].par['S_n'][overload_idx] *= 1.1
+
+    # Generator overload:
+    print(abs(ps.load_flow_soln[ps.gen['GEN']])/ps.gen['GEN'].par['S_n'])
 
     ps_lin = dps_ma.PowerSystemModelLinearization(ps)
     ps_lin.linearize()
@@ -38,16 +47,15 @@ if __name__ == '__main__':
     
     plt.scatter(eigs.real, eigs.imag)
     plt.scatter(eigs[idx_unstable].real, eigs[idx_unstable].imag, color='r', marker='X')
-    
+    # plt.xlim(-2, 2)
     plt.grid(True)
     plt.show()
-
-    rev_unstable = ps_lin.rev[idx_unstable, :]
-    plt.plot(rev_unstable.T)
-    max_obs_idx = np.argmax(abs(rev_unstable[0]))
-    ps.state_desc[max_obs_idx]
-    plt.show()
 if False:
+    # rev_unstable = ps_lin.rev[idx_unstable, :]
+    # plt.plot(rev_unstable.T)
+    # max_obs_idx = np.argmax(abs(rev_unstable[0]))
+    # ps.state_desc[max_obs_idx]
+    # plt.show()
     # import numpy as np
     # state_idx = np.where(abs(ps.state_derivatives(0, ps.x_0, ps.v_0)) > 0.01)
     # ps.state_desc[state_idx]
@@ -73,13 +81,13 @@ if False:
     while t < t_end:
         sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
-        if t > 1:
-            ps.y_bus_red_mod[(load_bus_idx,) * 2] = y_load_0*0.1
+        # if t > 1:
+            # ps.y_bus_red_mod[(load_bus_idx,) * 2] = y_load_0*0.1
         # Short circuit
-        # if t >= 1 and t <= 1.05:
-        #     ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 1e6
-        # else:
-        #     ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 0
+        if t >= 1 and t <= 1.05:
+            ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 1e6
+        else:
+            ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 0
 
         # Simulate next step
         result = sol.step()
