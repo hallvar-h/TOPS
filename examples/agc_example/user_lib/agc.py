@@ -6,6 +6,7 @@ from dynpssimpy.dyn_models.utils import auto_init
 class AGC1(DAEModel):
     def input_list(self):
         return ['gen_speed_dev', 'P_tie']
+    
     def connections(self):
         return [
             {
@@ -24,10 +25,10 @@ class AGC1(DAEModel):
                     'mdl': '*',
                     'id': self.par['line'],
                 },
-                'output': 'P_from',
+                'output': 'p_from',
             },
             {
-                'output': 'P_setp_gen',
+                'output': 'output',
                 'destination': {
                     'container': 'gen',
                     'mdl': '*',
@@ -37,6 +38,10 @@ class AGC1(DAEModel):
             }
         ]
     
+    
+    def state_list(self):
+        return ['x_1']
+
     def state_derivatives(self, dx, x, v):
         dX = self.local_view(dx)
 
@@ -44,7 +49,7 @@ class AGC1(DAEModel):
         dX['x_1'][:] = self.ACE(x, v) # p['K_i']*ace
 
     def ACE(self, x, v):
-        return self.par['lambda']*self.gen_speed_dev(x, v) - (self.p_tie(x, v) - self.int_par['Ptie0'])
+        return self.par['lambda']*self.gen_speed_dev(x, v) - (self.P_tie(x, v) - self.int_par['bias'])
     
     def delta_P_ref(self, x, v):
         X = self.local_view(x)
@@ -53,12 +58,12 @@ class AGC1(DAEModel):
         s_3 = p['K_i']*X['x_1']
         return s_1 + s_3
 
-    def P_setp_gen(self, x, v):
+    def output(self, x, v):
         return np.minimum(np.maximum(-1.0, self.par['alpha']*self.delta_P_ref(x, v)), 1.0)
 
     def int_par_list(self):
         return ['bias']
 
-    # def init_from_connections(self, x0, v0, output_0):
-        # auto_init(self, x0, v0, output_0['output'])
+    def init_from_connections(self, x0, v0, output_0):
+        auto_init(self, x0, v0, output_0['output'])
         # self.int_par['bias'] = output_0['output']
