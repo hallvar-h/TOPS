@@ -20,8 +20,6 @@ if __name__ == '__main__':
     model = model_data.load()
     # model['agc'] = {}
 
-
-
     # Power system model
     ps = dps.PowerSystemModel(model=model, user_mdl_lib=user_lib)
     ps.init_dyn_sim()
@@ -47,7 +45,9 @@ if False:
 
         # Short circuit
         if t > 1:
-            ps.y_bus_red_mod[(load_bus_idx,) * 2] = y_load_0*0.5
+            ps.acg
+            # ps.y_bus_red_mod[(load_bus_idx,) * 2] = y_load_0*0.5
+            
 
         # Simulate next step
         result = sol.step()

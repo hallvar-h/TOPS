@@ -4,6 +4,8 @@ from dynpssimpy.dyn_models.utils import auto_init
 
 
 class AGC1(DAEModel):
+    def input_list(self):
+        return ['gen_speed_dev', 'P_tie']
     def connections(self):
         return [
             {
@@ -18,7 +20,7 @@ class AGC1(DAEModel):
             {
                 'input': 'P_tie',
                 'source': {
-                    'container': 'line',
+                    'container': 'lines',
                     'mdl': '*',
                     'id': self.par['line'],
                 },
@@ -57,6 +59,6 @@ class AGC1(DAEModel):
     def int_par_list(self):
         return ['bias']
 
-    def init_from_connections(self, x0, v0, output_0):
-        auto_init(self, x0, v0, output_0['output'])
+    # def init_from_connections(self, x0, v0, output_0):
+        # auto_init(self, x0, v0, output_0['output'])
         # self.int_par['bias'] = output_0['output']

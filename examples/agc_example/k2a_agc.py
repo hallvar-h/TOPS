@@ -67,15 +67,20 @@ def load():
 
         'gov': {
             'HYGOV': [
-                ['name', 'gen', 'R', 'D_t', 'V_min', 'V_max', 'T_2', 'T_3', 'T_4', 'P_m0', 'T_w'],
-                ['GOV1', 'G1', 0.05, 0.0, 0, 1, 0.36, 6.0, 67.6, 0.777, 1.0],
-                ['GOV2', 'G2', 0.05, 0.0, 0, 1, 0.36, 6.0, 67.6, 0.777, 1.0],
-                ['GOV3', 'G3', 0.05, 0.0, 0, 1, 0.36, 6.0, 67.6, 0.800, 1.0],
-                ['GOV4', 'G4', 0.05, 0.0, 0, 1, 0.36, 6.0, 67.6, 0.777, 1.0],
+                ['name',  'gen',   'r',  'T_r',    'T_f',   'T_g', 'T_w',  'A_t',   'D_turb',   'q_nl', 'R',    'P_N',  'G_min',  'V_elm',	'G_max' ],
+                ['GOV1',   'G1',   1.5,	 1.3, 	   0.05,    0.6,	2,	   1.1,     0,	         0.1,	0.145,	1100,	 0,	      0.2,      1       ],
+                ['GOV2',   'G2',   1.5,	 1.3, 	   0.05,    0.6,	2,	   1.1,     0,	         0.1,	0.145,	1100,	 0,	      0.2,      1       ],
+                ['GOV3',   'G3',   1.5,	 1.3, 	   0.05,    0.6,	2,	   1.1,     0,	         0.1,	0.145,	1100,	 0,	      0.2,      1       ],
+                ['GOV4',   'G4',   1.5,	 1.3, 	   0.05,    0.6,	2,	   1.1,     0,	         0.1,	0.145,	1100,	 0,	      0.2,      1       ],
+                # ['name', 'gen', 'R', 'D_t', 'V_min', 'V_max', 'T_2', 'T_3', 'T_4', 'P_m0', 'T_w'],
+                # ['GOV1', 'G1', 0.05, 0.0, 0, 1, 0.36, 6.0, 67.6, 0.777, 1.0],
+                # ['GOV2', 'G2', 0.05, 0.0, 0, 1, 0.36, 6.0, 67.6, 0.777, 1.0],
+                # ['GOV3', 'G3', 0.05, 0.0, 0, 1, 0.36, 6.0, 67.6, 0.800, 1.0],
+                # ['GOV4', 'G4', 0.05, 0.0, 0, 1, 0.36, 6.0, 67.6, 0.777, 1.0],
             ]
         },
 
-        'ace0': {
+        'agc': {
             # AT THE MOMENT, HAVE TO INCLUDE ACE AT ALL GENERATORS
             # BUT, THE ACEs having the same bus1 and bus2 (in that order) are essentially using the same centralized ACE
             # Was some difficulities regarding which generator reference power to be adjusted if this was not done

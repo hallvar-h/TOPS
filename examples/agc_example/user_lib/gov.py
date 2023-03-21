@@ -27,4 +27,5 @@ class TGOV1(GOV_AGC, TGOV1_0):
 class HYGOV(GOV_AGC, HYGOV_0):
     def add_blocks(self):
         super().add_blocks()
+        p = self.par
         self.time_constant_1.input = lambda x, v: -self.input(x, v) + self.int_par['bias'] - p['R']*self.c(x, v) + self.P_agc(x, v)
