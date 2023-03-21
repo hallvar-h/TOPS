@@ -331,6 +331,7 @@ def auto_init(mdl, x0, v0, output_0):
 
     x_sol_best = np.ones(n_sol)
     err_best = 1e6
+    err = err_best
     for init_conditions in [np.ones(n_sol), np.zeros(n_sol), np.random.randn(n_sol)]:
         try:
             sol = least_squares(ode_fun_mdl, init_conditions)
