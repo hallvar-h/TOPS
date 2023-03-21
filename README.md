@@ -15,5 +15,6 @@ pip install git+https://github.com/hallvar-h/dynpssimpy
 # Citing
 If you use this code for your research, please cite [this paper](https://arxiv.org/abs/2101.02937).
 
-# Example notebooks can be run using Binder:
+# Example notebooks
+...can be run using Binder:
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/hallvar-h/DynPSSimPy/HEAD?filepath=examples%2Fnotebooks)
