@@ -18,3 +18,6 @@ If you use this code for your research, please cite [this paper](https://arxiv.o
 
 # Example notebooks
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/hallvar-h/DynPSSimPy/HEAD?filepath=examples%2Fnotebooks)
+
+# Contact
+[Hallvar Haugdal](mailto:hallvhau@gmail.com)
