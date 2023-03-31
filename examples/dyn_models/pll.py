@@ -4,10 +4,13 @@ import matplotlib.pyplot as plt
 import time
 import dynpssimpy.dynamic as dps
 import dynpssimpy.solvers as dps_sol
+import dynpssimpy.utility_functions as dps_uf
 import importlib
 importlib.reload(dps)
 import importlib
 import numpy as np
+
+
 
 if __name__ == '__main__':
 
@@ -16,27 +19,37 @@ if __name__ == '__main__':
     importlib.reload(model_data)
     model = model_data.load()
 
-    model['pll'] = {
-        'PLL1':[
-           ['name',        'T_filter',   'bus'],
-            *[[f'PLL{i}',   0.1,        bus[0]] for i, bus in enumerate(model['buses'][1:])],
-        ],
-        'PLL2':[
-            ['name',        'K_p', 'K_i',   'bus'],
-            *[[f'PLL{i}',   10,    1,    bus[0]] for i, bus in enumerate(model['buses'][1:])],
-            ]
-    }
+    # model['pll'] = {
+    #     'PLL1':[
+    #        ['name',        'T_filter',   'bus'],
+    #         *[[f'PLL{i}',   0.1,        bus[0]] for i, bus in enumerate(model['buses'][1:])],
+    #     ],
+    #     'PLL2':[
+    #         ['name',        'K_p', 'K_i',   'bus'],
+    #         *[[f'PLL{i}',   10,    1,    bus[0]] for i, bus in enumerate(model['buses'][1:])],
+    #         ]
+    # }
 
 
     # Power system model
     ps = dps.PowerSystemModel(model=model)
+    ps.add_model_data({'pll': {
+        'PLL1': [
+             ['name',        'T_filter',     'bus'   ],
+            *[[f'PLL{i}',    0.1,            bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
+        ],
+        'PLL2': [
+             ['name',        'K_p',  'K_i',  'bus'   ],
+            *[[f'PLL{i}',    10,     1,      bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
+        ]
+    }})
     ps.init_dyn_sim()
     print(max(abs(ps.ode_fun(0, ps.x_0))))
 
     x0 = ps.x_0
     v0 = ps.v_0
 
-    t_end = 10
+    t_end = 2
     x_0 = ps.x_0.copy()
 
     # Solver
