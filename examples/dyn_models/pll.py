@@ -36,8 +36,6 @@ if __name__ == '__main__':
     x0 = ps.x_0
     v0 = ps.v_0
 
-    ps.pll['PLL2'].v_measured(x0, v0)
-
     t_end = 10
     x_0 = ps.x_0.copy()
 
@@ -76,6 +74,9 @@ if __name__ == '__main__':
         res['PLL1'].append(ps.pll['PLL1'].output(x, v).copy())
         res['PLL2'].append(ps.pll['PLL2'].output(x, v).copy())
 
+        res['PLL1_freq'].append(ps.pll['PLL1'].freq_est(x, v).copy())
+        res['PLL2_freq'].append(ps.pll['PLL2'].freq_est(x, v).copy())
+
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
     # plt.figure()
@@ -91,6 +92,25 @@ if __name__ == '__main__':
         ax[i].plot(res['t'], pll_1, color=f'C{i}', linestyle='--', label=f'PLL 1 angle est Bus {i+1}')
         ax[i].plot(res['t'], pll_2, color=f'C{i}', linestyle=':', label=f'PLL 2 angle est Bus {i+1}')
         ax[i].plot(res['t'], v_angle, color=f'C{i}', label=f'Voltage {i+1} angle')
+        ax[i].set_ylabel(f'Bus {i}')
+        ax[i].legend()
+    ax[-1].set_xlabel('Time [s]')
+    plt.show()
+
+    
+    # freq_diff = np.diff(np.array(res['v_angle']).T, n=1)
+    n_plt = 4
+    fig, ax = plt.subplots(n_plt, sharex=True)
+    for i, (pll_1, pll_2, freq_diff_) in enumerate(zip(np.array(res['PLL1_freq']).T, np.array(res['PLL2_freq']).T)):  # , freq_diff)):
+        if i >= n_plt:
+            break
+
+        if i in ps.gen['GEN'].bus_idx_red['terminal']:
+            ax[i].plot(res['t'], np.array(res['gen_speed'])[:, i], color=f'C{i}', linestyle='-.', label=f'Gen {i+1} el. speed')
+
+        ax[i].plot(res['t'], pll_1, color=f'C{i}', linestyle='--', label=f'PLL 1 freq est Bus {i+1}')
+        ax[i].plot(res['t'], pll_2, color=f'C{i}', linestyle=':', label=f'PLL 2 freq est Bus {i+1}')
+        # ax[i].plot(res['t'][:len(freq_diff_)], freq_diff_, color=f'C{i}', label=f'Diff {i+1}')  # This one was not accurate
         ax[i].set_ylabel(f'Bus {i}')
         ax[i].legend()
     ax[-1].set_xlabel('Time [s]')
