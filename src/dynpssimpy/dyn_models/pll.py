@@ -55,6 +55,8 @@ class PLL2(PLL1):
         self.pi.input = lambda x, v: -self.v_measured(x, v).real*np.sin(self.phi(x, v)) + self.v_measured(x, v).imag*np.cos(self.phi(x, v))
         self.integrator.input = self.pi.output
 
+        self.freq_est = lambda x, v: self.integrator.input(x, v)/(2 * np.pi * self.sys_par['f_n'])
+
         self.output = self.phi
 
     def init_from_load_flow(self, x_0, v_0, S):
