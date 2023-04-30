@@ -40,6 +40,8 @@ if __name__ == '__main__':
     c = ps_lin.linearize_outputs_v4([output_fun])
     d = np.zeros((1, b.shape[1]))
     y0 = output_fun(0, ps.x0, ps.v0)
+    delta_x_lin = np.zeros_like(ps.x0)
+    x0_lin = ps.x0.copy()
 
     sys_ss = StateSpace(ps_lin.a, b, c, d)
     sys_ss_d = sys_ss.to_discrete(dt=dt)
@@ -59,7 +61,7 @@ if __name__ == '__main__':
 
         # Short circuit
         if 1 < t < 1.1:
-            ps.y_bus_red_mod[0, 0] += dist_magn
+            ps.y_bus_red_mod[0, 0] = dist_magn
             u = dist_magn
         else:
             ps.y_bus_red_mod *= 0
@@ -72,9 +74,11 @@ if __name__ == '__main__':
         t = sol.t
 
         # Simulate linear step
-        solution = dlsim(sys_ss_d, u=np.vstack([u, u]), x0=x)
-        x_lin = solution[2][-1, :]
+        solution = dlsim(sys_ss_d, u=np.vstack([u, u]), x0=delta_x_lin)
+        delta_x_lin = solution[2][-1, :]
         t_lin += dt
+
+        x_lin = x0_lin + delta_x_lin
 
         # Store result
         result_dict['Global', 't'].append(sol.t)
@@ -83,7 +87,7 @@ if __name__ == '__main__':
 
         result_dict_lin['Global', 't'].append(t_lin)
         [result_dict_lin[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x_lin)]
-        result_dict_lin['Linear output'].append(y0 + c.dot(x_lin - x0))
+        result_dict_lin['Linear output'].append(y0 + c.dot(delta_x_lin))
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
