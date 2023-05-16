@@ -40,7 +40,7 @@ if __name__ == '__main__':
         ],
         'PLL2': [
              ['name',        'K_p',  'K_i',  'bus'   ],
-            *[[f'PLL{i}',    10,     1,      bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
+            *[[f'PLL{i}',    10,     10,      bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
         ]
     }})
     ps.init_dyn_sim()
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     x0 = ps.x_0
     v0 = ps.v_0
 
-    t_end = 2
+    t_end = 10
     x_0 = ps.x_0.copy()
 
     # Solver
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     # freq_diff = np.diff(np.array(res['v_angle']).T, n=1)
     n_plt = 4
     fig, ax = plt.subplots(n_plt, sharex=True)
-    for i, (pll_1, pll_2, freq_diff_) in enumerate(zip(np.array(res['PLL1_freq']).T, np.array(res['PLL2_freq']).T)):  # , freq_diff)):
+    for i, (pll_1, pll_2) in enumerate(zip(np.array(res['PLL1_freq']).T, np.array(res['PLL2_freq']).T)):  # , freq_diff)):
         if i >= n_plt:
             break
 
