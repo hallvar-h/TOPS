@@ -275,8 +275,8 @@ class PowerSystemModel:
         return y_kk - y_rk.T.dot(np.linalg.inv(y_rr)).dot(y_rk)
 
     def init_dyn_sim(self):
-        if self.initialization_ready:
-            return
+        # if self.initialization_ready:
+            # return
 
         if not self.power_flow_ready:
             self.power_flow()
@@ -284,7 +284,7 @@ class PowerSystemModel:
         self.state_desc = np.empty((0, 2))
         self.n_states = 0
         for mdl in self.dyn_mdls:
-            mdl.idx = slice(mdl.idx.start + self.n_states, mdl.idx.stop + self.n_states)
+            mdl.idx = slice(self.n_states, mdl.idx.stop - mdl.idx.start + self.n_states)
             for field in mdl.state_idx_global.dtype.names:
                 mdl.state_idx_global[field] += mdl.idx.start
             self.n_states += mdl.n_states * mdl.n_units
