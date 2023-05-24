@@ -15,6 +15,7 @@ importlib.reload(mdl_lib)
 
 class PowerSystemModel:
     def __init__(self, model, user_mdl_lib=None):
+        self.user_mdl_lib = user_mdl_lib
         file_is_json = isinstance(model, str) and model[-5:] == '.json'
         if file_is_json:
             try:
@@ -70,7 +71,7 @@ class PowerSystemModel:
             if key in model and len(model[key]) > 1:
                 model[key] = {default_mdl: model[key]}
 
-        sys_data = {
+        self.sys_data = sys_data = {
             's_n': model['base_mva'],
             'f_n': model['f'],
             'n_bus': self.n_bus,
@@ -81,32 +82,8 @@ class PowerSystemModel:
 
         self.dyn_mdls = []
         self.dyn_mdls_dict = {}
-        for key, val in model.items():
-            if isinstance(val, dict):
-                category_key = key
-                category = val
-                for mdl_key, mdl_data_raw in category.items():
-                    if hasattr(user_mdl_lib, category_key) and hasattr(getattr(user_mdl_lib, category_key), mdl_key):
-                        print('User model: {}, {}'.format(category_key, mdl_key))
-                        mdl_class = getattr(getattr(user_mdl_lib, category_key), mdl_key)
-                    elif hasattr(mdl_lib, category_key) and hasattr(getattr(mdl_lib, category_key), mdl_key):
-                        print('Standard model: {}, {}'.format(category_key, mdl_key))
-                        mdl_class = getattr(getattr(mdl_lib, category_key), mdl_key)
-
-                    else:
-                        print('Model {}:{} not found in model library.'.format(category_key, mdl_key))
-                        continue
-
-                    mdl_data = dps_uf.structured_array_from_list(mdl_data_raw[0], mdl_data_raw[1:])
-                    mdl = mdl_class(mdl_data, sys_data)
-                    if hasattr(self, category_key):
-                        getattr(self, category_key).update({mdl_key: mdl})
-                        self.dyn_mdls_dict[category_key].update({mdl_key: mdl})
-                    else:
-                        setattr(self, category_key, {mdl_key: mdl})
-                        self.dyn_mdls_dict[category_key] = {mdl_key: mdl}
-
-                    [self.dyn_mdls.append(item) for item in mdl_lib.utils.get_submodules(mdl)]  # [::-1]
+        
+        self.add_model_data(model)
 
 
         self.mdl_instructions = {key: list() for key in [
@@ -128,6 +105,34 @@ class PowerSystemModel:
             # '_current_injections', 'state_derivatives',
             # 'ref'
         ]}
+
+    def add_model_data(self, model_data):
+        for key, val in model_data.items():
+            if isinstance(val, dict):
+                category_key = key
+                category = val
+                for mdl_key, mdl_data_raw in category.items():
+                    if hasattr(self.user_mdl_lib, category_key) and hasattr(getattr(self.user_mdl_lib, category_key), mdl_key):
+                        # print('User model: {}, {}'.format(category_key, mdl_key))
+                        mdl_class = getattr(getattr(self.user_mdl_lib, category_key), mdl_key)
+                    elif hasattr(mdl_lib, category_key) and hasattr(getattr(mdl_lib, category_key), mdl_key):
+                        # print('Standard model: {}, {}'.format(category_key, mdl_key))
+                        mdl_class = getattr(getattr(mdl_lib, category_key), mdl_key)
+
+                    else:
+                        print('Model {}:{} not found in model library.'.format(category_key, mdl_key))
+                        continue
+
+                    mdl_data = dps_uf.structured_array_from_list(mdl_data_raw[0], mdl_data_raw[1:])
+                    mdl = mdl_class(mdl_data, self.sys_data)
+                    if hasattr(self, category_key):
+                        getattr(self, category_key).update({mdl_key: mdl})
+                        self.dyn_mdls_dict[category_key].update({mdl_key: mdl})
+                    else:
+                        setattr(self, category_key, {mdl_key: mdl})
+                        self.dyn_mdls_dict[category_key] = {mdl_key: mdl}
+
+                    [self.dyn_mdls.append(item) for item in mdl_lib.utils.get_submodules(mdl)]  # [::-1]
 
     def setup(self):
         assert not self.setup_ready
@@ -230,6 +235,7 @@ class PowerSystemModel:
         phi_0 = np.zeros(self.n_bus)
         self.v_0, self.s_0, converged = dps_uf.newton_rhapson_power_flow(self.y_bus_lf, v_pv, p_pv + p_pq, q_pq, bus_type,
                                                               self.pf_tol, self.pf_max_it)
+        self.v0 = self.v_0
 
         pv_units_per_bus = np.zeros(self.n_bus, dtype=int)
         for mdl in self.mdl_instructions['load_flow_pv']:
@@ -269,16 +275,13 @@ class PowerSystemModel:
         return y_kk - y_rk.T.dot(np.linalg.inv(y_rr)).dot(y_rk)
 
     def init_dyn_sim(self):
-        if self.initialization_ready:
-            return
-
         if not self.power_flow_ready:
             self.power_flow()
 
         self.state_desc = np.empty((0, 2))
         self.n_states = 0
         for mdl in self.dyn_mdls:
-            mdl.idx = slice(mdl.idx.start + self.n_states, mdl.idx.stop + self.n_states)
+            mdl.idx = slice(self.n_states, mdl.idx.stop - mdl.idx.start + self.n_states)
             for field in mdl.state_idx_global.dtype.names:
                 mdl.state_idx_global[field] += mdl.idx.start
             self.n_states += mdl.n_states * mdl.n_units
