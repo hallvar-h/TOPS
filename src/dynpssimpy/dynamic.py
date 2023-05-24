@@ -113,10 +113,10 @@ class PowerSystemModel:
                 category = val
                 for mdl_key, mdl_data_raw in category.items():
                     if hasattr(self.user_mdl_lib, category_key) and hasattr(getattr(self.user_mdl_lib, category_key), mdl_key):
-                        print('User model: {}, {}'.format(category_key, mdl_key))
+                        # print('User model: {}, {}'.format(category_key, mdl_key))
                         mdl_class = getattr(getattr(self.user_mdl_lib, category_key), mdl_key)
                     elif hasattr(mdl_lib, category_key) and hasattr(getattr(mdl_lib, category_key), mdl_key):
-                        print('Standard model: {}, {}'.format(category_key, mdl_key))
+                        # print('Standard model: {}, {}'.format(category_key, mdl_key))
                         mdl_class = getattr(getattr(mdl_lib, category_key), mdl_key)
 
                     else:
@@ -275,9 +275,6 @@ class PowerSystemModel:
         return y_kk - y_rk.T.dot(np.linalg.inv(y_rr)).dot(y_rk)
 
     def init_dyn_sim(self):
-        # if self.initialization_ready:
-            # return
-
         if not self.power_flow_ready:
             self.power_flow()
 
