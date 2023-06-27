@@ -33,14 +33,17 @@ if __name__ == '__main__':
 
     # Power system model
     ps = dps.PowerSystemModel(model=model)
+    ps.setup()
+    ps.build_y_bus_lf()
+    
     ps.add_model_data({'pll': {
         'PLL1': [
              ['name',        'T_filter',     'bus'   ],
-            *[[f'PLL{i}',    0.1,            bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
+            *[[f'PLL{i}',    0.01,            bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
         ],
         'PLL2': [
              ['name',        'K_p',  'K_i',  'bus'   ],
-            *[[f'PLL{i}',    10,     10,      bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
+            *[[f'PLL{i}',    100,     100,      bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
         ]
     }})
     ps.init_dyn_sim()
@@ -108,7 +111,7 @@ if __name__ == '__main__':
         ax[i].set_ylabel(f'Bus {i}')
         ax[i].legend()
     ax[-1].set_xlabel('Time [s]')
-    plt.show()
+    # plt.show()
 
     
     # freq_diff = np.diff(np.array(res['v_angle']).T, n=1)
