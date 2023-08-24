@@ -32,10 +32,10 @@ if __name__ == '__main__':
 
 
     # Power system model
-    ps = dps.PowerSystemModel(model=model)
+    ps = dps.PowerSystemModel(model=model)    
     ps.setup()
     ps.build_y_bus_lf()
-    
+
     ps.add_model_data({'pll': {
         'PLL1': [
              ['name',        'T_filter',     'bus'   ],
@@ -46,6 +46,9 @@ if __name__ == '__main__':
             *[[f'PLL{i}',    100,     100,      bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
         ]
     }})
+
+    ps.setup()
+    ps.build_y_bus_lf()
     ps.init_dyn_sim()
     print(max(abs(ps.ode_fun(0, ps.x_0))))
 
@@ -130,4 +133,9 @@ if __name__ == '__main__':
         ax[i].set_ylabel(f'Bus {i}')
         ax[i].legend()
     ax[-1].set_xlabel('Time [s]')
+    # plt.show()
+
+
+    fig, ax = plt.subplots(1)
+    plt.plot(res['t'], np.array(res['PLL2_freq']))
     plt.show()

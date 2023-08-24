@@ -46,9 +46,9 @@ class PowerSystemModel:
         self.pf_tol = 1e-8
 
         self.s_n = model['base_mva']
+        self.f_n = model['f']
         self.slack_bus = model['slack_bus'] if 'slack_bus' in model else None
         self.buses = dps_uf.structured_array_from_list(model['buses'][0], model['buses'][1:])
-        self.n_bus = len(self.buses)
 
         self.y_bus_lf = None
         self.power_flow_ready = False
@@ -71,40 +71,20 @@ class PowerSystemModel:
             if key in model and len(model[key]) > 1:
                 model[key] = {default_mdl: model[key]}
 
-        self.sys_data = sys_data = {
-            's_n': model['base_mva'],
-            'f_n': model['f'],
+                self.n_bus = len(self.buses)
+        
+        self.sys_data = {
+            's_n': self.s_n,
+            'f_n': self.f_n,
             'n_bus': self.n_bus,
             'bus_v_n': self.buses['V_n'],
             'bus_names': self.buses['name'],
             'red_to_full': None
         }
-
         self.dyn_mdls = []
         self.dyn_mdls_dict = {}
-        
+
         self.add_model_data(model)
-
-
-        self.mdl_instructions = {key: list() for key in [
-            'initialize',
-            'state_derivatives',
-            'connections',
-            'bus_references',
-            'bus_ref_spec',
-            'reduced_system',
-            'load_flow_pq',
-            'load_flow_pv',
-            'load_flow_adm',
-            'dyn_const_adm',
-            'dyn_var_adm',
-            'init_from_load_flow',
-            'current_injections',
-
-            # 'init_mdl', 'lf_adm', 'dyn_const_adm', 'dyn_var_adm',
-            # '_current_injections', 'state_derivatives',
-            # 'ref'
-        ]}
 
     def add_model_data(self, model_data):
         for key, val in model_data.items():
@@ -135,7 +115,24 @@ class PowerSystemModel:
                     [self.dyn_mdls.append(item) for item in mdl_lib.utils.get_submodules(mdl)]  # [::-1]
 
     def setup(self):
-        assert not self.setup_ready
+        self.mdl_instructions = {key: list() for key in [
+            'initialize',
+            'state_derivatives',
+            'connections',
+            'bus_references',
+            'bus_ref_spec',
+            'reduced_system',
+            'load_flow_pq',
+            'load_flow_pv',
+            'load_flow_adm',
+            'dyn_const_adm',
+            'dyn_var_adm',
+            'init_from_load_flow',
+            'current_injections',
+            # 'init_mdl', 'lf_adm', 'dyn_const_adm', 'dyn_var_adm',
+            # '_current_injections', 'state_derivatives',
+            # 'ref'
+        ]}
 
         for mdl in self.dyn_mdls:
             for key, fun_list in self.mdl_instructions.items():
