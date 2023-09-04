@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     model['vsc'] = {'VSC': [
         ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp',   ],
-        ['VSC1',    0.1,        1,      'B8',   0.01,        1e-12,        0.1,        0.1,        100,          100],
+        ['VSC1',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        100,          100],
     ]}
 
     # Power system model
@@ -45,6 +45,8 @@ if __name__ == '__main__':
 
         if t > 1:
             ps.vsc['VSC'].set_input('P_setp', 500)
+        if t > 5:
+            ps.vsc['VSC'].set_input('Q_setp', 200)
 
         # Simulate next step
         result = sol.step()
@@ -57,14 +59,22 @@ if __name__ == '__main__':
         # Store result
         res['t'].append(sol.t)
         res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
-        res['VSC_power'].append(ps.vsc['VSC'].P(x, v).copy())
+        res['VSC_P'].append(ps.vsc['VSC'].P(x, v).copy())
+        res['VSC_P_setp'].append(ps.vsc['VSC'].P_setp(x, v).copy())
+
+        res['VSC_Q'].append(ps.vsc['VSC'].Q(x, v).copy())
+        res['VSC_Q_setp'].append(ps.vsc['VSC'].Q_setp(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
-    plt.figure()
-    plt.plot(res['t'], res['gen_speed'])
-    plt.show()
+    # plt.figure()
+    # plt.plot(res['t'], res['gen_speed'])
+    # plt.show()
 
-    plt.figure()
-    plt.plot(res['t'], res['VSC_power'])
+    fig, ax = plt.subplots(2)
+    ax[0].plot(res['t'], res['VSC_P'])
+    ax[0].plot(res['t'], res['VSC_P_setp'])
+
+    ax[1].plot(res['t'], res['VSC_Q'])
+    ax[1].plot(res['t'], res['VSC_Q_setp'])
     plt.show()
