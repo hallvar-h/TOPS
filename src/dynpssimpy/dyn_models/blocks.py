@@ -337,3 +337,32 @@ class Saturation(DAEModel):
         
         return SE
     
+
+class Backlash(DAEModel):
+    """Based on PowerFactory implementation"""
+    def state_list(self):
+        return ['x']
+    
+    def state_derivatives(self, dx, x, v):
+        dX = self.local_view(dx)
+        X = self.local_view(x)
+        db = self.par['db']
+        if db <= 0:
+            return db*0
+
+        y = self.input(x, v)
+        x = X['x']
+
+        if (y - x) >= db:
+            d = (y - x) - db
+        elif (y - x) <= -db:
+            d = (y - x) + db
+        else:
+            d = 0
+
+        dX['x'][:] = d/0.01
+
+    @output
+    def output(self, x, v):
+        X = self.local_view(x)
+        return X['x']
