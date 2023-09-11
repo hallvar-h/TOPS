@@ -18,8 +18,8 @@ if __name__ == '__main__':
     model['gov'] = {
         'TGOV1': [model['gov']['TGOV1'][0], *model['gov']['TGOV1'][2:]],
         'HYGOV': [
-            ['name',    'gen',  'R',    'r',    'T_f',  'T_r',  'T_g',  'A_t',  'T_w',  'q_nl',     'D_turb' ,      'G_min',    'V_elm',    'G_max',    'P_N',  'backlash'],
-            ['HYGOV1',  'G1',   0.04,   0.1,    0.1,    10,     0.5,      1,      1,      0.01,      0.01,          0,          0.15,       1,          0,      0.01],
+            ['name',    'gen',  'R',    'r',    'T_f',  'T_r',  'T_g',  'A_t',  'T_w',  'q_nl',     'D_turb' ,      'G_min',    'V_elm',    'G_max',    'P_N', 'backlash'],
+            ['HYGOV1',  'G1',   0.04,   0.1,    0.1,    10,     0.5,      1,      1,      0.01,      0.01,          0,          0.15,       1,          0,     0.01],
     ]}
 
     # Power system model
@@ -39,7 +39,6 @@ if __name__ == '__main__':
     t_0 = time.time()
 
     sc_bus_idx = ps.gen['GEN'].bus_idx_red['terminal'][0]
-
     initial_bias = ps.gov['HYGOV'].int_par['bias'].copy()
 
     # Run simulation
@@ -65,8 +64,9 @@ if __name__ == '__main__':
         res['t'].append(t)
         res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
 
-        res['backlash_in'].append(ps.gov['HYGOV'].backlash.input(x, v).copy())
-        res['backlash_out'].append(ps.gov['HYGOV'].backlash.output(x, v).copy())
+        if hasattr(ps.gov['HYGOV'], 'backlash'):
+            res['backlash_in'].append(ps.gov['HYGOV'].backlash.input(x, v).copy())
+            res['backlash_out'].append(ps.gov['HYGOV'].backlash.output(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
@@ -75,11 +75,12 @@ if __name__ == '__main__':
     ax[0].plot(res['t'], res['gen_speed'])
     ax[0].set_xlabel('Time [s]')
     ax[0].set_ylabel('Gen. speed')
-    ax[1].plot(res['t'], res['backlash_in'])
-    ax[1].plot(res['t'], res['backlash_out'])
+    if hasattr(ps.gov['HYGOV'], 'backlash'):
+        ax[1].plot(res['t'], res['backlash_in'])
+        ax[1].plot(res['t'], res['backlash_out'])
     # ax[0].xlabel('Time [s]')
     # ax[0].ylabel('Deadband in/out')
-    ax[2].plot(res['backlash_in'], res['backlash_out'])
+        ax[2].plot(res['backlash_in'], res['backlash_out'])
     
     
     plt.show()
