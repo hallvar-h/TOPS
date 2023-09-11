@@ -46,9 +46,9 @@ class PowerSystemModel:
         self.pf_tol = 1e-8
 
         self.s_n = model['base_mva']
+        self.f_n = model['f']
         self.slack_bus = model['slack_bus'] if 'slack_bus' in model else None
         self.buses = dps_uf.structured_array_from_list(model['buses'][0], model['buses'][1:])
-        self.n_bus = len(self.buses)
 
         self.y_bus_lf = None
         self.power_flow_ready = False
@@ -71,40 +71,20 @@ class PowerSystemModel:
             if key in model and len(model[key]) > 1:
                 model[key] = {default_mdl: model[key]}
 
-        self.sys_data = sys_data = {
-            's_n': model['base_mva'],
-            'f_n': model['f'],
+                self.n_bus = len(self.buses)
+        
+        self.sys_data = {
+            's_n': self.s_n,
+            'f_n': self.f_n,
             'n_bus': self.n_bus,
             'bus_v_n': self.buses['V_n'],
             'bus_names': self.buses['name'],
             'red_to_full': None
         }
-
         self.dyn_mdls = []
         self.dyn_mdls_dict = {}
-        
+
         self.add_model_data(model)
-
-
-        self.mdl_instructions = {key: list() for key in [
-            'initialize',
-            'state_derivatives',
-            'connections',
-            'bus_references',
-            'bus_ref_spec',
-            'reduced_system',
-            'load_flow_pq',
-            'load_flow_pv',
-            'load_flow_adm',
-            'dyn_const_adm',
-            'dyn_var_adm',
-            'init_from_load_flow',
-            'current_injections',
-
-            # 'init_mdl', 'lf_adm', 'dyn_const_adm', 'dyn_var_adm',
-            # '_current_injections', 'state_derivatives',
-            # 'ref'
-        ]}
 
     def add_model_data(self, model_data):
         for key, val in model_data.items():
@@ -135,7 +115,24 @@ class PowerSystemModel:
                     [self.dyn_mdls.append(item) for item in mdl_lib.utils.get_submodules(mdl)]  # [::-1]
 
     def setup(self):
-        assert not self.setup_ready
+        self.mdl_instructions = {key: list() for key in [
+            'initialize',
+            'state_derivatives',
+            'connections',
+            'bus_references',
+            'bus_ref_spec',
+            'reduced_system',
+            'load_flow_pq',
+            'load_flow_pv',
+            'load_flow_adm',
+            'dyn_const_adm',
+            'dyn_var_adm',
+            'init_from_load_flow',
+            'current_injections',
+            # 'init_mdl', 'lf_adm', 'dyn_const_adm', 'dyn_var_adm',
+            # '_current_injections', 'state_derivatives',
+            # 'ref'
+        ]}
 
         for mdl in self.dyn_mdls:
             for key, fun_list in self.mdl_instructions.items():
@@ -275,16 +272,13 @@ class PowerSystemModel:
         return y_kk - y_rk.T.dot(np.linalg.inv(y_rr)).dot(y_rk)
 
     def init_dyn_sim(self):
-        if self.initialization_ready:
-            return
-
         if not self.power_flow_ready:
             self.power_flow()
 
         self.state_desc = np.empty((0, 2))
         self.n_states = 0
         for mdl in self.dyn_mdls:
-            mdl.idx = slice(mdl.idx.start + self.n_states, mdl.idx.stop + self.n_states)
+            mdl.idx = slice(self.n_states, mdl.idx.stop - mdl.idx.start + self.n_states)
             for field in mdl.state_idx_global.dtype.names:
                 mdl.state_idx_global[field] += mdl.idx.start
             self.n_states += mdl.n_states * mdl.n_units

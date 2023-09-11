@@ -32,24 +32,30 @@ if __name__ == '__main__':
 
 
     # Power system model
-    ps = dps.PowerSystemModel(model=model)
+    ps = dps.PowerSystemModel(model=model)    
+    ps.setup()
+    ps.build_y_bus_lf()
+
     ps.add_model_data({'pll': {
         'PLL1': [
              ['name',        'T_filter',     'bus'   ],
-            *[[f'PLL{i}',    0.1,            bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
+            *[[f'PLL{i}',    0.01,            bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
         ],
         'PLL2': [
              ['name',        'K_p',  'K_i',  'bus'   ],
-            *[[f'PLL{i}',    10,     1,      bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
+            *[[f'PLL{i}',    100,     100,      bus_name  ] for i, bus_name in enumerate(ps.buses['name'])],
         ]
     }})
+
+    ps.setup()
+    ps.build_y_bus_lf()
     ps.init_dyn_sim()
     print(max(abs(ps.ode_fun(0, ps.x_0))))
 
     x0 = ps.x_0
     v0 = ps.v_0
 
-    t_end = 2
+    t_end = 10
     x_0 = ps.x_0.copy()
 
     # Solver
@@ -108,13 +114,13 @@ if __name__ == '__main__':
         ax[i].set_ylabel(f'Bus {i}')
         ax[i].legend()
     ax[-1].set_xlabel('Time [s]')
-    plt.show()
+    # plt.show()
 
     
     # freq_diff = np.diff(np.array(res['v_angle']).T, n=1)
     n_plt = 4
     fig, ax = plt.subplots(n_plt, sharex=True)
-    for i, (pll_1, pll_2, freq_diff_) in enumerate(zip(np.array(res['PLL1_freq']).T, np.array(res['PLL2_freq']).T)):  # , freq_diff)):
+    for i, (pll_1, pll_2) in enumerate(zip(np.array(res['PLL1_freq']).T, np.array(res['PLL2_freq']).T)):  # , freq_diff)):
         if i >= n_plt:
             break
 
@@ -127,4 +133,9 @@ if __name__ == '__main__':
         ax[i].set_ylabel(f'Bus {i}')
         ax[i].legend()
     ax[-1].set_xlabel('Time [s]')
+    # plt.show()
+
+
+    fig, ax = plt.subplots(1)
+    plt.plot(res['t'], np.array(res['PLL2_freq']))
     plt.show()
