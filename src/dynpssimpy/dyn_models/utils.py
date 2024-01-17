@@ -198,7 +198,7 @@ class DAEModel:
     def disconnect_input(self, input_name):
         def input(self, x, v):
             return self._input_values[input_name]
-        setattr(type(self), input_name, input)
+        setattr(type(self), input_name, input)  # TODO: Check if this is right.
 
     def add_blocks(self):
         """Sub-modules can be specified by overwriting this function"""
