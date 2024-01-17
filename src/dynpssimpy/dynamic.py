@@ -4,7 +4,7 @@ import dynpssimpy.utility_functions as dps_uf
 import dynpssimpy.dyn_models as mdl_lib
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
-#from scipy.sparse import diags as sp_diags
+from scipy.sparse import diags as sp_diags
 
 import json
 import os
