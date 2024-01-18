@@ -3,8 +3,8 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-import dynpssimpy.dynamic as dps
-import dynpssimpy.solvers as dps_sol
+import tops.dynamic as dps
+import tops.solvers as dps_sol
 import importlib
 importlib.reload(dps)
 import pandas as pd
@@ -12,7 +12,7 @@ import pandas as pd
 if __name__ == '__main__':
 
     # Load model
-    import dynpssimpy.ps_models.k2a as model_data
+    import tops.ps_models.k2a as model_data
     importlib.reload(model_data)
     model = model_data.load()
     

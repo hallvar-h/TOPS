@@ -1,6 +1,6 @@
 from collections import defaultdict
 import validation_functions as val_fun
-import dynpssimpy.dynamic as dps
+import tops.dynamic as dps
 import importlib
 from scipy.integrate import RK45
 import pandas as pd
@@ -10,7 +10,7 @@ import pathlib
 
 if __name__ == '__main__':
 
-    import dynpssimpy.ps_models.k2a_val as model_data
+    import tops.ps_models.k2a_val as model_data
     model = model_data.load()
 
     [importlib.reload(mdl) for mdl in [model_data, dps]]

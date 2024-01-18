@@ -14,7 +14,7 @@ def generate_plots(ps, result, pf_res, dt, choose_plots='all'):
 
     if choose_plots == 'all' or choose_plots == 'basic':
         fig, ax_4x1 = plt.subplots(4, 1, sharex=True, squeeze=False)
-        fig.suptitle('DynPSSimPy vs DIgSILENT PowerFactory', fontsize=16)
+        fig.suptitle('TOPS vs DIgSILENT PowerFactory', fontsize=16)
         y_labels = ['Angle', 'Speed', 'Subtransient\nq-axis voltage', 'Subtransient\nd-axis voltage']
         for ax_, label in zip(ax_4x1[:, 0], y_labels):
             ax_.set_ylabel(label)
@@ -53,7 +53,7 @@ def generate_plots(ps, result, pf_res, dt, choose_plots='all'):
 
     if choose_plots == 'all' or choose_plots == 'expanded':
         fig, ax_4xN = plt.subplots(4, ps.gen['GEN'].n_units, sharex=True, sharey='row', squeeze=False)
-        fig.suptitle('DynPSSimPy vs DIgSILENT PowerFactory', fontsize=16)
+        fig.suptitle('TOPS vs DIgSILENT PowerFactory', fontsize=16)
         plt.subplots_adjust(wspace=0, hspace=0)
         y_labels = ['Angle', 'Speed', 'Subtransient\nq-axis voltage', 'Subtransient\nd-axis voltage']
         for ax_, label in zip(ax_4xN[:, 0], y_labels):
