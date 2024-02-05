@@ -2,14 +2,14 @@ import sys
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import time
-import dynpssimpy.dynamic as dps
-from dynpssimpy.solvers_sde import EulerDAE_SDE
+import tops.dynamic as dps
+from tops.solvers_sde import EulerDAE_SDE
 import numpy as np
 
 if __name__ == '__main__':
 
     # Load model
-    import dynpssimpy.ps_models.k2a as model_data
+    import tops.ps_models.k2a as model_data
     model = model_data.load()
     model['loads'] = {'DynamicLoadFiltered':  [# model['loads']}
         model['loads'][0] + ['T_g', 'T_b'],

@@ -1,4 +1,4 @@
-from dynpssimpy.solvers import EulerDAE
+from tops.solvers import EulerDAE
 import numpy as np
 
 class EulerDAE_SDE(EulerDAE):
