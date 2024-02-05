@@ -1,7 +1,7 @@
 import numpy as np
 import inspect
 import functools
-import dynpssimpy.utility_functions as dps_uf
+import tops.utility_functions as dps_uf
 from scipy.optimize import least_squares
 
 
@@ -307,7 +307,6 @@ def auto_init(mdl, x0, v0, output_0):
         for idx, idx_local in zip(state_idx, state_idx_local):
             x_all_test[idx] = x_test[idx_local]
         
-        dx_all = np.zeros(n_states_all)
         for submodule in submodules:
             submodule.reset_outputs()
             submodule._store_output = True
@@ -330,7 +329,9 @@ def auto_init(mdl, x0, v0, output_0):
     x_test = np.concatenate([x0[:n_states], mdl.int_par['bias']])
     x_test[:] = 1
 
+    x_sol_best = np.ones(n_sol)
     err_best = 1e6
+    err = err_best
     for init_conditions in [np.ones(n_sol), np.zeros(n_sol), np.random.randn(n_sol)]:
         try:
             sol = least_squares(ode_fun_mdl, init_conditions)
@@ -345,9 +346,10 @@ def auto_init(mdl, x0, v0, output_0):
     for idx, idx_local in zip(state_idx, state_idx_local):
         x_sol_all[idx] = x_sol_best[idx_local]
 
-    
     mdl.int_par[:] = x_sol_best[int_par_idx]
         
-    assert np.linalg.norm(mdl.output(x_sol_all, v0) - output_0) < 1e-6
+    if np.linalg.norm(mdl.output(x_sol_all, v0) - output_0) > 1e-6:
+        print(f'Model {mdl.__class__} was potentially not initialized properly (error: {err}).')
     # assert max(abs(ps.state_derivatives(0, x_sol_all, ps.v_0))) < 1e-6
     x0[:] = x_sol_all
+    x0

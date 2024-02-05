@@ -1,5 +1,5 @@
 import numpy as np
-from dynpssimpy.dyn_models.utils import DAEModel
+from tops.dyn_models.utils import DAEModel
 
 
 class Trafo(DAEModel):

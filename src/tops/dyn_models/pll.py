@@ -1,4 +1,4 @@
-from dynpssimpy.dyn_models.blocks import *
+from tops.dyn_models.blocks import *
 
 class PLL1(DAEModel):
     def __init__(self, *args, **kwargs):
@@ -54,6 +54,8 @@ class PLL2(PLL1):
         self.phi = self.integrator.output
         self.pi.input = lambda x, v: -self.v_measured(x, v).real*np.sin(self.phi(x, v)) + self.v_measured(x, v).imag*np.cos(self.phi(x, v))
         self.integrator.input = self.pi.output
+
+        self.freq_est = lambda x, v: self.integrator.input(x, v)/(2 * np.pi * self.sys_par['f_n'])
 
         self.output = self.phi
 

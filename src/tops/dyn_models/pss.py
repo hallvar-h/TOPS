@@ -1,4 +1,4 @@
-from dynpssimpy.dyn_models.blocks import *
+from tops.dyn_models.blocks import *
 
 
 class PSS:
