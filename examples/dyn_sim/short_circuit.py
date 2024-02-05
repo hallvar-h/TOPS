@@ -2,16 +2,13 @@ import sys
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import time
-import dynpssimpy.dynamic as dps
-import dynpssimpy.solvers as dps_sol
-import importlib
-importlib.reload(dps)
+import tops.dynamic as dps
+import tops.solvers as dps_sol
 
 if __name__ == '__main__':
 
     # Load model
-    import dynpssimpy.ps_models.ieee39 as model_data
-    importlib.reload(model_data)
+    import tops.ps_models.ieee39 as model_data
     model = model_data.load()
 
     # Power system model

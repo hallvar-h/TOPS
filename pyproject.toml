@@ -3,8 +3,8 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dynpssimpy"
-description = 'Dynamic power system simulation in Python'
+name = "tops"
+description = 'Tiny open power system simulator'
 readme = "README.md"
 requires-python = ">=3.7"
 license = {file="LICENSE"}
@@ -25,5 +25,5 @@ dependencies = [
 	]
 
 [project.urls]
-"Homepage" = "https://github.com/hallvar-h/DynPSSimPy"
-"Bug Tracker" = "https://github.com/hallvar-h/DynPSSimPy/issues"
+"Homepage" = "https://github.com/hallvar-h/TOPS"
+"Bug Tracker" = "https://github.com/hallvar-h/TOPS/issues"

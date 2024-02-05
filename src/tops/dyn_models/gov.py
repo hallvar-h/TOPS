@@ -1,5 +1,5 @@
-from dynpssimpy.dyn_models.blocks import *
-from dynpssimpy.dyn_models.utils import auto_init
+from tops.dyn_models.blocks import *
+from tops.dyn_models.utils import auto_init
 
 
 class GOV:

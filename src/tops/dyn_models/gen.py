@@ -1,6 +1,6 @@
 import numpy as np
-from dynpssimpy.dyn_models.utils import DAEModel
-import dynpssimpy.utility_functions as dps_uf
+from tops.dyn_models.utils import DAEModel
+import tops.utility_functions as dps_uf
 
 class GEN(DAEModel):
     def __init__(self, *args, **kwargs):

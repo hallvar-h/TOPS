@@ -2,7 +2,7 @@ from collections import defaultdict
 import tests.test_validation.validation_functions as val_fun
 import sys
 sys.path.append(r'tests/validation')
-import dynpssimpy.dynamic as dps
+import tops.dynamic as dps
 import importlib
 from scipy.integrate import RK45
 import pandas as pd
@@ -11,7 +11,7 @@ importlib.reload(val_fun)
 
 if __name__ == '__main__':
 
-    import dynpssimpy.ps_models.ieee39 as model_data
+    import tops.ps_models.ieee39 as model_data
     model = model_data.load()
 
     [importlib.reload(mdl) for mdl in [model_data, dps, val_fun]]

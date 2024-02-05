@@ -1,5 +1,5 @@
 import numpy as np
-from dynpssimpy.solvers import Euler, ModifiedEuler, SimpleRK4
+from tops.solvers import Euler, ModifiedEuler, SimpleRK4
 
 
 def newton_rhapson_power_flow(y_bus, v_0, p_sum_bus, q_sum_bus, bus_types, tol, pf_max_it):

@@ -1,7 +1,7 @@
 import numpy as np
 
-import dynpssimpy.utility_functions as dps_uf
-import dynpssimpy.dyn_models as mdl_lib
+import tops.utility_functions as dps_uf
+import tops.dyn_models as mdl_lib
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
 from scipy.sparse import diags as sp_diags
@@ -456,11 +456,11 @@ class PowerSystemModel:
 
 #     from collections import defaultdict
 #     import time
-#     import dynpssimpy.solvers as dps_sol
+#     import tops.solvers as dps_sol
 #     import sys
 
 #     # Load model
-#     import dynpssimpy.ps_models.k2a as model_data
+#     import tops.ps_models.k2a as model_data
 
 #     importlib.reload(model_data)
 #     model = model_data.load()

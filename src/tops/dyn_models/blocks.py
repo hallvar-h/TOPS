@@ -1,4 +1,4 @@
-from dynpssimpy.dyn_models.utils import DAEModel, output
+from tops.dyn_models.utils import DAEModel, output
 import numpy as np
 
 
