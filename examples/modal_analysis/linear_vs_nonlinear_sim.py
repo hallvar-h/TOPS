@@ -1,19 +1,19 @@
 import sys
-import dynpssimpy.dynamic as dps
+import tops.dynamic as dps
 from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-import dynpssimpy.solvers as dps_sol
-import dynpssimpy.modal_analysis as dps_lin
+import tops.solvers as dps_sol
+import tops.modal_analysis as dps_lin
 from scipy.signal import dlsim, StateSpace
 
 
 if __name__ == '__main__':
 
     # Load model
-    import dynpssimpy.ps_models.k2a as model_data
+    import tops.ps_models.k2a as model_data
     model = model_data.load()
 
     # Power system model

@@ -1,8 +1,8 @@
-from dynpssimpy.dyn_models.avr import SEXS
-from dynpssimpy.dyn_models.gov import HYGOV
-from dynpssimpy.dyn_models.pss import STAB1
-from dynpssimpy.dyn_models.utils import get_submodules
-from dynpssimpy.modal_analysis import PowerSystemModelLinearization
+from tops.dyn_models.avr import SEXS
+from tops.dyn_models.gov import HYGOV
+from tops.dyn_models.pss import STAB1
+from tops.dyn_models.utils import get_submodules
+from tops.modal_analysis import PowerSystemModelLinearization
 import numpy as np
 import matplotlib.pyplot as plt
 
