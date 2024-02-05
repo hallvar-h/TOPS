@@ -43,8 +43,15 @@ if __name__ == '__main__':
     delta_x_lin = np.zeros_like(ps.x0)
     x0_lin = ps.x0.copy()
 
+    x_init_test = ps.x0.copy()
+    delta_x_init_test = np.zeros_like(x_init_test)
+    delta_x_init_test[0] += 1e-6
+    x_init_test += delta_x_init_test
+
     sys_ss = StateSpace(ps_lin.a, b, c, d)
     sys_ss_d = sys_ss.to_discrete(dt=dt)
+    
+    assert np.linalg.norm(ps.ode_fun(0, x_init_test) - ps_lin.a.dot(delta_x_init_test)) < 1e-9
 
     # Initialize simulation
     t = 0
@@ -53,7 +60,7 @@ if __name__ == '__main__':
     result_dict_lin = defaultdict(list)
     t_0 = time.time()
 
-    dist_magn = 1e-6
+    dist_magn = 1e-2
 
     # Run simulation
     while t < t_end:
