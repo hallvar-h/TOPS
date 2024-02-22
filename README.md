@@ -14,7 +14,7 @@ Some features:
 # Installation
 The package can be installed using pip, as follows:
 
-`pip install git+https://github.com/hallvar-h/tops`
+`pip install tops`
 
 # Citing
 If you use this code for your research, please cite [this paper](https://arxiv.org/abs/2101.02937).
