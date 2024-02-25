@@ -36,10 +36,10 @@ if __name__ == '__main__':
 
     b = np.hstack([b_dist])
 
-    output_fun = lambda t, x, v: v[1]
+    output_fun = lambda x, v: v[1]
     c = ps_lin.linearize_outputs_v4([output_fun])
     d = np.zeros((1, b.shape[1]))
-    y0 = output_fun(0, ps.x0, ps.v0)
+    y0 = output_fun(ps.x0, ps.v0)
     delta_x_lin = np.zeros_like(ps.x0)
     x0_lin = ps.x0.copy()
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
         # Store result
         result_dict['Global', 't'].append(sol.t)
         [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x)]
-        result_dict['Non-linear output'].append(output_fun(t, x, v))
+        result_dict['Non-linear output'].append(output_fun(x, v))
 
         result_dict_lin['Global', 't'].append(t_lin)
         [result_dict_lin[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x_lin)]

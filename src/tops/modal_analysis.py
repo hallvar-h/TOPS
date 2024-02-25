@@ -170,7 +170,8 @@ class PowerSystemModelLinearization:
         return c
 
     def linearize_outputs_v4(self, output_description):
-
+        
+        # Allows complex C matrix (in case a phasor is measured)
         ps = self.ps
         eps = self.eps
         t = 0
@@ -179,7 +180,7 @@ class PowerSystemModelLinearization:
 
         dtypes = np.zeros(len(output_description), dtype=np.dtype)
         for i, outp_ in enumerate(output_description):
-            dtypes[i] = np.dtype(outp_(t, x, v))
+            dtypes[i] = np.dtype(outp_(x, v))
 
         if np.any(dtypes == 'complex128'):
             dtype_c = 'complex128'
@@ -200,15 +201,57 @@ class PowerSystemModelLinearization:
 
                 ps.ode_fun(0, x_1)
                 v_1 = ps.solve_algebraic(0, x_1)
-                var_1 = outp_(t_1, x_1, v_1)
+                var_1 = outp_(x_1, v_1)
                 ps.ode_fun(0, x_2)
                 v_2 = ps.solve_algebraic(0, x_2)
-                var_2 = outp_(t_2, x_2, v_2)
+                var_2 = outp_(x_2, v_2)
 
                 c_tmp[j] += (var_1 - var_2) / (2 * eps)
             c[i, :] = c_tmp
         self.c = c
         return c
+    
+    def linearize_inputs_from_spec(self, input_spec):
+        # Linearize from specification, which should be on the following form:
+        # input_spec = [
+        #     ('gen', 'GEN', 'G1', 'P_m'),
+        #     ('gen', 'GEN', 'G2', 'P_m'),
+        #     ('gen', 'GEN', 'G3', 'P_m'),
+        #     ('gen', 'GEN', 'G4', 'P_m'),
+        # ]
+        ps = self.ps
+        input_funs = []
+        for mdl_type, mdl_name, unit_name, input_function in input_spec:
+            mdl = getattr(ps, mdl_type)[mdl_name]
+            unit_idx = utils.lookup_strings(unit_name, mdl.par['name'])
+            def input_fun(ps, eps, mdl=mdl, unit_idx=unit_idx):            
+                prev_value = getattr(mdl, input_function)(ps.x0, ps.v0)[unit_idx]
+                mdl.set_input(input_function, prev_value + eps, unit_idx)
+            input_funs.append(input_fun)
+
+        return self.linearize_inputs_v3(input_funs)
+    
+    def linearize_outputs_from_spec(self, output_spec):
+        # Linearize from specification, which should be on the following form:
+        # output_spec = [
+        #     ('gen', 'GEN', 'G1', 'speed'),
+        #     ('gen', 'GEN', 'G2', 'speed'),
+        #     ('gen', 'GEN', 'G3', 'speed'),
+        #     ('gen', 'GEN', 'G4', 'speed'),
+        # ]
+        ps = self.ps
+        output_funs = []
+        for mdl_type, mdl_name, unit_name, output_function in output_spec:
+            mdl = getattr(ps, mdl_type)[mdl_name]
+            unit_idx = utils.lookup_strings(unit_name, mdl.par['name'])
+            def output_fun(x, v, mdl=mdl, unit_idx=unit_idx):
+                return getattr(mdl, output_function)(x, v)[unit_idx]
+            output_funs.append(output_fun)
+
+        print(output_funs[0](ps.x0, ps.v0))
+        
+        # Find the output matrix
+        return self.linearize_outputs_v4(output_funs)
 
     def get_mode_idx(self, mode_type=['em', 'non_conj'], damp_threshold=1, freq_range=[0.1, 3], sorted=True):
         # Get indices of modes from specified criteria.
