@@ -49,6 +49,7 @@ class PowerSystemModel:
         self.f_n = model['f']
         self.slack_bus = model['slack_bus'] if 'slack_bus' in model else None
         self.buses = dps_uf.structured_array_from_list(model['buses'][0], model['buses'][1:])
+        self.n_bus = len(self.buses)
 
         self.y_bus_lf = None
         self.power_flow_ready = False
@@ -71,7 +72,6 @@ class PowerSystemModel:
             if key in model and len(model[key]) > 1:
                 model[key] = {default_mdl: model[key]}
 
-                self.n_bus = len(self.buses)
         
         self.sys_data = {
             's_n': self.s_n,
@@ -270,11 +270,8 @@ class PowerSystemModel:
         self.red_to_full[self.bus_idx_red] = np.eye(self.n_bus_red)
 
         return y_kk - y_rk.T.dot(np.linalg.inv(y_rr)).dot(y_rk)
-
-    def init_dyn_sim(self):
-        if not self.power_flow_ready:
-            self.power_flow()
-
+    
+    def define_state_vector(self):
         self.state_desc = np.empty((0, 2))
         self.n_states = 0
         for mdl in self.dyn_mdls:
@@ -286,6 +283,12 @@ class PowerSystemModel:
 
         self.state_desc_der = self.state_desc.copy()
         self.state_desc_der[:, 1] = np.char.add(np.array(self.n_states * ['d_']), self.state_desc[:, 1])
+
+    def init_dyn_sim(self):
+        if not self.power_flow_ready:
+            self.power_flow()
+
+        self.define_state_vector()
         self.x_0 = np.zeros(self.n_states)
         self.x0 = self.x_0
 

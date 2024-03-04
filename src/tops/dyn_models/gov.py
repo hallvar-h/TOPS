@@ -76,12 +76,16 @@ class HYGOV(GOV, DAEModel):
 
     def add_blocks(self):
         p = self.par
+        g_min = p['g_min'] if 'g_min' in p.dtype.name else np.zeros(self.n_units)
+        g_max = p['g_max'] if 'g_max' in p.dtype.name else 1*np.ones(self.n_units)
+
         self.time_constant_1 = TimeConstant(T=p['T_f'])
-        self.pi_reg = PIRegulator2(T_1=p['T_r'], T_2=p['T_r']*p['r'])  # This should have limits!
+        self.pi_reg = PIRegulator2Lims(T_1=p['T_r'], T_2=p['T_r']*p['r'], x_min=g_min, x_max=g_max)  # This should have limits!
         self.gain = Gain(K=p['R'])
         self.time_constant_2 = TimeConstant(T=p['T_g'])
         self.gain_A_t = Gain(K=p['A_t'])
         self.integrator = Integrator2(T=p['T_w'])
+
         self.time_constant_1.input = lambda x, v: -self.input(x, v) + self.int_par['bias'] - p['R']*self.c(x, v)
         self.pi_reg.input = self.time_constant_1.output  # This should have a limiter
         self.c = self.pi_reg.output
@@ -102,15 +106,20 @@ class HYGOV(GOV, DAEModel):
         self.output = self.gain_A_t.output
     
     def init_from_connections(self, x0, v0, output_0):
-        auto_init(self, x0, v0, output_0['output'])
-        # input_0 = self.auto_init(x0, v0, output_0['output'])
-        # p = self.par
-        # q_p = self.gain_A_t.initialize(x0, v0, output_0['output'])
-        # q = q_p + p['q_nl']
-        # self.integrator.initialize(x0, v0, q)
-        # self.time_constant_2.initialize(x0, v0, q)
-        # self.pi_reg.initialize(x0, v0, q)
-        # self.time_constant_1.initialize(x0, v0, q*0)
+        # auto_init(self, x0, v0, output_0['output'])
+        p = self.par
+        q_p = self.gain_A_t.initialize(x0, v0, output_0['output'])
+        q = q_p + p['q_nl']
+        self.integrator.initialize(x0, v0, q)
+        c = g = q
+        if 'backlash' in self.par.dtype.names:
+            self.backlash.initialize(x0, v0, q)
+        self.time_constant_2.initialize(x0, v0, q)
+        self.pi_reg.initialize(x0, v0, q)
+        self.pi_reg.output(x0, v0)
+        self.time_constant_1.initialize(x0, v0, q*0)
+        self.int_par['bias'] = p['R']*c
+        
 
 
 class IEESGO(GOV, DAEModel):
