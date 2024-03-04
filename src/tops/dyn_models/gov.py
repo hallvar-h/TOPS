@@ -80,7 +80,7 @@ class HYGOV(GOV, DAEModel):
         g_max = p['g_max'] if 'g_max' in p.dtype.name else 1*np.ones(self.n_units)
 
         self.time_constant_1 = TimeConstant(T=p['T_f'])
-        self.pi_reg = PIRegulator2Lims(T_1=p['T_r'], T_2=p['T_r']*p['r'], x_min=g_min, x_max=g_max)  # This should have limits!
+        self.pi_reg = PIRegulator2Lims(T_1=p['T_r'], T_2=p['T_r']*p['r'], x_min=g_min, x_max=g_max)
         self.gain = Gain(K=p['R'])
         self.time_constant_2 = TimeConstant(T=p['T_g'])
         self.gain_A_t = Gain(K=p['A_t'])
