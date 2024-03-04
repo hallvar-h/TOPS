@@ -275,9 +275,37 @@ class PIRegulator2(DAEModel):
 
     def initialize(self, x0, v0, output_value):
         X = self.local_view(x0)
-        X['x'] = self.par['T_2']/self.par['T_1']*output_value
+        X['x'] = self.par['T_2']*output_value
         return np.zeros(self.n_units)
     
+
+class PIRegulator2Lims(DAEModel):
+    def state_list(self):
+        return ['x']
+
+    @output
+    def output(self, x, v):
+        X = self.local_view(x)
+        output_before_limiter = 1/self.par['T_2']*(self.par['T_1']*self.input(x, v) + X['x'])
+        return np.minimum(np.maximum(output_before_limiter, self.par['x_min']), self.par['x_max'])
+
+    def state_derivatives(self, dx, x, v):
+        dX = self.local_view(dx)
+        X = self.local_view(x)
+        dX['x'][:] = self.input(x, v)
+
+        # Lims on state variable (clamping)
+        lower_lim_idx = (X['x'] <= self.par['x_min']) & (dX['x'] < 0)
+        dX['x'][lower_lim_idx] *= 0
+
+        upper_lim_idx = (X['x'] >= self.par['x_max']) & (dX['x'] > 0)
+        dX['x'][upper_lim_idx] *= 0
+
+    def initialize(self, x0, v0,output_value):
+        X0 = self.local_view(x0)
+        X0['x'][:] = np.minimum(np.maximum(self.par['T_2']*output_value, self.par['x_min']), self.par['x_max'])
+        return np.zeros(self.n_units)   
+
 
 class WashoutGain(DAEModel):
     '''
@@ -366,3 +394,8 @@ class Backlash(DAEModel):
     def output(self, x, v):
         X = self.local_view(x)
         return X['x']
+    
+    def initialize(self, x0, v0, output_value):
+        X0 = self.local_view(x0)
+        X0['x'][:] = output_value
+        return output_value
