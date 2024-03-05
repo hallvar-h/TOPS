@@ -266,44 +266,41 @@ class PIRegulator2(DAEModel):
     @output
     def output(self, x, v):
         X = self.local_view(x)
-        return 1/self.par['T_2']*(self.par['T_1']*self.input(x, v) + X['x'])
+        return (self.par['T_1']/self.par['T_2']*self.input(x, v) + X['x'])
 
     def state_derivatives(self, dx, x, v):
         dX = self.local_view(dx)
         X = self.local_view(x)
-        dX['x'][:] = self.input(x, v)
+        dX['x'][:] = self.input(x, v)/self.par['T_2']
 
     def initialize(self, x0, v0, output_value):
         X = self.local_view(x0)
-        X['x'] = self.par['T_2']*output_value
+        X['x'] = output_value
         return np.zeros(self.n_units)
     
 
-class PIRegulator2Lims(DAEModel):
-    def state_list(self):
-        return ['x']
-
+class PIRegulator2Lims(PIRegulator2):
     @output
     def output(self, x, v):
-        X = self.local_view(x)
-        output_before_limiter = 1/self.par['T_2']*(self.par['T_1']*self.input(x, v) + X['x'])
+        output_before_limiter = super().output(x, v)
         return np.minimum(np.maximum(output_before_limiter, self.par['x_min']), self.par['x_max'])
 
     def state_derivatives(self, dx, x, v):
-        dX = self.local_view(dx)
-        X = self.local_view(x)
-        dX['x'][:] = self.input(x, v)
+        super().state_derivatives(dx, x, v)
 
         # Lims on state variable (clamping)
+        dX = self.local_view(dx)
+        X = self.local_view(x)
         lower_lim_idx = (X['x'] <= self.par['x_min']) & (dX['x'] < 0)
         dX['x'][lower_lim_idx] *= 0
 
         upper_lim_idx = (X['x'] >= self.par['x_max']) & (dX['x'] > 0)
         dX['x'][upper_lim_idx] *= 0
 
-    def initialize(self, x0, v0,output_value):
+    def initialize(self, x0, v0, output_value):
+        super().initialize(x0, v0, output_value)
         X0 = self.local_view(x0)
-        X0['x'][:] = np.minimum(np.maximum(self.par['T_2']*output_value, self.par['x_min']), self.par['x_max'])
+        X0['x'][:] = np.minimum(np.maximum(X0['x'], self.par['x_min']), self.par['x_max'])
         return np.zeros(self.n_units)   
 
 
