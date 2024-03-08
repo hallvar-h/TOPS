@@ -40,6 +40,11 @@ class Trafo(DAEModel):
     def load_flow_adm(self):
         z_n = self.sys_par['bus_v_n'] ** 2 / self.sys_par['s_n']
 
+        self.V_n_from = self.sys_par['bus_v_n'][self.bus_idx['from_bus']]
+        self.I_n_from = self.sys_par['s_n']/(np.sqrt(3)*self.V_n_from)
+        self.V_n_to = self.sys_par['bus_v_n'][self.bus_idx['to_bus']]
+        self.I_n_to = self.sys_par['s_n']/(np.sqrt(3)*self.V_n_to)
+
         data = self.data
         self.admittance = np.zeros(self.n_units, dtype=complex)
         self.ratio_from_0 = np.zeros(self.n_units, dtype=complex)
@@ -90,6 +95,12 @@ class Trafo(DAEModel):
     def i_to(self, x, v):
         v_full = v
         return self.v_to_i_rev.dot(v_full)*self.connected
+    
+    def I_from(self, x, v):
+        return self.i_from(x, v)*self.I_n_from
+
+    def I_to(self, x, v):
+        return self.i_to(x, v)*self.I_n_to
 
     def s_from(self, x, v):
         v_full = v
@@ -131,6 +142,11 @@ class DynTrafo(Trafo):
     
     def load_flow_adm(self):
         z_n = self.sys_par['bus_v_n'] ** 2 / self.sys_par['s_n']
+
+        self.V_n_from = self.sys_par['bus_v_n'][self.bus_idx['from_bus']]
+        self.I_n_from = self.sys_par['s_n']/(np.sqrt(3)*self.V_n_from)
+        self.V_n_to = self.sys_par['bus_v_n'][self.bus_idx['to_bus']]
+        self.I_n_to = self.sys_par['s_n']/(np.sqrt(3)*self.V_n_to)
 
         data = self.data
         self.admittance = np.zeros(self.n_units, dtype=complex)
