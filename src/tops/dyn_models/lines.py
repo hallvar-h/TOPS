@@ -67,6 +67,10 @@ class Line(DAEModel):
     def load_flow_adm(self):
         z_n = self.sys_par['bus_v_n'] ** 2 / self.sys_par['s_n']
 
+        V_n_from = self.sys_par['bus_v_n'][self.bus_idx['from_bus']]
+        self.I_n = self.sys_par['s_n']/(np.sqrt(3)*V_n_from)
+        
+
         data = self.data
         self.shunt = np.zeros(self.n_units, dtype=complex)
         self.admittance = np.zeros(self.n_units, dtype=complex)
@@ -124,6 +128,13 @@ class Line(DAEModel):
     def i_to(self, x, v):
         v_full = v
         return self.v_to_i_rev.dot(v_full)*self.connected
+    
+    def I_from(self, x, v):
+        return self.i_from(x, v)*self.I_n
+
+    def I_to(self, x, v):
+        return self.i_from(x, v)*self.I_n
+
 
     def s_from(self, x, v):
         v_full = v
