@@ -122,17 +122,21 @@ class Line(DAEModel):
         return self.load_flow_adm()
 
     def i_from(self, x, v):
+        # Current in p.u.
         v_full = v
         return self.v_to_i.dot(v_full)*self.connected
 
     def i_to(self, x, v):
+        # Current in p.u.
         v_full = v
         return self.v_to_i_rev.dot(v_full)*self.connected
     
     def I_from(self, x, v):
+        # Current in kA
         return self.i_from(x, v)*self.I_n
 
     def I_to(self, x, v):
+        # Current in kA
         return self.i_from(x, v)*self.I_n
 
 
