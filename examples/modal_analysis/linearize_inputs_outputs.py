@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
     import tops.ps_models.k2a as model_data
     model = model_data.load()
-    del model['gov']
+    del model['pss']
     ps = dps.PowerSystemModel(model=model)
     ps.init_dyn_sim()
 
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     ]
 
     input_spec = [
-        ('gen', 'GEN', 'G1', 'P_m'),
+        ('gen', 'GEN', 'G1', 'v_pss'),
         # ('gen', 'GEN', 'G2', 'P_m'),
         # ('gen', 'GEN', 'G3', 'P_m'),
         # ('gen', 'GEN', 'G4', 'P_m'),
