@@ -69,7 +69,8 @@ class PowerSystemModel:
         default_mdls = ['Line', 'Trafo', 'Load', 'Shunt']
 
         for key, default_mdl in zip(mdl_data, default_mdls):
-            if key in model and isinstance(model[key], list):
+            print(key, default_mdl)
+            if key in model and isinstance(model[key], list) and len(model[key]) > 1:
                 model[key] = {default_mdl: model[key]}
 
         
