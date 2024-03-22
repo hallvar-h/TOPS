@@ -93,10 +93,10 @@ class PowerSystemModel:
                 category = val
                 for mdl_key, mdl_data_raw in category.items():
                     if hasattr(self.user_mdl_lib, category_key) and hasattr(getattr(self.user_mdl_lib, category_key), mdl_key):
-                        print('User model: {}, {}'.format(category_key, mdl_key))
+                        # print('User model: {}, {}'.format(category_key, mdl_key))
                         mdl_class = getattr(getattr(self.user_mdl_lib, category_key), mdl_key)
                     elif hasattr(mdl_lib, category_key) and hasattr(getattr(mdl_lib, category_key), mdl_key):
-                        print('Standard model: {}, {}'.format(category_key, mdl_key))
+                        # print('Standard model: {}, {}'.format(category_key, mdl_key))
                         mdl_class = getattr(getattr(mdl_lib, category_key), mdl_key)
 
                     else:
