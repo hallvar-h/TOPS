@@ -1,5 +1,8 @@
 import unittest
-from .validation_functions import load_pf_res, compute_error
+try:
+    from .validation_functions import load_pf_res, compute_error
+except ImportError:
+    from validation_functions import load_pf_res, compute_error
 # import pandas as pd
 from collections import defaultdict
 import tops.dynamic as dps

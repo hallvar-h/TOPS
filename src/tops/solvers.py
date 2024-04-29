@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Euler:
-    def __init__(self, f, t0, x0, t_end, dt=5e-3, **kwargs):
+    def __init__(self, f, t0, x0, t_end=np.inf, dt=5e-3, **kwargs):
         self.f = f
         self.t = t0
         self.x = x0.copy()

@@ -18,7 +18,7 @@ if __name__ == '__main__':
     model['gov'] = {
         'TGOV1': [model['gov']['TGOV1'][0], *model['gov']['TGOV1'][2:]],
         'HYGOV': [
-            ['name',    'gen',  'R',    'r',    'T_f',  'T_r',  'T_g',  'A_t',  'T_w',  'q_nl',     'D_turb' ,      'G_min',    'V_elm',    'G_max',    'P_N',  'backlash'],
+            ['name',    'gen',  'R',    'r',    'T_f',  'T_r',  'T_g',  'A_t',  'T_w',  'q_nl',     'D_turb' ,      'g_min',    'V_elm',    'g_max',    'P_N',  'backlash'],
             ['HYGOV1',  'G1',   0.04,   0.1,    0.1,    10,     0.5,      1,      1,      0.01,      0.01,          0,          0.15,       1,          0,      0.01],
     ]}
 
