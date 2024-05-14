@@ -183,7 +183,21 @@ def add_virtual_gen(model,fault_bus, fault_P, fault_Sn):
     for gen in relevant_gens:  # total Sn and P must be equal when adding virtual generator
         gen[index_P] = (P_tot - fault_P) / Num
         gen[index_Sn] = (S_tot - fault_Sn) / Num
+    return True
 
+def load_to_disconnect(model, load_name: str):
+    '''
+    Moving load to virtual buss to disconnect that single load
+        model: network model (N45)
+        fault_bus: bus where faulty load is located
+        load_name: name of load
+    '''
+    index_bus_name = model['loads'][0].index('bus')
+    index_load_name = model['loads'][0].index('name')
+    for row in model['loads'][1:]:
+        if row[index_load_name] == load_name:
+            row[index_bus_name] = 'Virtual bus'
+            break
 
 def calc_frequency_bias(model):
     '''
