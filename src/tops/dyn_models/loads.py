@@ -132,3 +132,31 @@ class DynamicLoadFiltered(DynamicLoad):
 
         self.lpf_g.initialize(x_0, v_0, y_load.real)
         self.lpf_b.initialize(x_0, v_0, y_load.imag)
+
+
+class AlmostConstPLoad(DynamicLoad):
+    def input_list(self):
+        return ['P_setp', 'Q_setp']
+    
+    def add_blocks(self):
+        p = self.par
+        self.v_abs_filtered = TimeConstant(T=p['T'])
+        self.v_abs_filtered.input = lambda x, v: abs(v[self.bus_idx_red['terminal']])
+
+    def g_load(self, x, v):
+        p_setp_pu = self.P_setp(x, v)/self.sys_par['s_n']
+        return p_setp_pu/self.v_abs_filtered.output(x, v)**2
+
+    def b_load(self, x, v):
+        q_setp_pu = self.Q_setp(x, v)/self.sys_par['s_n']
+        return - q_setp_pu/self.v_abs_filtered.output(x, v)**2
+    
+    def init_from_load_flow(self, x_0, v_0, S):
+        self.v_0 = v_0[self.bus_idx['terminal']]
+        s_load = (self.par['P'] + 1j * self.par['Q']) / self.sys_par['s_n']
+        z_load = np.conj(abs(self.v_0) ** 2 / s_load)
+        y_load = 1/z_load
+        self._input_values['P_setp'] = self.par['P']  # /self.sys_par['s_n']
+        self._input_values['Q_setp'] = self.par['Q']  # /self.sys_par['s_n']
+
+        self.v_abs_filtered.initialize(x_0, v_0, abs(self.v_0))
