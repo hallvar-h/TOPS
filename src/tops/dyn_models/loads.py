@@ -39,10 +39,20 @@ class Load(DAEModel):
         return v[self.bus_idx_red['terminal']]*np.conj(self.i(x, v))
 
     def p(self, x, v):
+        # p.u. system base
         return self.s(x, v).real
 
     def q(self, x, v):
+        # p.u. system base
         return self.s(x, v).imag
+    
+    def P(self, x, v):
+        # MW
+        return self.s(x, v).real*self.sys_par['s_n']
+
+    def Q(self, x, v):
+        # MVA
+        return self.s(x, v).imag*self.sys_par['s_n']
 
 
 class DynamicLoad(DAEModel):
@@ -95,10 +105,20 @@ class DynamicLoad(DAEModel):
         return v[self.bus_idx_red['terminal']]*np.conj(self.i(x, v))
 
     def p(self, x, v):
+        # p.u. system base
         return self.s(x, v).real
 
     def q(self, x, v):
+        # p.u. system base
         return self.s(x, v).imag
+    
+    def P(self, x, v):
+        # MW
+        return self.s(x, v).real*self.sys_par['s_n']
+
+    def Q(self, x, v):
+        # MVA
+        return self.s(x, v).imag*self.sys_par['s_n']
 
 
 class DynamicLoadFiltered(DynamicLoad):
