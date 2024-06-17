@@ -55,6 +55,7 @@ if __name__ == '__main__':
         res['t'].append(t)
         res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
         res['v'].append(v.copy())
+        res['gen_I'].append(ps.gen['GEN'].I(x, v).copy())
         res['load_I'].append(ps.loads['DynamicLoad'].I(x, v).copy())
         res['load_P'].append(ps.loads['DynamicLoad'].P(x, v).copy())
         res['load_Q'].append(ps.loads['DynamicLoad'].Q(x, v).copy())
@@ -67,9 +68,15 @@ if __name__ == '__main__':
     plt.ylabel('Bus voltage')
 
     fig = plt.figure()
+    # Note: Geneartor current is higher than load current due to transformers
+    plt.plot(res['t'], np.abs(res['gen_I']))
+    plt.xlabel('Time [s]')
+    plt.ylabel('Generator current [A]')
+
+    fig = plt.figure()
     plt.plot(res['t'], np.abs(res['load_I']))
     plt.xlabel('Time [s]')
-    plt.ylabel('Current [A]')
+    plt.ylabel('Load current [A]')
     
     fig = plt.figure()
     plt.plot(res['t'], np.abs(res['load_P']))

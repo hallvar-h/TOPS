@@ -29,6 +29,10 @@ class GEN(DAEModel):
         return self.bus_idx['terminal'], -self.par['P']*self.par['N_par'], self.par['V']
 
     def init_from_load_flow(self, x_0, v_0, S):
+
+        self.V_n = self.sys_par['bus_v_n'][self.bus_idx_red['terminal']]
+        self.I_n = self.sys_par['s_n']/(np.sqrt(3) * self.V_n)
+    
         X_0 = self.local_view(x_0)
 
         fix_idx = self.par['V_n'] == 0
@@ -178,6 +182,10 @@ class GEN(DAEModel):
 
     def i(self, x, v):
         return (self.e_st(x, v) - self.v_t(x, v)) / (1j * self.par['X_d_st'])
+    
+    def I(self, x, v):
+        # A (or kA, depending on other p.u. base values)
+        return self.i(x, v)*self.I_n
 
     def i_d(self, x, v):
         i_dq = self.i(x, v)*np.exp(1j*(np.pi/2 - self.angle(x, v)))
