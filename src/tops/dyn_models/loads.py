@@ -29,11 +29,17 @@ class Load(DAEModel):
         z_load = np.conj(abs(self.v_0) ** 2 / s_load)
         self.y_load = 1/z_load
 
+        V_n = self.sys_par['bus_v_n'][self.bus_idx['terminal']]
+        self.I_n = self.sys_par['s_n']/(np.sqrt(3)*V_n)
+
     def dyn_const_adm(self):
         return self.y_load, (self.bus_idx_red['terminal'],)*2
 
     def i(self, x, v):
         return v[self.bus_idx_red['terminal']]*self.y_load
+    
+    def I(self, x, v):
+        return self.i(x, v)*self.I_n
     
     def s(self, x, v):
         return v[self.bus_idx_red['terminal']]*np.conj(self.i(x, v))
@@ -86,6 +92,9 @@ class DynamicLoad(DAEModel):
         self._input_values['g_setp'] = y_load.real
         self._input_values['b_setp'] = y_load.imag
 
+        V_n = self.sys_par['bus_v_n'][self.bus_idx['terminal']]
+        self.I_n = self.sys_par['s_n']/(np.sqrt(3)*V_n)
+
     def g_load(self, x, v):
         return self.g_setp(x, v)
 
@@ -100,6 +109,9 @@ class DynamicLoad(DAEModel):
 
     def i(self, x, v):
         return v[self.bus_idx_red['terminal']]*self.y_load(x, v)
+    
+    def I(self, x, v):
+        return self.i(x, v)*self.I_n
     
     def s(self, x, v):
         return v[self.bus_idx_red['terminal']]*np.conj(self.i(x, v))
