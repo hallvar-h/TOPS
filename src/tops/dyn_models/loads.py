@@ -164,3 +164,6 @@ class DynamicLoadFiltered(DynamicLoad):
 
         self.lpf_g.initialize(x_0, v_0, y_load.real)
         self.lpf_b.initialize(x_0, v_0, y_load.imag)
+
+        V_n = self.sys_par['bus_v_n'][self.bus_idx['terminal']]
+        self.I_n = self.sys_par['s_n']/(np.sqrt(3)*V_n)
