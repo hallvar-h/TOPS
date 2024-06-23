@@ -5,20 +5,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-import src.tops.dynamic as dps
-import src.tops.solvers as dps_sol
-import src.tops.utility_functions_Eirik as MThesis
+import tops.dynamic as dps
+import tops.solvers as dps_sol
+import tops.utility_functions_Eirik as MThesis
 import importlib
-import pickle #For å lagre initialisering
 importlib.reload(dps)
 
-    #print(ps['gov'])
 if __name__ == '__main__':
     #fault_area = 'FI'  # Kan jo egt hentes fra fault_bus. Skal fikses senere
-    fault_bus = '7000'
-    fault_Sn = 1400
+    fault_bus = '7000'#'3359' #7000
+    fault_Sn = 1400 #1400 #1110
     fault_P = 1400
-    kinetic_energy_eps = 250e3  # MWs
+    kinetic_energy_eps = 300e3  # 300 MWs 180MWs #130MWs
     path = 'C:/Users/eirik/OneDrive - NTNU/Master/'
 
 
@@ -188,13 +186,15 @@ if __name__ == '__main__':
     #MThesis.scale_impedance(model,0,True)
 
     #Adding virtual line with generator to be disconnected
+    add_virtual_gen = False
     MThesis.add_virtual_line(model, fault_bus)
-    MThesis.add_virtual_gen(model, fault_bus, fault_P, fault_Sn)
+    add_virtual_gen = MThesis.add_virtual_gen(model, fault_bus, fault_P, fault_Sn)
+    #MThesis.load_to_disconnect(model,'L5230-1')
 
     area_by_bus['Virtual bus'] = model['buses'][-1][index_area] #adding to mapping
     index_H = model['generators']['GEN'][0].index('H')
-    S_EPS = 0 # Nominal power of EPS
-    H_EPS = 0 # Inertia time constant of EPS
+    S_EPS = 0 #Nominal power of EPS
+    H_EPS = 0 #Inertia time constant of EPS
     Ek_EPS = 0 #Kinetic energy of EPS
     # updating S_n
     for row in model['generators']['GEN'][1:]:
@@ -212,18 +212,6 @@ if __name__ == '__main__':
     #index_name_tgov = model['gov']['TGOV1'][0].index('gen')
     #index_gen_name = model['generators']['GEN'][0].index('name')
     Freq_bias = MThesis.calc_frequency_bias(model)
-
-    mapping_for_gov = {
-        'name': 'Virtual gov',
-        'gen': 'Virtual gen',
-        'R': 0.99,
-        'D_t': 0.02,
-        'V_min': 0,
-        'V_max': 2,
-        'T_1': 0.1,
-        'T_2': 0.1,
-        'T_3': 0.3
-    }
 
     # print(model['gov']['TGOV1'][0])
     #model['gov']['TGOV1'].append([mapping_for_gov[element] for element in model['gov']['TGOV1'][0]])
@@ -246,26 +234,12 @@ if __name__ == '__main__':
     import examples.dyn_sim.x0 as x0
     # Power flow calculation
     ps.power_flow()
-    '''with open('C:\\Users\\Eirik SS\\Desktop\\TOPS-main\\examples\\dyn_sim\initialization.pkl', 'rb') as f:
-        ps.x0, ps.v0, ps.s_0 = pickle.load(f)
-        ps.x0 = np.array(ps.x0)
-        ps.v0 = np.array(ps.v0)
-        ps.s_0 = np.array(ps.v0)
-    '''
+
     # Initialization
     ps.init_dyn_sim()
-    '''
-    with open('C:\\Users\\Eirik SS\\Desktop\\TOPS-main\\examples\\dyn_sim\initialization.pkl', 'rb') as f:
-        ps.x0, ps.v0, ps.s_0 = pickle.load(f)
-        ps.x0 = np.array(ps.x0)
-        ps.v0 = np.array(ps.v0)
-        ps.s_0 = np.array(ps.s_0)
-    '''
-
     x0 = ps.x0.copy()
     v0 = ps.v0.copy()
-    '''with open('initialization.pkl', 'wb') as f:
-        pickle.dump((x0, v0, s0), f)'''
+'
 
     # ---------------------------------------- Checking simulated results (stationary) --------------------------------
     for name, P in zip(ps.loads['Load'].par['name'], ps.loads['Load'].par['P']):
@@ -354,8 +328,7 @@ if __name__ == '__main__':
     print('SE_3-FI',ps.loads['Load'].par['name'][3], ps.loads['Load'].p(x0, v0).copy()[3]*S_base)
     print(sum(ps.gen['GEN'].par['S_n']))
     # ------------------------------------------------------------------------------
-    #Har markert ut denne for deg, Kjetil, ettersom du bare skal simulere
-    #Open the Excel file in append mode using openpyxl engine
+    #Open the Excel file in append mode using openpyxl engine. To save for printing initial power flow
     with pd.ExcelWriter(path + 'dataframes_DynPSSimPy.xlsx',
                         engine='openpyxl') as writer:
 
@@ -377,11 +350,7 @@ if __name__ == '__main__':
     #Dynamisk til master. Alt før det her er fra prosjektoppgave (forprosjekt)
     t = 0
 
-    actual_data['Timestamp'] = pd.to_datetime(actual_data['Timestamp'], format='%d.%m.%Y %H:%M:%S')
-    # shifting to first element as reference time (t=0)
-    actual_data['Timestamp'] = (actual_data['Timestamp'] - actual_data['Timestamp'].iloc[0]).dt.total_seconds()
-
-    t_end = 80 #actual_data['Timestamp'].iloc[-1]  # Simulate the same time as actual response
+    t_end = 50 #actual_data['Timestamp'].iloc[-1]  # Simulate the same time as actual response
     #x0 = ps.x0.copy()
     sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x0, t_end, max_step=5e-3)
 
@@ -421,7 +390,7 @@ if __name__ == '__main__':
         else:
             ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 0'''
 
-        if t > 17.6 and event_flag: #17.5
+        if t > 17.6 and event_flag: #17.6  #10.5 #10.8 #60.26
             event_flag = False
             ps.lines['Line'].event(ps, 'Virtual line', 'disconnect')
 
@@ -584,7 +553,8 @@ if __name__ == '__main__':
         Average_freq.append(column_sum / len(list_frequency_actual))
     #Average of simulated:
     list_frequency_sim = list()
-    speed_results = result.xs(key='speed', axis='columns', level=1).drop(columns=['Virtual gen'])
+    speed_results = result.xs(key='speed', axis='columns', level=1).drop(columns=['Virtual gen']) if add_virtual_gen \
+               else result.xs(key='speed', axis='columns', level=1)
     list_frequency_sim = speed_results.mean(axis=1)
 
 
@@ -594,8 +564,8 @@ if __name__ == '__main__':
     fig.suptitle('Generator speed deviation', fontsize=20)
     #ax.plot(timestamps, result.xs(key='speed', axis='columns', level=1).drop(columns=['Virtual gen']) * ps.model['f'])
     ax.plot(timestamps, list_frequency_sim * ps.model['f'], label='Simulated')
-    ax.plot(actual_data['Timestamp'], Average_freq, label='Actual')
-    gi_navn = frequency_label.index(fault_area)
+    #ax.plot(actual_data['Timestamp'], Average_freq, label='Actual')
+    #gi_navn = frequency_label.index(fault_area)
     #ax.plot(actual_data['Timestamp'],[elem - frequency_actual[gi_navn][0] for elem in frequency_actual[gi_navn]],label='Actual')
     #for gen in generators_plot:
         #ax.plot(timestamps, result.xs(key='speed', axis='columns', level=1)[gen] * ps.model['f'], label=gen)
@@ -661,18 +631,12 @@ if __name__ == '__main__':
         #         label=labels_flows[k])
     plt.legend()
     plt.ylabel('Power flows (MWh/h)')
-    plt.xlabel('Time (s)')'''
+    plt.xlabel('Time (s)')
 
-    '''
+
     plt.figure()
     plt.plot(result[('Global', 't')], np.array(E_f_stored))
     plt.xlabel('time (s)')
     plt.ylabel('E_q (p.u.)')'''
-
-    #with open('no_tuning.pkl', 'wb') as f:
-    #    pickle.dump((timestamps, list_frequency_sim * ps.model['f']), f)
-
-    #with open('actual.pkl', 'wb') as f:
-    #    pickle.dump((actual_data['Timestamp'], Average_freq), f)
 
     plt.show()
