@@ -1,3 +1,5 @@
+#This base script is created for a quick start into analysing N45.
+
 from collections import defaultdict
 
 import sys
