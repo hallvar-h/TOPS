@@ -39,12 +39,12 @@ def HYGOV_to_simplified(ps):
         new_gov = ['', '', 0, 0, 0, 0, 0, 0, 0, 0, 0]  # ps['gov']['TGOV1'][-1].copy()
         new_gov[TGov_name] = HYGOV[Hygov_name]
         new_gov[TGov_gen] = HYGOV[Hygov_gen]
-        new_gov[TGov_R] = HYGOV[Hygov_R] + 0.01
-        new_gov[TGov_D] = HYGOV[Hygov_D] #+ 0.1
-        new_gov[TGov_Tg] = HYGOV[Hygov_Tg] #+ 0.1
-        new_gov[TGov_T2] = HYGOV[Hygov_Tr] + 0.5
-        new_gov[TGov_T1] = HYGOV[Hygov_Tw] / 2 + 0.7
-        new_gov[TGov_T3] = (HYGOV[Hygov_r] + new_gov[TGov_R] + 0.2) * new_gov[TGov_T2] / new_gov[TGov_R]
+        new_gov[TGov_R] = HYGOV[Hygov_R] 
+        new_gov[TGov_D] = HYGOV[Hygov_D] 
+        new_gov[TGov_Tg] = HYGOV[Hygov_Tg]
+        new_gov[TGov_T2] = HYGOV[Hygov_Tr]
+        new_gov[TGov_T1] = HYGOV[Hygov_Tw] / 2
+        new_gov[TGov_T3] = (HYGOV[Hygov_r] + new_gov[TGov_R]) * new_gov[TGov_T2] / new_gov[TGov_R]
         new_gov[TGOV_T4] = - new_gov[TGov_T1] * 2
         new_gov[TGov_Vmin] = 0
         new_gov[TGov_Vmax] = 1.5
@@ -246,8 +246,3 @@ def calc_frequency_bias(model):
     Freq_bias = Freq_bias / model['f']
     print('P_HYGOV',P_HYGOV,'P_TGOV', P_TGOV1)
     return Freq_bias
-
-
-'''
-All functions after this point assumes the simulations has been completed
-'''
