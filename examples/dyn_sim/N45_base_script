@@ -31,7 +31,7 @@ if __name__ == '__main__':
                            'L7020-2': 'FI-RU'}
 
     # Load model
-    import src.tops.ps_models.n45_with_controls_adapted as model_data
+    import tops.ps_models.n45_tuned as model_data
     model = model_data.load()
     # ------------------------------ Reparameterization to fit specific time-senario -----------------------------------
     index_area = model['buses'][0].index('Area')
