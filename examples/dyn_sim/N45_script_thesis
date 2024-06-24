@@ -1,3 +1,7 @@
+#This is the script used in the master's thesis to investigate the different cases and tune.
+#This is only kept as documentation
+#It may also prove usefull for ideas when using N45
+
 from collections import defaultdict
 
 import sys
