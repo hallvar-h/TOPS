@@ -59,7 +59,6 @@ def Import_data_ENTSOE(path):
         path -- path to ENTSOE (Transparency platform) data. Should be a xlsx file
     '''
     # path = 'C:/Users/eirik/OneDrive - NTNU/Master/'
-    #actual_data = pd.read_excel(path + 'faktiske hendelser/utfall Olkiluoto.xlsx')
     # Retrieving data from Transparency platform
     # Reading the aggregated generation data from excel file
     ENTSOE_gen_data = pd.read_excel(
@@ -70,7 +69,7 @@ def Import_data_ENTSOE(path):
 
     # Reading the aggregated exchange data from excel file (power links)
     ENTSOE_exchange_data = pd.read_excel(
-        path + 'dataframes_transparency.xlsx', sheet_name='aggr_exchange', index_col=0)
+        path + 'powerflow_Statnett.xlsx', sheet_name='aggr_exchange', index_col=0)
     return ENTSOE_gen_data, ENTSOE_load_data, ENTSOE_exchange_data
 
 def Import_actual_data(path):
