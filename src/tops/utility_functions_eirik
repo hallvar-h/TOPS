@@ -56,7 +56,7 @@ def Import_data_ENTSOE(path):
     '''
     Retrieving data from Transparency platform
     Arguments
-        path -- path to ENTSOE (Transparency platform) data. Should be a xlsx file
+        path -- path to folder with case data
     '''
     # path = 'C:/Users/eirik/OneDrive - NTNU/Master/'
     # Retrieving data from Transparency platform
