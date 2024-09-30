@@ -54,6 +54,8 @@ if __name__ == '__main__':
         res['t'].append(t)
         res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
 
+        
+
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
     plt.figure()
