@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     model['vsc'] = {'VSC': [
         ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp',   ],
-        ['VSC1',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        100,          100],
+        ['VSC1',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        100,          100], #P_inertia + P_Max - litt
     ]}
 
     # Power system model
