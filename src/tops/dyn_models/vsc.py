@@ -71,3 +71,5 @@ class VSC(DAEModel):
         i_n = self.sys_par['s_n'] / (np.sqrt(3) * self.sys_par['bus_v_n'])
         # self.P(x, v)
         return self.bus_idx_red['terminal'], self.I_inj(x, v)/i_n[self.bus_idx_red['terminal']]
+
+
