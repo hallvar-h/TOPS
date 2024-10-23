@@ -17,9 +17,9 @@ if __name__ == '__main__':
     model = model_data.load()
     #model['loads'] = {'DynamicLoad': model['loads']}
 
-    model['vsc'] = {'VSC': [
+    model['HVDC'] = {'VSC': [
         ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp',   ],
-        ['VSC1',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        300,          100],
+        ['HVDC',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        300,          100],
     ]}
 
     # Power system model
@@ -102,7 +102,7 @@ if __name__ == '__main__':
         res['gen_P'].append(ps.gen['GEN'].P_e(x, v).copy())
         res['load_P'].append(ps.loads['Load'].P(x, v).copy())
         res['load_Q'].append(ps.loads['Load'].Q(x, v).copy())
-        res['VSC'].append(ps.vsc['VSC'].P(x,v).copy())
+        res['HVDC'].append(ps.vsc['VSC'].P(x,v).copy())
     res['bus_names'].append(ps.buses['name'])
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
@@ -120,5 +120,5 @@ if __name__ == '__main__':
                 for j, v in enumerate(res[key][i]):  # Iterate through each value in the timestep
                     if isinstance(v, complex):  # Check if it's a complex number
                         res[key][i][j] = str(v)  # Convert the complex number to a string
-    with open('Results/Basecase/No_loss_HVDC.json','w') as file:
+    with open('Results/Basecase/loss_HVDC.json','w') as file:
         json.dump(res,file)
