@@ -77,8 +77,8 @@ class VSC_PV(DAEModel):
     """
     'vsc': {
             'VSC_PV': [
-                ['name', 'bus', 'S_n', 'p_ref', 'V', 'k_p', 'k_v', 'T_p', 'T_v', 'k_pll', 'T_pll', 'T_i', 'i_max'],
-                ['VSC1', 'B1',    50,   0.8,    0.93,    1,      1,   0.1,   0.1,     5,      1,      0.01,    1.2],
+                ['name', 'bus', 'S_n', 'P_setp', 'V_setp', 'k_p', 'k_v', 'T_p', 'T_v', 'k_pll', 'T_pll', 'T_i', 'i_max'],
+                ['VSC1', 'B1',    50,   300,    0.93,    1,      1,   0.1,   0.1,     5,      1,      0.01,    1.2],
             ],
         }
     """
@@ -122,7 +122,7 @@ class VSC_PV(DAEModel):
     def init_from_load_flow(self, x_0, v_0, S):
         X = self.local_view(x_0)
 
-        self._input_values['P_setp'] = self.par['P_setp']
+        self._input_values['P_setp'] = self.par['P_setp']/self.par['S_n'] #p.u
         self._input_values['V_setp'] = self.par['V_setp']
 
         v0 = v_0[self.bus_idx_red['terminal']] #tror dette er i p.u
