@@ -13,7 +13,7 @@ import numpy as np
 if __name__ == '__main__':
 
     # Load model
-    import my_k2a as model_data
+    import inertia.Basecase as model_data
     importlib.reload(model_data)
     model = model_data.load()
     model['loads'] = {'DynamicLoad': model['loads']}

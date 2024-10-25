@@ -10,17 +10,17 @@ import numpy as np
 import json
 
 if __name__ == '__main__':
-    #for iteration in np.arange(550,900,50):
+    for iteration in np.arange(1.1,3,0.2):
         # Load model
-        import gen_trip as model_data
+        import Basecase as model_data
         importlib.reload(model_data)
         model = model_data.load()
         #model['loads'] = {'DynamicLoad': model['loads']}
 
         model['vsc'] = {'VSC': [
             ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp',   ],
-            ['HVDC',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        700,         100],
-            #['Wind',    0.1,        1,      'B1',   0.1,        0.1,        0.1,        0.1,        500,          100],
+            ['HVDC',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        600,         100],
+            ['Wind',    0.1,        1,      'B1',   0.1,        0.1,        0.1,        0.1,        500,          100],
         ]}
 
 
@@ -51,14 +51,14 @@ if __name__ == '__main__':
         t_ffr = 0
         t_start = 0
         P_fin = 0
-        #ps.gen['GEN'].par['H'][3] = iteration
+        ps.gen['GEN'].par['H'][4] = iteration
         while t < t_end:
             sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
             if 10 <= t:
                 # ps.vsc['VSC'].set_input('P_setp', 0, 0)
                 # ps.vsc['VSC'].set_input('Q_setp', 0, 0)
-                ps.lines['Line'].event(ps, ps.lines['Line'].par['name'][0], 'disconnect')
+                ps.gen['GEN']
 
             
             
@@ -70,31 +70,25 @@ if __name__ == '__main__':
             v = sol.v
             t = sol.t
 
-            # if((abs(v[0])<0.97)):
-            #     q_con = (1-abs(v[0]))*1500
-            #     ps.vsc['VSC'].set_input('Q_setp',100+q_con,1)
+
 
             
-            if (50+50*np.mean(ps.gen['GEN'].speed(x, v)) <=49.7 or 50+50*np.mean(ps.gen['GEN'].speed(x, v)) >=50.3) and ffr ==False:
-                t_start = t+1.3
-                t_ffr = t_start+30
-                ffr = True
+            # if (50+50*np.mean(ps.gen['GEN'].speed(x, v)) <=49.7 or 50+50*np.mean(ps.gen['GEN'].speed(x, v)) >=50.3) and ffr ==False:
+            #     t_start = t+1.3
+            #     t_ffr = t_start+30
+            #     ffr = True
             
+            # # if(t_start <= t <=t_ffr and ffr == True):
+            # #     k = 180
+            # #     f_dev = np.mean(ps.gen['GEN'].speed(x, v))
+            # #     Pcontrol = 500-k*50*f_dev
+            # #     ps.vsc['VSC'].set_input('P_setp', Pcontrol)
+            # #     P_fin = Pcontrol
+
+
             # if(t_start <= t <=t_ffr and ffr == True):
-            #     k = 180
-            #     f_dev = np.mean(ps.gen['GEN'].speed(x, v))
-            #     Pcontrol = 500-k*50*f_dev
-            #     ps.vsc['VSC'].set_input('P_setp', Pcontrol)
-            #     P_fin = Pcontrol
-
-
-            if(t_start <= t <=t_ffr and ffr == True):
-                ps.vsc['VSC'].set_input('P_setp', 1000,0)
-
-
-
-
-            dx = ps.ode_fun(0, ps.x_0)
+            #     ps.vsc['VSC'].set_input('P_setp', iteration,1)
+            # dx = ps.ode_fun(0, ps.x_0)
 
 
 
@@ -127,10 +121,10 @@ if __name__ == '__main__':
                     for j, v in enumerate(res[key][i]):  # Iterate through each value in the timestep
                         if isinstance(v, complex):  # Check if it's a complex number
                             res[key][i][j] = str(v)  # Convert the complex number to a string
-        #name = 'Results/Wind/FFR' + str(round(iteration)-500) +'.json'
-        with open('Results/Basecase/gen_trip_FFR2.json','w') as file:
+        name = 'Results/Basecase/sensitivity/H_' + str(round(iteration,1)) +'.json'
+        with open(name,'w') as file:
             json.dump(res,file)
-        #print(iteration)
+        print(round(iteration,1))
 
 
 

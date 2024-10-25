@@ -3,31 +3,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 results = []
 names = []
-with open('Results/Basecase.json','r') as file:
+# with open('Results/Basecase/loss_HVDC.json','r') as file:
+#     res = json.load(file)
+#     results.append(res)
+#     names.append('Loss of HVDC')
+with open('Results/Basecase/gen_trip_FFR2.json','r') as file:
     res = json.load(file)
     results.append(res)
-    names.append('Basecase')
-with open('Results/Wind.json','r') as file2:
-    res2 = json.load(file2)
-    results.append(res2)
-    names.append('Wind')
-# with open('FFR.json','r') as file3:
-#     res3 = json.load(file3)
-#     results.append(res3)
-#     names.append('FFR')
-with open('Results/Ny_FFR.json','r') as file6:
-    res6 = json.load(file6)
-    results.append(res6)
-    names.append('FFR')
-with open('Results/FFR_and_SC.json','r') as file4:
-    res4 = json.load(file4)
-    results.append(res4)
-    names.append('FFR_and_SC')
-with open('Results/SC.json','r') as file5:
-    res5 = json.load(file5)
-    results.append(res5)
-    names.append('SC')
-
+    names.append('Gererator tripping')
+# with open('Results/Wind/loss_HVDC.json','r') as file:
+#     res = json.load(file)
+#     results.append(res)
+#     names.append('Loss of HVDC with Wind')
+# with open('Results/Wind_and_SC/loss_HVDC.json','r') as file:
+#     res = json.load(file)
+#     results.append(res)
+#     names.append('Loss of HVDC with Wind and SC')
 for res in results:
     for key, value in res.items():
         if key != 't':
@@ -41,19 +32,25 @@ for res in results:
                             pass  # In case the string is not a valid complex number
 
 
-# fig = plt.figure()
-# i = 0
-# for res in results:
-#     bus1 = [row[8] for row in res['v']]
-#     plt.plot(res['t'], np.abs(np.array(bus1)),label = names[i])
-#     i+=1
-
-# plt.xlabel('Time [s]')
-# plt.ylabel('Bus voltage')
-# plt.legend()
-# # plt.show()
-
-
+fig = plt.figure()
+i = 0
+for res in results:
+    bus7 = [row[8] for row in res['v']]
+    plt.plot(res['t'], np.abs(np.array(bus7)),label = names[i] + ' bus 7')
+    i+=1
+i = 0
+for res in results:
+    bus7 = [row[10] for row in res['v']]
+    plt.plot(res['t'], np.abs(np.array(bus7)),label = names[i] + ' bus 9')
+    i+=1
+plt.xlabel('Time [s]')
+plt.ylabel('Bus voltage')
+plt.legend()
+# plt.show()
+plt.figure()
+for res in results:
+    plt.plot(res['t'], np.abs(np.array(res['gen_P'])),label = res['gen_name'][0])
+plt.legend()
 # fig = plt.figure()
 # plt.plot(res['t'], np.abs(res['VSC']))
 # plt.xlabel('Time [s]')
@@ -61,7 +58,6 @@ for res in results:
 
 
 plt.figure()
-#plt.plot(res['t'], res['gen_speed'],label = ps.gen['GEN'].par['name'])
 i = 0
 for res in results:
     plt.plot(res['t'],50+50*np.mean((res['gen_speed']),axis = 1), label = names[i])
