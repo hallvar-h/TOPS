@@ -10,17 +10,17 @@ import numpy as np
 import json
 
 if __name__ == '__main__':
-    for iteration in np.arange(1.1,3,0.2):
+    for iteration in np.arange(0,1001,200):
         # Load model
-        import Basecase as model_data
+        import Wind as model_data
         importlib.reload(model_data)
         model = model_data.load()
         #model['loads'] = {'DynamicLoad': model['loads']}
 
         model['vsc'] = {'VSC': [
             ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp',   ],
-            ['HVDC',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        600,         100],
-            ['Wind',    0.1,        1,      'B1',   0.1,        0.1,        0.1,        0.1,        500,          100],
+            ['HVDC',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        400,         100],
+            ['Wind',    0.1,        1,      'B1',   0.1,        0.1,        0.1,        0.1,        600,          100],
         ]}
 
 
@@ -48,17 +48,18 @@ if __name__ == '__main__':
     # Run simulation
     
         ffr = False
+        SI = False
         t_ffr = 0
         t_start = 0
         P_fin = 0
-        ps.gen['GEN'].par['H'][4] = iteration
+        #ps.gen['GEN'].par['H'][4] = iteration
         while t < t_end:
             sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
             if 10 <= t:
-                # ps.vsc['VSC'].set_input('P_setp', 0, 0)
-                # ps.vsc['VSC'].set_input('Q_setp', 0, 0)
-                ps.gen['GEN']
+                ps.vsc['VSC'].set_input('P_setp', 0, 0)
+                ps.vsc['VSC'].set_input('Q_setp', 0, 0)
+                
 
             
             
@@ -70,9 +71,26 @@ if __name__ == '__main__':
             v = sol.v
             t = sol.t
 
-
-
+            #Synthetic inertia
+            if(t == 0 or t==0.005):
+                delta_P = 0
+            else:
+                delta_P = (50*np.mean(res['gen_speed'][-1])-50*np.mean(ps.gen['GEN'].speed(x, v)))/(t-res['t'][-1])
             
+            if( delta_P >= 0.005 ):
+                k = iteration
+                P  = 600 + delta_P*k
+                if(P>650):
+                    P = 650
+                if(SI == True):
+                    ps.vsc['VSC'].set_input('P_setp',P,1)
+                else:
+                    SI = True
+            
+
+
+
+            #FFR
             # if (50+50*np.mean(ps.gen['GEN'].speed(x, v)) <=49.7 or 50+50*np.mean(ps.gen['GEN'].speed(x, v)) >=50.3) and ffr ==False:
             #     t_start = t+1.3
             #     t_ffr = t_start+30
@@ -121,7 +139,7 @@ if __name__ == '__main__':
                     for j, v in enumerate(res[key][i]):  # Iterate through each value in the timestep
                         if isinstance(v, complex):  # Check if it's a complex number
                             res[key][i][j] = str(v)  # Convert the complex number to a string
-        name = 'Results/Basecase/sensitivity/H_' + str(round(iteration,1)) +'.json'
+        name = 'Results/Dyn_load/k_' + str(round(iteration,1)) +'.json'
         with open(name,'w') as file:
             json.dump(res,file)
         print(round(iteration,1))

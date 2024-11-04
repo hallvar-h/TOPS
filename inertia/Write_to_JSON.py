@@ -12,15 +12,15 @@ import json
 if __name__ == '__main__':
     #for iteration in np.arange(550,900,50):
         # Load model
-        import gen_trip as model_data
+        import Wind_and_SC as model_data
         importlib.reload(model_data)
         model = model_data.load()
-        #model['loads'] = {'DynamicLoad': model['loads']}
+        model['loads'] = {'DynamicLoad': model['loads']}
 
         model['vsc'] = {'VSC': [
             ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp',   ],
-            ['HVDC',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        700,         100],
-            #['Wind',    0.1,        1,      'B1',   0.1,        0.1,        0.1,        0.1,        500,          100],
+            ['HVDC',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        400,         100],
+            ['Wind',    0.1,        1,      'B1',   0.1,        0.1,        0.1,        0.1,        600,          100],
         ]}
 
 
@@ -56,9 +56,8 @@ if __name__ == '__main__':
             sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
             if 10 <= t:
-                # ps.vsc['VSC'].set_input('P_setp', 0, 0)
-                # ps.vsc['VSC'].set_input('Q_setp', 0, 0)
-                ps.lines['Line'].event(ps, ps.lines['Line'].par['name'][0], 'disconnect')
+                ps.loads['DynamicLoad'].set_input('g_setp', 1.6, 0)
+                # ps.lines['Line'].event(ps, ps.lines['Line'].par['name'][0], 'disconnect')
 
             
             
@@ -75,21 +74,21 @@ if __name__ == '__main__':
             #     ps.vsc['VSC'].set_input('Q_setp',100+q_con,1)
 
             
-            if (50+50*np.mean(ps.gen['GEN'].speed(x, v)) <=49.7 or 50+50*np.mean(ps.gen['GEN'].speed(x, v)) >=50.3) and ffr ==False:
-                t_start = t+1.3
-                t_ffr = t_start+30
-                ffr = True
+            # if (50+50*np.mean(ps.gen['GEN'].speed(x, v)) <=49.7) and ffr ==False:
+            #     t_start = t+1.3
+            #     t_ffr = t_start+30
+            #     ffr = True
             
+            # # if(t_start <= t <=t_ffr and ffr == True):
+            # #     k = 180
+            # #     f_dev = np.mean(ps.gen['GEN'].speed(x, v))
+            # #     Pcontrol = 500-k*50*f_dev
+            # #     ps.vsc['VSC'].set_input('P_setp', Pcontrol)
+            # #     P_fin = Pcontrol
+
+
             # if(t_start <= t <=t_ffr and ffr == True):
-            #     k = 180
-            #     f_dev = np.mean(ps.gen['GEN'].speed(x, v))
-            #     Pcontrol = 500-k*50*f_dev
-            #     ps.vsc['VSC'].set_input('P_setp', Pcontrol)
-            #     P_fin = Pcontrol
-
-
-            if(t_start <= t <=t_ffr and ffr == True):
-                ps.vsc['VSC'].set_input('P_setp', 1000,0)
+            #     ps.vsc['VSC'].set_input('P_setp', 1000,0)
 
 
 
@@ -106,8 +105,8 @@ if __name__ == '__main__':
             res['gen_I'].append(ps.gen['GEN'].I(x, v).copy())
             res['gen_P'].append(ps.gen['GEN'].P_e(x, v).copy())
             res['gen_Q'].append(ps.gen['GEN'].Q_e(x,v).copy())
-            res['load_P'].append(ps.loads['Load'].P(x, v).copy())
-            res['load_Q'].append(ps.loads['Load'].Q(x, v).copy())
+            res['load_P'].append(ps.loads['DynamicLoad'].P(x, v).copy())
+            res['load_Q'].append(ps.loads['DynamicLoad'].Q(x, v).copy())
             res['HVDC'].append(ps.vsc['VSC'].P(x,v).copy())
         res['bus_names'].append(ps.buses['name'])
         res['gen_name'].append(ps.gen['GEN'].par['name'])
@@ -128,7 +127,7 @@ if __name__ == '__main__':
                         if isinstance(v, complex):  # Check if it's a complex number
                             res[key][i][j] = str(v)  # Convert the complex number to a string
         #name = 'Results/Wind/FFR' + str(round(iteration)-500) +'.json'
-        with open('Results/Basecase/gen_trip_FFR2.json','w') as file:
+        with open('Results/Dyn_load/Wind_and_SC.json','w') as file:
             json.dump(res,file)
         #print(iteration)
 

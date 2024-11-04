@@ -10,11 +10,11 @@ names = []
 with open('Results/Basecase/loss_HVDC.json','r') as file:
     res = json.load(file)
     results.append(res)
-    names.append('Loss of HVDC')
-with open('Results/SC/loss_HVDC.json','r') as file:
+    names.append('Basecase')
+with open('Results/Wind/FFR0.json','r') as file:
     res = json.load(file)
     results.append(res)
-    names.append('Loss of HVDC with SC')
+    names.append('Wind power')
 for res in results:
     for key, value in res.items():
         if key != 't':
@@ -34,11 +34,11 @@ for res in results:
     bus7 = [row[8] for row in res['v']]
     plt.plot(res['t'], np.abs(np.array(bus7)),label = names[i] + ' bus 7')
     i+=1
-i = 0
-for res in results:
-    bus7 = [row[10] for row in res['v']]
-    plt.plot(res['t'], np.abs(np.array(bus7)),label = names[i] + ' bus 9')
-    i+=1
+# i = 0
+# for res in results:
+#     bus7 = [row[10] for row in res['v']]
+#     plt.plot(res['t'], np.abs(np.array(bus7)),label = names[i] + ' bus 9')
+#     i+=1
 plt.xlabel('Time [s]')
 plt.ylabel('Bus voltage')
 plt.legend()

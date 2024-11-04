@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 results = []
 names = []
-folder_path = Path('Results/Basecase/sensitivity')
+folder_path = Path('Results/SC/sensitivity')
 for name in sorted(folder_path.iterdir()):
     with open(name,'r') as file:
         res = json.load(file)
