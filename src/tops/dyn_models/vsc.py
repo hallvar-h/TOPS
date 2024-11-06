@@ -1,5 +1,5 @@
 from tops.dyn_models.blocks import *
-from .pll import PLL1
+from tops.dyn_models.pll import PLL1
 
 class VSC(DAEModel):
     def __init__(self, *args, **kwargs):
