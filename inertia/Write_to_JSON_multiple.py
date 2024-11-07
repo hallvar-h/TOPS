@@ -10,18 +10,19 @@ import numpy as np
 import json
 
 if __name__ == '__main__':
-    for iteration in np.arange(0,1001,200):
+    for iteration in np.arange(0,5010,1000):
         # Load model
         import Wind as model_data
         importlib.reload(model_data)
         model = model_data.load()
         #model['loads'] = {'DynamicLoad': model['loads']}
 
-        model['vsc'] = {'VSC': [
-            ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp',   ],
-            ['HVDC',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        400,         100],
-            ['Wind',    0.1,        1,      'B1',   0.1,        0.1,        0.1,        0.1,        600,          100],
-        ]}
+        model['vsc'] = {'VSC_nora': [
+    ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp', 'K_SI'  ],
+    ['HVDC',    0.1,        1,      'B8',     0.1,        0.1,        0.1,        0.1,        400,          100,      0],
+    ['Wind',    0.1,        1,      'B8',     0.1,        0.1,        0.1,        0.1,        600,          100,      iteration], #P_inertia + P_Max - litt
+    
+]}
 
 
         # Power system model
@@ -57,8 +58,8 @@ if __name__ == '__main__':
             sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
             if 10 <= t:
-                ps.vsc['VSC'].set_input('P_setp', 0, 0)
-                ps.vsc['VSC'].set_input('Q_setp', 0, 0)
+                ps.vsc['VSC_nora'].set_input('P_setp', 0, 0)
+                ps.vsc['VSC_nora'].set_input('Q_setp', 0, 0)
                 
 
             
@@ -71,22 +72,6 @@ if __name__ == '__main__':
             v = sol.v
             t = sol.t
 
-            #Synthetic inertia
-            if(t == 0 or t==0.005):
-                delta_P = 0
-            else:
-                delta_P = (50*np.mean(res['gen_speed'][-1])-50*np.mean(ps.gen['GEN'].speed(x, v)))/(t-res['t'][-1])
-            
-            if( delta_P >= 0.005 ):
-                k = iteration
-                P  = 600 + delta_P*k
-                if(P>650):
-                    P = 650
-                if(SI == True):
-                    ps.vsc['VSC'].set_input('P_setp',P,1)
-                else:
-                    SI = True
-            
 
 
 
@@ -120,7 +105,8 @@ if __name__ == '__main__':
             res['gen_Q'].append(ps.gen['GEN'].Q_e(x,v).copy())
             res['load_P'].append(ps.loads['Load'].P(x, v).copy())
             res['load_Q'].append(ps.loads['Load'].Q(x, v).copy())
-            res['HVDC'].append(ps.vsc['VSC'].P(x,v).copy())
+            res['HVDC'].append(ps.vsc['VSC_nora'].P(x,v).copy())
+            res['HVDC_setp'].append(ps.vsc['VSC_nora'].P_setp(x,v).copy())
         res['bus_names'].append(ps.buses['name'])
         res['gen_name'].append(ps.gen['GEN'].par['name'])
 
@@ -139,7 +125,7 @@ if __name__ == '__main__':
                     for j, v in enumerate(res[key][i]):  # Iterate through each value in the timestep
                         if isinstance(v, complex):  # Check if it's a complex number
                             res[key][i][j] = str(v)  # Convert the complex number to a string
-        name = 'Results/Dyn_load/k_' + str(round(iteration,1)) +'.json'
+        name = 'Results/SI/sensitivity2/k_' + str(round(iteration,1)) +'.json'
         with open(name,'w') as file:
             json.dump(res,file)
         print(round(iteration,1))

@@ -4,13 +4,14 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 results = []
 names = []
-folder_path = Path('Results/SI')
+folder_path = Path('Results/SI/sensitivity2')
 for name in sorted(folder_path.iterdir()):
     with open(name,'r') as file:
         res = json.load(file)
         results.append(res)
-        name = name.stem
-        names.append(name)
+        formatted_string = name.stem.replace('_', '=')
+
+        names.append(formatted_string)
 
 for res in results:
     for key, value in res.items():
@@ -45,20 +46,23 @@ for res in results:
 #     plt.plot(res['t'], np.abs(np.array(res['gen_P'])),label = res['gen_name'][0])
 # plt.legend()
 fig = plt.figure()
-plt.plot(res['t'], np.abs(res['VSC_SI']))
+# for res in results:
+plt.plot(res['t'], res['HVDC'], label = ['HVDC','Wind'])
+plt.plot(res['t'], res['HVDC_setp'],label = ['HVDC_setp','Wind_setp'])
 plt.xlabel('Time [s]')
 plt.ylabel('MW')
-
-
-plt.figure()
-i = 0
-for res in results:
-    plt.plot(res['t'],50+50*np.mean((res['gen_speed']),axis = 1), label = names[i])
-    i+=1
-plt.xlabel('Time [s]')
-plt.ylabel('Frequency [Hz]')
-plt.grid()
 plt.legend()
+
+
+# plt.figure()
+# i = 0
+# for res in results:
+#     plt.plot(res['t'],50+50*np.mean((res['gen_speed']),axis = 1), label = names[i])
+#     i+=1
+# plt.xlabel('Time [s]')
+# plt.ylabel('Frequency [Hz]')
+# plt.grid()
+# plt.legend()
 # plt.figure()
 # i = 0
 # for res in results:
