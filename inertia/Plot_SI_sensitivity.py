@@ -4,11 +4,12 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 results = []
 names = []
-folder_path = Path('Results/SI/sensitivity_2')
+folder_path = Path('Results/SI')
 for name in sorted(folder_path.iterdir()):
     with open(name,'r') as file:
         res = json.load(file)
         results.append(res)
+        name = name.stem
         names.append(name)
 
 for res in results:
@@ -30,23 +31,23 @@ for res in results:
 #     bus7 = [row[8] for row in res['v']]
 #     plt.plot(res['t'], np.abs(np.array(bus7)),label = names[i] + ' bus 7')
 #     i+=1
-i = 0
-for res in results:
-    bus7 = [row[10] for row in res['v']]
-    plt.plot(res['t'], np.abs(np.array(bus7)),label = str(names[i]) + ' bus 9')
-    i+=1
-plt.xlabel('Time [s]')
-plt.ylabel('Bus voltage')
-plt.legend()
+# i = 0
+# for res in results:
+#     bus7 = [row[10] for row in res['v']]
+#     plt.plot(res['t'], np.abs(np.array(bus7)),label = str(names[i]) + ' bus 9')
+#     i+=1
+# plt.xlabel('Time [s]')
+# plt.ylabel('Bus voltage')
+# plt.legend()
 # # plt.show()
 # plt.figure()
 # for res in results:
 #     plt.plot(res['t'], np.abs(np.array(res['gen_P'])),label = res['gen_name'][0])
 # plt.legend()
-# fig = plt.figure()
-# plt.plot(res['t'], np.abs(res['VSC']))
-# plt.xlabel('Time [s]')
-# plt.ylabel('MW')
+fig = plt.figure()
+plt.plot(res['t'], np.abs(res['VSC_SI']))
+plt.xlabel('Time [s]')
+plt.ylabel('MW')
 
 
 plt.figure()
@@ -58,14 +59,14 @@ plt.xlabel('Time [s]')
 plt.ylabel('Frequency [Hz]')
 plt.grid()
 plt.legend()
-plt.figure()
-i = 0
-for res in results:
-    ROCOF = np.gradient(50+50*np.mean((res['gen_speed']),axis=1),res['t'])
-    plt.plot(res['t'],ROCOF, label = names[i])
-    i+=1
-plt.xlabel('Time [s]')
-plt.ylabel('ROCOF [Hz/s]')
-plt.grid()
-plt.legend()
+# plt.figure()
+# i = 0
+# for res in results:
+#     ROCOF = np.gradient(50+50*np.mean((res['gen_speed']),axis=1),res['t'])
+#     plt.plot(res['t'],ROCOF, label = names[i])
+#     i+=1
+# plt.xlabel('Time [s]')
+# plt.ylabel('ROCOF [Hz/s]')
+# plt.grid()
+# plt.legend()
 plt.show()

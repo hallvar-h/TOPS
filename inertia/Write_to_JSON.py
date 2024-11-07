@@ -17,41 +17,13 @@ if __name__ == '__main__':
         model = model_data.load()
         model['loads'] = {'DynamicLoad': model['loads']}
 
-
-
-    # 'vsc': {
-    #         'VSC_PQ': [
-    #             ['name', 'bus', 'S_n', 'p_ref', 'q_ref',  'k_p', 'k_q', 'T_p', 'T_q', 'k_pll','T_pll', 'T_i', 'i_max', 'K_SI, 'T_rocof'],
-    #             ['VSC1', 'B1',    50,     1,       0,       1,      1,    0.1,   0.1,     5,      1,      0.01,    1.2, 10, 1],
-    #         ],
-    #     }
-
-#     model['vsc'] =  {'VSC_PQ_SI' : [
-#         ['name', 'bus', 'S_n', 'p_ref', 'q_ref',  'k_p', 'k_q', 'T_p', 'T_q', 'k_pll','T_pll', 'T_i', 'i_max', 'K_SI', 'T_rocof'],
-#          ['VSC_SI', 'B1',    900,     0.7,       0.1,       1,      1,    0.1,   0.1,     5,      1,   1,   0.01, 1.2,   1, 1],
-#          #['HVDC', 'B8',    900,     0.4,       0.1,       1,      1,    0.1,   0.1,     5,      1,    1,  0.01,  1.2,  0, 1],
-
-# ]}
-    
-#         model['vsc'] =  {'VSC_PQ_SI': [
-#                 ['name', 'bus', 'S_n', 'p_ref', 'q_ref',  'k_p', 'k_q', 'T_p', 'T_q', 'k_pll','T_pll', 'T_i', 'i_max', 'K_SI', 'T_rocof'],
-#                 ['VSC_SI', 'B1',    900,     0.7,       0.1,       1,      1,    0.1,   0.1,     5,      1,      0.01,    1.2, 0, 0.5],
-#                 ['VSC_HVDC', 'B8',    300,     1,       0.333,       1,      1,    0.1,   0.1,     5,      1,      0.01,    1.2, 0, 1],
-# ]}
-
-        model['vsc'] =  {'VSC_PQ': [
-                ['name', 'bus', 'S_n', 'p_ref', 'q_ref',      'k_p', 'k_q', 'T_p', 'T_q', 'k_pll','T_pll', 'T_i', 'i_max'],
-                ['VSC1', 'B1',    700,     1,       0.15,       0.1,      0.1,    1,   1,     5,      1,      1,    1.2],
-                ['VSC1', 'B8',    300,     1,       0.33,       0.1,      0.1,    1,   1,     5,      1,      1,    1.2],
+        model['vsc'] = {'VSC_nora': [
+    ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp', 'K_SI'  ],
+    ['VSC1',    0.1,        1,      'B8',     0.1,        0.1,        0.1,        0.1,        600,          100,      10], #P_inertia + P_Max - litt
+    ['VSC2',    0.1,        1,      'B8',     0.1,        0.1,        0.1,        0.1,        400,          100,      0],
 ]}
-    
 
 
-
-    # model['vsc'] = {'VSC': [
-    #     ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp',   ],
-    #     ['HVDC',    0.1,        1,      'B8',   0.1,        0.1,        0.1,        0.1,        300,          100],
-    # ]}
 
         # Power system model
         ps = dps.PowerSystemModel(model=model)
@@ -84,8 +56,8 @@ if __name__ == '__main__':
         while t < t_end:
             sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
-            #if 10 <= t:
-                #ps.loads['DynamicLoad'].set_input('g_setp', 1.6, 0)
+            if 10 <= t:
+                ps.loads['DynamicLoad'].set_input('g_setp', 1.6, 0)
                 # ps.lines['Line'].event(ps, ps.lines['Line'].par['name'][0], 'disconnect')
 
             
@@ -136,7 +108,7 @@ if __name__ == '__main__':
             res['load_P'].append(ps.loads['DynamicLoad'].P(x, v).copy())
             res['load_Q'].append(ps.loads['DynamicLoad'].Q(x, v).copy())
             # res['VSC_SI'].append(ps.vsc['VSC_PQ_SI'].p_e(x,v).copy()*ps.vsc['VSC_PQ_SI'].par['S_n'])
-            res['VSC_SI'].append(ps.vsc['VSC_PQ'].p_e(x,v).copy())
+            res['VSC_SI'].append(ps.vsc['VSC_nora'].P(x,v).copy())
             res['bus_names'].append(ps.buses['name'])
 
         print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
@@ -154,5 +126,5 @@ if __name__ == '__main__':
                     for j, v in enumerate(res[key][i]):  # Iterate through each value in the timestep
                         if isinstance(v, complex):  # Check if it's a complex number
                             res[key][i][j] = str(v)  # Convert the complex number to a string
-        with open('Results/SI/base2.json','w') as file:
+        with open('Results/SI/With_dyn_load.json','w') as file:
             json.dump(res,file)
