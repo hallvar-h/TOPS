@@ -106,7 +106,8 @@ if __name__ == '__main__':
             res['load_P'].append(ps.loads['Load'].P(x, v).copy())
             res['load_Q'].append(ps.loads['Load'].Q(x, v).copy())
             res['HVDC'].append(ps.vsc['VSC_nora'].P(x,v).copy())
-            res['HVDC_setp'].append(ps.vsc['VSC_nora'].P_setp(x,v).copy())
+            res['HVDC_SI'].append(ps.vsc['VSC_nora'].P_SI(x,v).copy())
+            res['VSC_rocof'].append(ps.vsc['VSC_nora'].ROCOF(x,v).copy())
         res['bus_names'].append(ps.buses['name'])
         res['gen_name'].append(ps.gen['GEN'].par['name'])
 

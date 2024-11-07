@@ -48,12 +48,19 @@ for res in results:
 fig = plt.figure()
 # for res in results:
 plt.plot(res['t'], res['HVDC'], label = ['HVDC','Wind'])
-plt.plot(res['t'], res['HVDC_setp'],label = ['HVDC_setp','Wind_setp'])
+
 plt.xlabel('Time [s]')
 plt.ylabel('MW')
 plt.legend()
-
-
+plt.figure()
+plt.plot(res['t'], res['HVDC_SI'],label = ['HVDC_SI','Wind_SI'])
+plt.xlabel('Time [s]')
+plt.ylabel('MW')
+plt.legend()
+plt.figure()
+ROCOF = np.gradient(50+50*np.mean((res['gen_speed']),axis=1),res['t'])
+plt.plot(res['t'],ROCOF)
+plt.plot(res['t'],res['VSC_rocof'])
 # plt.figure()
 # i = 0
 # for res in results:

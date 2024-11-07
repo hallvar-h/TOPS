@@ -742,7 +742,8 @@ class VSC_nora(DAEModel):
         )
     def P_SI(self, x, v):
         return self.par['K_SI']*self.pll.freq_est(x,v)
-
+    def ROCOF(self,x,v):
+        return self.pll.freq_est(x,v)
     def current_injections(self, x, v):
         i_n = self.sys_par['s_n'] / (np.sqrt(3) * self.sys_par['bus_v_n'])
         # self.P(x, v)
