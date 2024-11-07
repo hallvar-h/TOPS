@@ -740,6 +740,8 @@ class VSC_nora(DAEModel):
         self.pi_q.initialize(
             x_0, v_0, self.lag_q.initialize(x_0, v_0, I_q_0)
         )
+    def P_SI(self, x, v):
+        return self.par['K_SI']*self.pll.freq_est(x,v)
 
     def current_injections(self, x, v):
         i_n = self.sys_par['s_n'] / (np.sqrt(3) * self.sys_par['bus_v_n'])
