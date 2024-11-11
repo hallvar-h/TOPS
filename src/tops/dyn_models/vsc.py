@@ -490,7 +490,11 @@ class VSC_PQ_SI(DAEModel):
         X = self.local_view(x)
         par = self.par
 
-        dp = self.p_ref(x,v) - self.p_e(x, v) - par['K_SI']*X['rocof']
+        #Synthetic inertia limiter
+        P_si = par['K_SI']*X['rocof']
+        P_si = P_si*par['P_SI_max']/(np.maximum(par['P_SI_max'], abs(P_si)))
+
+        dp = self.p_ref(x,v) - self.p_e(x, v) - P_si
         dq = -self.q_ref(x,v) + self.q_e(x, v)
         i_d_ref = dp * par['k_p'] + X['x_p']
         i_q_ref = dq * par['k_q'] + X['x_q']
@@ -515,7 +519,7 @@ class VSC_PQ_SI(DAEModel):
     def init_from_load_flow(self, x_0, v_0, S):
         X = self.local_view(x_0)
 
-        self._input_values['p_ref'] = self.par['p_ref']#dette kan være feil OBSOBS
+        self._input_values['p_ref'] = self.par['p_ref']
         self._input_values['q_ref'] = self.par['q_ref']
 
         v0 = v_0[self.bus_idx_red['terminal']]
