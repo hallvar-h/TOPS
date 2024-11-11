@@ -2,23 +2,17 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from matplotlib import rcParams
 results = []
 names = []
-folder_path = Path('Results/SC/sensitivity')
+folder_path = Path('Results/SC/sensitivity2')
 for name in sorted(folder_path.iterdir()):
     with open(name,'r') as file:
         res = json.load(file)
         results.append(res)
         formatted_string = name.stem.replace('_', '=')
-
         names.append(formatted_string)
-name = 'Results/SC/loss_HVDC.json'
-with open(name,'r') as file:
-    res = json.load(file)
-    results.append(res)
-    filename = name.split('/')[-1]
-    formatted_string = filename.replace('.json', '')
-    names.append(formatted_string)
+
 for res in results:
     for key, value in res.items():
         if key != 't':
@@ -55,7 +49,8 @@ for res in results:
 # plt.plot(res['t'], np.abs(res['VSC']))
 # plt.xlabel('Time [s]')
 # plt.ylabel('MW')
-
+rcParams['font.family'] = 'DejaVu Serif'
+rcParams['font.serif'] = ['Computer Modern']
 
 plt.figure()
 i = 0

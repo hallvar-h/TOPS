@@ -12,10 +12,10 @@ import json
 if __name__ == '__main__':
     #for iteration in np.arange(550,900,50):
         # Load model
-        import Wind as model_data
+        import SC as model_data
         importlib.reload(model_data)
         model = model_data.load()
-        model['loads'] = {'DynamicLoad': model['loads']}
+        #model['loads'] = {'DynamicLoad': model['loads']}
 
         model['vsc'] = {'VSC_nora': [
     ['name',    'T_pll',    'T_i',  'bus',  'P_K_p',    'P_K_i',    'Q_K_p',    'Q_K_i',    'P_setp',   'Q_setp', 'K_SI'  ],

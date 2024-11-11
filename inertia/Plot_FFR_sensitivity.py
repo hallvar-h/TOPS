@@ -2,14 +2,22 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from matplotlib import rcParams
+rcParams['font.family'] = 'DejaVu Serif'
+rcParams['font.serif'] = ['Computer Modern']
+
 results = []
 names = []
 folder_path = Path('Results/Wind')
 for name in sorted(folder_path.iterdir()):
-    with open(name,'r') as file:
-        res = json.load(file)
-        results.append(res)
-        names.append(name)
+    try:
+        with open(name,'r') as file:
+            res = json.load(file)
+            results.append(res)
+            formatted_string = name.stem.replace('_', '=')
+            names.append(formatted_string)
+    except:
+        pass
 
 for res in results:
     for key, value in res.items():
@@ -24,31 +32,6 @@ for res in results:
                             pass  # In case the string is not a valid complex number
 
 
-# fig = plt.figure()
-# i = 0
-# for res in results:
-#     bus7 = [row[8] for row in res['v']]
-#     plt.plot(res['t'], np.abs(np.array(bus7)),label = names[i] + ' bus 7')
-#     i+=1
-# i = 0
-# for res in results:
-#     bus7 = [row[10] for row in res['v']]
-#     plt.plot(res['t'], np.abs(np.array(bus7)),label = names[i] + ' bus 9')
-#     i+=1
-# plt.xlabel('Time [s]')
-# plt.ylabel('Bus voltage')
-# plt.legend()
-# # plt.show()
-# plt.figure()
-# for res in results:
-#     plt.plot(res['t'], np.abs(np.array(res['gen_P'])),label = res['gen_name'][0])
-# plt.legend()
-# fig = plt.figure()
-# plt.plot(res['t'], np.abs(res['VSC']))
-# plt.xlabel('Time [s]')
-# plt.ylabel('MW')
-
-
 plt.figure()
 i = 0
 for res in results:
@@ -56,7 +39,7 @@ for res in results:
     i+=1
 plt.xlabel('Time [s]')
 plt.ylabel('Frequency [Hz]')
-plt.title('Fast frequency response to a disconnection 400MW HVDC connection')
+plt.title('Frequency response for disconnection of a 400MW HVDC connection')
 plt.grid()
 plt.legend()
 plt.show()

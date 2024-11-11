@@ -1,12 +1,12 @@
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
+rcParams['font.family'] = 'DejaVu Serif'
+rcParams['font.serif'] = ['Computer Modern']
+
 results = []
 names = []
-# with open('Results/Basecase/No_loss_HVDC.json','r') as file:
-#     res = json.load(file)
-#     results.append(res)
-#     names.append('Basecase')
 with open('Results/Basecase/loss_HVDC.json','r') as file:
     res = json.load(file)
     results.append(res)
