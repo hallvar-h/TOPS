@@ -1,0 +1,46 @@
+{
+    "base_mva": 900,
+    "f": 50,
+    "slack_bus": "B2",
+
+    "buses": [
+        ["name",    "V_n"],
+        ["B1",      20],
+        ["B2",      20]
+    ],
+
+    "lines": [
+        ["name",    "from_bus", "to_bus",   "length",   "S_n",  "V_n",  "unit", "R",    "X",      "B"],
+        ["L1-2",    "B1",       "B2",       50,         900,    20,     "PF",   1e-4,   1e-3,     0],
+        ["L1-2-2",    "B1",       "B2",       50,         900,    20,     "PF",   1e-4,   1e-3,     0]
+    ],
+
+    "generators": {
+        "GEN": [
+            ["name",    "bus",  "S_n",  "V_n",  "P",    "V",        "H",        "D",    "X_d",  "X_q",  "X_d_t",    "X_q_t",    "X_d_st",   "X_q_st",   "T_d0_t",   "T_q0_t",   "T_d0_st",  "T_q0_st"],
+            ["IB",      "B2",   100000,  20,     -600,   1,          999999.0,    0,      1.8,    1.8,    0.3,       0.3,        0.2,        0.2,        6.67,       6.67,       0.15,       0.15]
+        ]
+    },
+
+    "vsc": {
+        "VSC": [
+            ["name",    "T_pll",    "T_i",  "bus",  "DCbus",    "P_K_p",    "P_K_i",    "Q_K_p",    "Q_K_i",    "P_setp",   "Q_setp"],
+            ["VSC1",    0.1,        1,      "B1",   "B1",       0.01,        1e-12,        0.1,        0.1,        100,          100]
+        ]
+    },
+
+    "circuits": {
+        "Ground": "B0",
+        "Bus": [
+            ["name"],
+            ["B0"],
+            ["B1"]
+        ],
+        "Linear": [
+            ["from_bus","to_bus",   "type", "value"],
+            ["B0",      "B1",       "CS",    0],
+            ["B1",      "B0",       "C",    1e-3]
+        ]
+    }
+    
+}
