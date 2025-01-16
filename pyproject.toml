@@ -21,8 +21,15 @@ dependencies = [
 	"numpy",
 	"scipy",
 	"matplotlib",
-    "pandas"
-	]
+  "pandas",
+]
+
+doc = [
+  "sphinx",
+  "sphinx-rtd-theme",
+  "sphinx-autoapi",
+  "sphinx-mdinclude",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/hallvar-h/TOPS"
