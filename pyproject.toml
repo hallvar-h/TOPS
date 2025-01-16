@@ -18,12 +18,19 @@ classifiers = [
 	"Operating System :: OS Independent",
 ]
 dependencies = [
-	"numpy",
-	"scipy",
-	"matplotlib",
-    "pandas"
-	]
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pandas",
+    "TOPS-Circuits @ file:///Users/hallvar/Koding/TOPS-Circuits",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/hallvar-h/TOPS"
 "Bug Tracker" = "https://github.com/hallvar-h/TOPS/issues"
+
+[tool.pdm]
+[tool.pdm.dev-dependencies]
+dev = [
+    "-e file:///Users/hallvar/Koding/TOPS-Circuits#egg=TOPS-Circuits",
+]
