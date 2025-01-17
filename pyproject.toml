@@ -24,13 +24,16 @@ dependencies = [
   "pandas",
 ]
 
+[project.optional-dependencies]
 doc = [
-  "sphinx",
-  "sphinx-rtd-theme",
-  "sphinx-autoapi",
-  "sphinx-mdinclude",
+    "sphinx>=7.4.7",
+    "sphinx-rtd-theme>=3.0.2",
+    "sphinx-autoapi>=3.4.0",
+    "sphinx-mdinclude>=0.6.2",
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/hallvar-h/TOPS"
 "Bug Tracker" = "https://github.com/hallvar-h/TOPS/issues"
+
+[tool.pdm]
