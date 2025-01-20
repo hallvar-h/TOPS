@@ -1,4 +1,4 @@
-# TOPS (**T**iny **O**pen **P**ower System **S**imulator)
+# TOPS (Tiny Open Power System Simulator)
 **Note**: This repository was previously called DynPSSimPy.
 
 
