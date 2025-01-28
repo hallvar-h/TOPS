@@ -55,6 +55,8 @@ if __name__ == '__main__':
         res['t'].append(t)
         res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
         res['v'].append(v.copy())
+        res['load_P'].append(ps.loads['DynamicLoad'].P(x, v).copy())
+        res['load_Q'].append(ps.loads['DynamicLoad'].Q(x, v).copy())
 
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
@@ -62,6 +64,17 @@ if __name__ == '__main__':
     plt.plot(res['t'], np.abs(res['v']))
     plt.xlabel('Time [s]')
     plt.ylabel('Bus voltage')
+
+    
+    fig = plt.figure()
+    plt.plot(res['t'], np.abs(res['load_P']))
+    plt.xlabel('Time [s]')
+    plt.ylabel('MW')
+
+    fig = plt.figure()
+    plt.plot(res['t'], np.abs(res['load_Q']))
+    plt.xlabel('Time [s]')
+    plt.ylabel('MVA')
     
     plt.show()
     
