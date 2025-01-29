@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
     ps.solve_algebraic(0, ps.x0)
 
-    t_end = 20
+    t_end = 3
     x_0 = ps.x_0.copy()
 
     # Solver
@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
         # Store result
         res['t'].append(t)
-        res['gen_speed'].append(ps.gen['GEN'].speed(x, v).copy())
+        res['gen_angle'].append(ps.gen['GEN'].angle(x, v).copy())
         res['v'].append(v.copy())
         # res['load_P'].append(ps.loads['ConstPowerLoad'].P(x, v).copy())
         # res['load_Q'].append(ps.loads['ConstPowerLoad'].Q(x, v).copy())
@@ -118,9 +118,19 @@ if __name__ == '__main__':
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
     fig = plt.figure()
+    plt.plot(res['t'], np.abs(res['gen_angle']))
+    plt.xlabel('Time [s]')
+    plt.ylabel('Gen angle')
+    
+    fig = plt.figure()
     plt.plot(res['t'], np.abs(res['v']))
     plt.xlabel('Time [s]')
-    plt.ylabel('Bus voltage')
+    plt.ylabel('Bus voltage magnitude')
+
+    fig = plt.figure()
+    plt.plot(res['t'], np.angle(np.array(res['v'])), color='g')
+    plt.xlabel('Time [s]')
+    plt.ylabel('Bus voltage angle')
 
     fig = plt.figure()
     plt.plot(res['t'], res['iterations'])
