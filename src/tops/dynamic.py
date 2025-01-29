@@ -130,6 +130,7 @@ class PowerSystemModel:
             'dyn_var_adm',
             'init_from_load_flow',
             'current_injections',
+            'apparent_power_injections',
             # 'init_mdl', 'lf_adm', 'dyn_const_adm', 'dyn_var_adm',
             # '_current_injections', 'state_derivatives',
             # 'ref'
@@ -234,6 +235,7 @@ class PowerSystemModel:
         self.v_0, self.s_0, converged = dps_uf.newton_rhapson_power_flow(self.y_bus_lf, v_pv, p_pv + p_pq, q_pq, bus_type,
                                                               self.pf_tol, self.pf_max_it)
         self.v0 = self.v_0
+        self.v_prev = self.v0.copy()
 
         pv_units_per_bus = np.zeros(self.n_bus, dtype=int)
         for mdl in self.mdl_instructions['load_flow_pv']:
@@ -370,7 +372,40 @@ class PowerSystemModel:
             y_var += sp_mat.todense()
         y_var = sp.csr_matrix(y_var)
 
-        return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
+        if len(self.mdl_instructions['apparent_power_injections']) == 0:
+            return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
+
+        tol = 1e-6
+        max_it = 1000
+        error = 10 * tol
+        it = 0
+        v = self.v_prev
+        y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
+        s_inj = np.zeros(self.n_bus_red, dtype=complex)
+        for mdl in self.mdl_instructions['apparent_power_injections']:
+            bus_idx_red, s_inj_mdl = mdl.apparent_power_injections(x, None)
+            np.add.at(s_inj, bus_idx_red, s_inj_mdl)
+
+        while error > tol and it < max_it:
+            s_v2_diag = np.conj(sp_diags(s_inj / v ** 2))
+            A = y_bus + s_v2_diag
+            b = - (y_bus.dot(v) - i_inj - np.conj(s_inj / v))
+            dv = sp_linalg.spsolve(A, b)
+            v += dv
+
+            error = np.linalg.norm(y_bus.dot(v) - np.conj(s_inj / v) - i_inj)
+            it += 1
+
+        if error > tol:
+            print('''Warning: Solution of algebraic equations did not converge
+                due to apparent power injections.''')
+        else:
+            print(it)
+            self.it_prev = it
+            self.v_prev = v
+            return v
+
+
 
     def no_fun(self):
         pass
