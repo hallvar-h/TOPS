@@ -52,17 +52,44 @@ if __name__ == '__main__':
     max_it = 100
     error = 10 * tol
     it = 0
+    
+    i_mag = abs(i_inj)
+    i_ang = np.angle(i_inj)
 
-    # t_tot = time.time()
+    v_mag = abs(v_sol)
+    v_ang = np.angle(v_sol)
+
+    pq_vec = np.concatenate([s_inj.real, s_inj.imag])
+    i_vec = np.concatenate([i_mag*v_mag*np.cos(i_ang - v_ang), i_mag*v_mag*np.sin(i_ang - v_ang)])
+
+    v0 = v_sol
+    n_bus = len(v0)
+    x0 = np.zeros(2*n_bus)
+    v_abs_idx = slice(n_bus)
+    v_ang_idx = slice(n_bus, 2*n_bus)
+    x0[v_abs_idx] = 1
+    def f(x):
+        v = x[v_abs_idx]*np.exp(1j*x[v_ang_idx])
+        f_complex = y_bus.dot(v)*v - i_inj*v - s_inj
+        return np.concatenate([f_complex.real, f_complex.imag])
+
+    # x0 = np.concatenate([abs(v0), np.angle(v0)])
+    f(x0)
+    from tops.utility_functions import jacobian_num
+
+
+    
+    x = x0.copy()
+    error = np.linalg.norm(f(x))
     # t_spsolve_cum0 = 0
+    from scipy.sparse import csr_matrix
     while error > tol and it < max_it:
-        s_v2_diag = np.conj(sp_diags(self.s_inj / v ** 2))
-        A = y_bus + s_v2_diag
-        b = - (y_bus.dot(v) - i_inj - np.conj(self.s_inj / v))
-        dv = sp_linalg.spsolve(A, b)
-        v += dv
+        A = csr_matrix(jacobian_num(f, x))
+        b = - f(x)
+        dx = sp_linalg.spsolve(A, b)
+        x += dx
 
-        error = np.linalg.norm(y_bus.dot(v) - np.conj(self.s_inj / v) - i_inj)
+        error = np.linalg.norm(f(x))
         it += 1
         print(it)
 

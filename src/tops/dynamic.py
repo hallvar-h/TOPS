@@ -5,11 +5,13 @@ import tops.dyn_models as mdl_lib
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
 from scipy.sparse import diags as sp_diags
+from scipy.optimize import fsolve
 
 import json
 import os
 
 import importlib
+import warnings
 importlib.reload(mdl_lib)
 
 
@@ -236,6 +238,7 @@ class PowerSystemModel:
                                                               self.pf_tol, self.pf_max_it)
         self.v0 = self.v_0
         self.v_prev = self.v0.copy()
+        self.it_prev = 0
 
         pv_units_per_bus = np.zeros(self.n_bus, dtype=int)
         for mdl in self.mdl_instructions['load_flow_pv']:
@@ -353,7 +356,7 @@ class PowerSystemModel:
 
         return dx
 
-    def solve_algebraic(self, t, x):
+    def solve_algebraic(self, t, x, v_0=None):
         '''
         Solves algebraic equations given states
         :param t:
@@ -376,34 +379,100 @@ class PowerSystemModel:
             return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
 
         tol = 1e-6
-        max_it = 1000
-        error = 10 * tol
+        max_it = 2000
+        # error = 10 * tol
         it = 0
-        v = self.v_prev
+        # v = self.v_prev
+        # v = v_0.copy() if v_0 is not None else np.ones_like(self.v0)
         y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
         s_inj = np.zeros(self.n_bus_red, dtype=complex)
         for mdl in self.mdl_instructions['apparent_power_injections']:
             bus_idx_red, s_inj_mdl = mdl.apparent_power_injections(x, None)
             np.add.at(s_inj, bus_idx_red, s_inj_mdl)
+    
+        v_abs_idx = slice(self.n_bus)
+        v_ang_idx = slice(self.n_bus, 2*self.n_bus)
+        
+        # angle_shift = np.mean(np.angle(i_inj))
+        # i_inj *= np.exp(-1j*angle_shift)
+        # v_ang_idx *= angle_shift 
+        # i_inj_abs = abs(i_inj)
+        # i_inj_ang = np.angle(i_inj)
+        # i_inj_ang_rel = i_inj_ang - i_inj_ang[0]
+        
+        def f(x):
+            v = x[v_abs_idx]*np.exp(1j*x[v_ang_idx])
+            f_complex = y_bus.dot(v)*np.conj(v) - i_inj*np.conj(v) - np.conj(s_inj)
+            return np.concatenate([f_complex.real, f_complex.imag])
+        
+        # v_0 = None
+        v_0 = v_0 if v_0 is not None else np.ones_like(self.v0)
+        x_alg = np.concatenate([abs(v_0), np.angle(v_0)])
+        # x_alg[v_abs_idx] = 1
+        # x_alg[v_ang_idx] = -1
 
-        while error > tol and it < max_it:
-            s_v2_diag = np.conj(sp_diags(s_inj / v ** 2))
-            A = y_bus + s_v2_diag
-            b = - (y_bus.dot(v) - i_inj - np.conj(s_inj / v))
-            dv = sp_linalg.spsolve(A, b)
-            v += dv
+        with warnings.catch_warnings():
+            # Cause all warnings to always be triggered.
+            warnings.filterwarnings('error')
+            try:
+                x_alg = fsolve(f, x_alg)
+            except RuntimeWarning:
+                raise Exception('''Singular jacobian when solving
+                    algebraic equations''') 
 
-            error = np.linalg.norm(y_bus.dot(v) - np.conj(s_inj / v) - i_inj)
-            it += 1
 
-        if error > tol:
-            print('''Warning: Solution of algebraic equations did not converge
-                due to apparent power injections.''')
-        else:
-            print(it)
-            self.it_prev = it
-            self.v_prev = v
-            return v
+        # x_alg[v_ang_idx] %= 2*np.pi
+
+          
+        # if False:    
+            # print((np.angle(i_inj) - np.angle(i_inj)[0])[:4])
+            error = np.linalg.norm(f(x_alg))
+            # while error > tol and it < max_it:
+            #     A = sp.csr_matrix(dps_uf.jacobian_num(f, x_alg))
+            #     # A += np.random.randn(2*self.n_bus, 2*self.n_bus)
+            #     # if False:  # np.linalg.cond(A) < 1e-10:
+            #         # raise Exception('''Singular jacobian when solving
+            #             # algebraic equations''') 
+            #     b = - f(x_alg)
+            #     try:
+            #         dx = sp_linalg.spsolve(A, b)
+            #     except sp.linalg.MatrixRankWarning:
+            #         raise Exception('''Singular jacobian when solving
+            #             algebraic equations''') 
+
+            #     x_alg += dx
+
+            #     # x_alg[v_ang_idx] %= 2*np.pi
+            #     # x_alg[v_abs_idx][x_alg[v_abs_idx] < 0.7] = 0.7
+            #     # x_alg[v_abs_idx][x_alg[v_abs_idx] > 1.3] = 1.3
+
+
+            #     error = np.linalg.norm(f(x_alg))
+            #     it += 1
+            #     # print(f"{it} \t {error:.6f}")
+            
+            if error > tol:
+                raise Exception('''Solution of algebraic equations did not converge
+                    due to apparent power injections.''')
+                # print('''Warning: ''')
+                self.it_prev = it
+
+            # if it > 0:
+            #     print(A.diagonal())
+            # if t >= 5.4:
+            #     pass
+            
+
+        v = x_alg[v_abs_idx]*np.exp(1j*x_alg[v_ang_idx])
+        # print(np.conj(s_inj))
+        # v *= np.exp(-1j*angle_shift)
+
+        # print(f"|v|={abs(v[0]):.3f}, angle={np.angle(v[0]):.3f}")
+
+        # print(it)
+        # self.it_prev = it
+        # self.v_prev = v
+        return v
 
 
 

@@ -39,7 +39,7 @@ class EulerDAE(Euler):
         if self.t < self.t_end:
             self.x[:] = self.x + self.f(self.t, self.x, self.v) * self.dt
             self.t += self.dt
-            self.v[:] = self.g_inv(self.t, self.x)
+            self.v[:] = self.g_inv(self.t, self.x, self.v)
 
         else:
             print('End of simulation time reached.')
@@ -77,12 +77,12 @@ class ModifiedEulerDAE(EulerDAE):
             dxdt_0 = self.f(self.t, self.x, self.v)
             x_1 = self.x + dxdt_0*self.dt
             for _ in range(self.n_it):
-                dxdt_1 = self.f_ode(self.t + self.dt, x_1)
+                dxdt_1 = self.f(self.t + self.dt, x_1, self.v)
                 dxdt_est = (dxdt_0 + dxdt_1) / 2
                 x_1 = self.x + dxdt_est*self.dt
 
             self.x[:] = x_1
-            self.v[:] = self.g_inv(self.t, self.x)
+            self.v[:] = self.g_inv(self.t, self.x, self.v)
             self.t += self.dt
 
         else:
