@@ -65,9 +65,9 @@ if __name__ == '__main__':
     import tops.ps_models.k2a as model_data
     importlib.reload(model_data)
     model = model_data.load()
-    model['loads'] = {  # 'ConstPowerLoad': model['loads']}
-        'Load': [model['loads'][ix] for ix in [0, 2]],
-        'ConstPowerLoad': [model['loads'][ix] for ix in [0, 1]]}
+    model['loads'] = {  'ConstPowerLoad': model['loads']}
+        # 'Load': [model['loads'][ix] for ix in [0, 2]],
+        # 'ConstPowerLoad': [model['loads'][ix] for ix in [0, 1]]}
 
     user_mdl_lib = type('', (), {'loads': type('', (), {'ConstPowerLoad': ConstPowerLoad})})
     hasattr(getattr(user_mdl_lib, 'loads'), 'ConstPowerLoad')
@@ -110,14 +110,14 @@ if __name__ == '__main__':
     p_bus_7(ps.x0, ps.v0)
     967/900
     # line_mdl.par[3]
-    # ps.loads['ConstPowerLoad'].par
+    print(ps.loads['ConstPowerLoad'].par)
     # Run simulation
     while t < t_end:
         sys.stdout.write("\r%d%%" % (t/(t_end)*100))
         # print(t)
 
         if 1 <= t:  #  < 1.1:
-            ps.loads['ConstPowerLoad'].par['P'][0] = p_0 + 100
+            ps.loads['ConstPowerLoad'].par['P'][0] = p_0 - 100
         # else:
             # ps.loads['ConstPowerLoad'].par['P'][0] = p_0
             
@@ -152,7 +152,7 @@ if __name__ == '__main__':
     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
 
     fig = plt.figure()
-    plt.plot(res['t'], np.abs(res['gen_speed']))
+    plt.plot(res['t'], res['gen_speed'])
     plt.xlabel('Time [s]')
     plt.ylabel('Gen speed')
     
