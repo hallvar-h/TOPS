@@ -51,8 +51,8 @@ if __name__ == '__main__':
         sys.stdout.write("\r%d%%" % (t/(t_end)*100))
         # print(t)
 
-        # if 1 <= t:  #  < 1.1:
-        ps.loads['ConstPowerLoad'].par['P'] += np.random.randn(ps.loads['ConstPowerLoad'].n_units)*1e-1
+        if 1 <= t:  #  < 1.1:
+            ps.loads['ConstPowerLoad'].par['P'] += np.random.randn(ps.loads['ConstPowerLoad'].n_units)*5
         # else:
             # ps.loads['ConstPowerLoad'].par['P'][0] = p_0
             

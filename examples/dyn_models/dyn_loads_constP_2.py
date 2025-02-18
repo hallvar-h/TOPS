@@ -35,29 +35,6 @@ class ConstPowerLoad(DAEModel):
         s_inj = -(self.par['P'] + 1j*self.par['Q'])/self.sys_par['s_n']
         return self.bus_idx_red['terminal'], s_inj
     
-    def i(self, x, v):
-        return v[self.bus_idx_red['terminal']]*self.y_load
-    
-    def s(self, x, v):
-        return v[self.bus_idx_red['terminal']]*np.conj(self.i(x, v))
-
-    def p(self, x, v):
-        # p.u. system base
-        return self.s(x, v).real
-
-    def q(self, x, v):
-        # p.u. system base
-        return self.s(x, v).imag
-    
-    def P(self, x, v):
-        # MW
-        return self.s(x, v).real*self.sys_par['s_n']
-
-    def Q(self, x, v):
-        # MVA
-        return self.s(x, v).imag*self.sys_par['s_n']
-
-
 
 if __name__ == '__main__':
 
@@ -65,9 +42,9 @@ if __name__ == '__main__':
     import tops.ps_models.k2a as model_data
     importlib.reload(model_data)
     model = model_data.load()
-    model['loads'] = {  'ConstPowerLoad': model['loads']}
-        # 'Load': [model['loads'][ix] for ix in [0, 2]],
-        # 'ConstPowerLoad': [model['loads'][ix] for ix in [0, 1]]}
+    model['loads'] = { # 'ConstPowerLoad': model['loads']}
+        'Load': [model['loads'][ix] for ix in [0, 2]],
+        'ConstPowerLoad': [model['loads'][ix] for ix in [0, 1]]}
 
     user_mdl_lib = type('', (), {'loads': type('', (), {'ConstPowerLoad': ConstPowerLoad})})
     hasattr(getattr(user_mdl_lib, 'loads'), 'ConstPowerLoad')
@@ -85,7 +62,7 @@ if __name__ == '__main__':
     x_0 = ps.x_0.copy()
 
     # Solver
-    sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x_0, t_end, max_step=5e-3)
+    sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x_0, ps.v0, t_end, max_step=5e-3)
 
     # Initialize simulation
     t = 0
@@ -117,18 +94,7 @@ if __name__ == '__main__':
         # print(t)
 
         if 1 <= t:  #  < 1.1:
-            ps.loads['ConstPowerLoad'].par['P'][0] = p_0 - 100
-        # else:
-            # ps.loads['ConstPowerLoad'].par['P'][0] = p_0
-            
-        # if 1.1 <= t:
-            # ps.loads['ConstPowerLoad'].par['P'][0] = 967
-        # print(ps.loads['ConstPowerLoad'].par['P'][0])
-        # Short circuit
-        # if t >= 1 and t <= 1.05:
-            # ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 1e-1
-        # else:
-            # ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 0
+            ps.loads['ConstPowerLoad'].par['P'][0] = p_0 - 10
 
         # Simulate next step
         result = sol.step()

@@ -378,12 +378,6 @@ class PowerSystemModel:
         if len(self.mdl_instructions['apparent_power_injections']) == 0:
             return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
 
-        tol = 1e-6
-        max_it = 2000
-        # error = 10 * tol
-        it = 0
-        # v = self.v_prev
-        # v = v_0.copy() if v_0 is not None else np.ones_like(self.v0)
         y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
         s_inj = np.zeros(self.n_bus_red, dtype=complex)
         for mdl in self.mdl_instructions['apparent_power_injections']:
@@ -393,13 +387,6 @@ class PowerSystemModel:
         v_abs_idx = slice(self.n_bus)
         v_ang_idx = slice(self.n_bus, 2*self.n_bus)
         
-        # angle_shift = np.mean(np.angle(i_inj))
-        # i_inj *= np.exp(-1j*angle_shift)
-        # v_ang_idx *= angle_shift 
-        # i_inj_abs = abs(i_inj)
-        # i_inj_ang = np.angle(i_inj)
-        # i_inj_ang_rel = i_inj_ang - i_inj_ang[0]
-        
         def f(x):
             v = x[v_abs_idx]*np.exp(1j*x[v_ang_idx])
             f_complex = y_bus.dot(v)*np.conj(v) - i_inj*np.conj(v) - np.conj(s_inj)
@@ -408,19 +395,24 @@ class PowerSystemModel:
         # v_0 = None
         v_0 = v_0 if v_0 is not None else np.ones_like(self.v0)
         x_alg = np.concatenate([abs(v_0), np.angle(v_0)])
-        # x_alg[v_abs_idx] = 1
-        # x_alg[v_ang_idx] = -1
 
         with warnings.catch_warnings():
             # Cause all warnings to always be triggered.
-            # warnings.filterwarnings('error')
+            warnings.filterwarnings('error')
             try:
                 x_alg = fsolve(f, x_alg, xtol=1e-10)
             except RuntimeWarning:
-                raise Warning('''Singular jacobian when solving
-                    algebraic equations''') 
+                x_alg *= np.nan
+                print('Warning: Power flow did not converge.')
+                # raise Warning('''Singular jacobian when solving
+                    # algebraic equations''') 
 
 
+
+        # Implementation of Newton's method. Turned out a bit slower than fsolve
+        #tol = 1e-6
+        #max_it = 2000
+        #it = 0
         # x_alg[v_ang_idx] %= 2*np.pi
 
           
@@ -452,102 +444,15 @@ class PowerSystemModel:
             #     it += 1
             # #     # print(f"{it} \t {error:.6f}")
             
-            if error > tol:
+            # if error > tol:
                 # raise Warning('''Solution of algebraic equations did not converge
                     # due to apparent power injections.''')
                 # print('''Warning: ''')
-                x_alg *= np.nan
-                self.it_prev = it
-
-            # if it > 0:
-            #     print(A.diagonal())
-            # if t >= 5.4:
-            #     pass
-            
+                # x_alg *= np.nan
+                # self.it_prev = it
 
         v = x_alg[v_abs_idx]*np.exp(1j*x_alg[v_ang_idx])
-        # print(np.conj(s_inj))
-        # v *= np.exp(-1j*angle_shift)
-
-        # print(f"|v|={abs(v[0]):.3f}, angle={np.angle(v[0]):.3f}")
-
-        # print(it)
-        # self.it_prev = it
-        # self.v_prev = v
         return v
-
-
-
-    def no_fun(self):
-        pass
-        '''
-        # Interfacing models  with system (current injections)
-        self.i_inj_d = np.zeros(self.n_bus_red, dtype=complex)
-        self.i_inj_q = np.zeros(self.n_bus_red, dtype=complex)
-        for dm in self.mdl_instructions['current_injections']:
-            I_n = dm.par['S_n'] / (np.sqrt(3) * dm.par['V_n'])
-            i_inj_d_mdl, i_inj_q_mdl = dm.current_injections(
-                x[dm.idx].view(dtype=dm.dtypes),
-                dm.input,
-                dm.output,
-                dm.par,
-                dm.int_par,
-            )*I_n/self.i_n[dm.bus_idx]
-            np.add.at(self.i_inj_d, dm.bus_idx_red, i_inj_d_mdl)
-            np.add.at(self.i_inj_q, dm.bus_idx_red, i_inj_q_mdl)
-
-        self.i_inj[:] = self.i_inj_d + self.i_inj_q
-
-        # Get dynamic impedances
-        self.y_bus_red_dyn *= 0
-        for dm in self.mdl_functions['dyn_var_adm']:
-            y_mdl = dm.dyn_var_adm(
-                x[dm.idx].view(dtype=dm.dtypes) if len(dm.state_list) > 0 else None,
-                dm.input, dm.output, dm.par, dm.int_par
-            )
-
-            data = np.array(y_mdl).flatten()
-            row_idx = dm.row_idx.flatten()
-            col_idx = dm.col_idx.flatten()
-            sp_mat = sp.csr_matrix((data, (row_idx, col_idx)), shape=(self.n_bus_red,) * 2)
-            self.y_bus_red_dyn += sp_mat
-
-            # np.add.at(self.y_bus_red_dyn, (dm.row_idx, dm.col_idx), y_bus_red_dyn_mdl)
-            # for y_mdl_, row_idx, col_idx in zip(np.array(y_mdl).T, dm.row_idx.T, dm.col_idx.T):
-                # print(row_idx.shape)
-                # print(y_mdl_.shape)
-                # self.y_bus_red_dyn[row_idx, col_idx] = self.y_bus_red_dyn[row_idx, col_idx] + y_mdl_
-            # self.y_bus_red_dyn[dm.row_idx, dm.col_idx] = y_bus_red_dyn_mdl
-
-        # Solve network equations
-        # self.v_red = sp_linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
-        y_bus = self.y_bus_red + self.y_bus_red_dyn + self.y_bus_red_mod
-
-        if self.algebraic_equations_iterate:
-            v_red = self.v_red.copy()
-
-            tol = 1e-10
-            max_it = 10
-            error = 10 * tol
-            it = 0
-
-            # t_tot = time.time()
-            # t_spsolve_cum0 = 0
-            while error > tol and it < max_it:
-                s_v2_diag = np.conj(sp_diags(self.s_inj / v_red ** 2))
-                A = y_bus + s_v2_diag
-                b = np.conj(self.s_inj / v_red) + self.i_inj + s_v2_diag * v_red
-                v_red = sp_linalg.spsolve(A, b)
-                error = np.linalg.norm(y_bus.dot(v_red) - np.conj(self.s_inj / v_red) - self.i_inj)
-                it += 1
-
-            if error > tol:
-                print('Warning: Solution of algebraic equations did not converge.')
-
-            return v_red
-        else:
-            return sp_linalg.spsolve(y_bus, self.i_inj)
-        '''
 
 
     def ode_fun(self, t, x, v_0=None):
