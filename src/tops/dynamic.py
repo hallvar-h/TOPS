@@ -413,11 +413,11 @@ class PowerSystemModel:
 
         with warnings.catch_warnings():
             # Cause all warnings to always be triggered.
-            warnings.filterwarnings('error')
+            # warnings.filterwarnings('error')
             try:
-                x_alg = fsolve(f, x_alg)
+                x_alg = fsolve(f, x_alg, xtol=1e-10)
             except RuntimeWarning:
-                raise Exception('''Singular jacobian when solving
+                raise Warning('''Singular jacobian when solving
                     algebraic equations''') 
 
 
@@ -452,8 +452,8 @@ class PowerSystemModel:
             #     # print(f"{it} \t {error:.6f}")
             
             if error > tol:
-                raise Exception('''Solution of algebraic equations did not converge
-                    due to apparent power injections.''')
+                raise Warning('''Solution of algebraic equations did not converge
+                    due to complex power injections.''')
                 # print('''Warning: ''')
                 self.it_prev = it
 
@@ -548,14 +548,14 @@ class PowerSystemModel:
         '''
 
 
-    def ode_fun(self, t, x):
+    def ode_fun(self, t, x, v_0=None):
         '''
         Can be integrated with any ODE-integration method (e.g. Euler, Runge-Kutta etc.)
         :param t:
         :param x:
         :return:
         '''
-        v_red = self.solve_algebraic(t, x)
+        v_red = self.solve_algebraic(t, x, v_0=v_0)
 
         return self.state_derivatives(t, x, v_red)
 
