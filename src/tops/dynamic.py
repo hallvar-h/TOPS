@@ -437,7 +437,8 @@ class PowerSystemModel:
             #     try:
             #         dx = sp_linalg.spsolve(A, b)
             #     except sp.linalg.MatrixRankWarning:
-            #         raise Exception('''Singular jacobian when solving
+            #         # warnings.filterwarnings('default')
+            #         raise Warning('''Singular jacobian when solving
             #             algebraic equations''') 
 
             #     x_alg += dx
@@ -449,12 +450,13 @@ class PowerSystemModel:
 
             #     error = np.linalg.norm(f(x_alg))
             #     it += 1
-            #     # print(f"{it} \t {error:.6f}")
+            # #     # print(f"{it} \t {error:.6f}")
             
             if error > tol:
-                raise Warning('''Solution of algebraic equations did not converge
-                    due to complex power injections.''')
+                # raise Warning('''Solution of algebraic equations did not converge
+                    # due to apparent power injections.''')
                 # print('''Warning: ''')
+                x_alg *= np.nan
                 self.it_prev = it
 
             # if it > 0:
