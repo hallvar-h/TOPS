@@ -77,7 +77,7 @@ class ModifiedEulerDAE(EulerDAE):
             dxdt_0 = self.f(self.t, self.x, self.v)
             x_1 = self.x + dxdt_0*self.dt
             for _ in range(self.n_it):
-                dxdt_1 = self.f_ode(self.t + self.dt, x_1)
+                dxdt_1 = self.f(self.t + self.dt, x_1, self.v)
                 dxdt_est = (dxdt_0 + dxdt_1) / 2
                 x_1 = self.x + dxdt_est*self.dt
 
