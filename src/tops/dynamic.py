@@ -152,6 +152,10 @@ class PowerSystemModel:
         else:
             bus_idx_red = np.arange(self.n_bus)
 
+        self.algebraic_equations_are_linear = len(
+            self.mdl_instructions['apparent_power_injections']) > 0
+        
+
         # Remove duplicate buses
         bus_idx_red_sort, idx = np.unique(bus_idx_red, return_index=True)
         self.bus_idx_red = bus_idx_red_sort
@@ -374,8 +378,7 @@ class PowerSystemModel:
             sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
             y_var += sp_mat.todense()
         y_var = sp.csr_matrix(y_var)
-
-        if len(self.mdl_instructions['apparent_power_injections']) == 0:
+        if self.algebraic_equations_are_linear:
             return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
 
         y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
