@@ -21,7 +21,7 @@ class Euler:
 
 
 class EulerDAE(Euler):
-    def __init__(self, f, g_inv, *args, **kwargs):
+    def __init__(self, f, g_inv, t0, x0, v0, *args, **kwargs):
         '''
         Similar to Euler solver-class, but ensures that algebraic equations (stored in self.v) are always updated at the end of each time step.
         :param f: Function that takes time, states and algebraic variables (t, x and v) as arguments and returns state
@@ -31,15 +31,15 @@ class EulerDAE(Euler):
         :param args:
         :param kwargs:
         '''
-        super().__init__(f, *args, **kwargs)
+        super().__init__(f, t0, x0, *args, **kwargs)
         self.g_inv = g_inv
-        self.v = self.g_inv(self.t, self.x)
+        self.v = self.g_inv(self.t, self.x, v0)
 
     def step(self):
         if self.t < self.t_end:
             self.x[:] = self.x + self.f(self.t, self.x, self.v) * self.dt
             self.t += self.dt
-            self.v[:] = self.g_inv(self.t, self.x)
+            self.v[:] = self.g_inv(self.t, self.x, self.v)
 
         else:
             print('End of simulation time reached.')
@@ -82,7 +82,7 @@ class ModifiedEulerDAE(EulerDAE):
                 x_1 = self.x + dxdt_est*self.dt
 
             self.x[:] = x_1
-            self.v[:] = self.g_inv(self.t, self.x)
+            self.v[:] = self.g_inv(self.t, self.x, self.v)
             self.t += self.dt
 
         else:
