@@ -153,7 +153,7 @@ class PowerSystemModel:
             bus_idx_red = np.arange(self.n_bus)
 
         self.algebraic_equations_are_linear = len(
-            self.mdl_instructions['apparent_power_injections']) > 0
+            self.mdl_instructions['apparent_power_injections']) == 0
         
 
         # Remove duplicate buses
