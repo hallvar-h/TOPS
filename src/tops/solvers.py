@@ -70,14 +70,14 @@ class ModifiedEulerDAE(EulerDAE):
     def __init__(self, *args, n_it=1, **kwargs):
         super().__init__(*args, **kwargs)
         self.n_it = n_it
-        self.f_ode = lambda t, x: self.f(t, x, self.g_inv(t, x))
+        self.f_ode = lambda t, x: self.f(t, x, self.g_inv(t, x, self.v))
 
     def step(self):
         if self.t < self.t_end:
             dxdt_0 = self.f(self.t, self.x, self.v)
             x_1 = self.x + dxdt_0*self.dt
             for _ in range(self.n_it):
-                dxdt_1 = self.f(self.t + self.dt, x_1, self.v)
+                dxdt_1 = self.f_ode(self.t + self.dt, x_1)
                 dxdt_est = (dxdt_0 + dxdt_1) / 2
                 x_1 = self.x + dxdt_est*self.dt
 
