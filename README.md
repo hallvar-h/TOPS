@@ -1,4 +1,8 @@
 # TOPS (**T**iny **O**pen **P**ower System **S**imulator)
+
+[![Docs](https://github.com/hallvar-h/TOPS/actions/workflows/docs.yml/badge.svg)](https://github.com/hallvar-h/TOPS/actions/workflows/docs.yml)
+[![Tests](https://github.com/hallvar-h/TOPS/actions/workflows/python-app.yml/badge.svg?branch=main)](https://github.com/hallvar-h/TOPS/actions/workflows/python-app.yml)
+
 **Note**: This repository was previously called DynPSSimPy.
 
 
