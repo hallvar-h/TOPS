@@ -31,7 +31,7 @@ jobs:
 
       - name: make the sphinx docs
         run: |
-          py -m sphinx build docs/source public
+          python -m sphinx build docs/source public
           # make -C docs clean 
           # sphinx-apidoc -f -o docs/source . -H Test -e -t docs/source/_templates
           # make -C docs html
