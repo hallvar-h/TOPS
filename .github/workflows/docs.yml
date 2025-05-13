@@ -31,14 +31,14 @@ jobs:
 
       - name: make the sphinx docs
         run: |
-          python -m sphinx build docs/source docs/build
-          # make -C docs clean 
+          # python -m sphinx build docs/source docs/build
+          make -C docs clean 
           # sphinx-apidoc -f -o docs/source . -H Test -e -t docs/source/_templates
-          # make -C docs html
+          make -C docs html
 
       - name: Init new repo in dist folder and commit generated files
         run: |
-          cd public/
+          cd docs/build/html
           git init
           touch .nojekyll
           git add -A
@@ -52,4 +52,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
           force: true
-          directory: ./docs/build
+          directory: ./docs/build/html
