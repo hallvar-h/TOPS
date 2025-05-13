@@ -1,4 +1,4 @@
-name: docs_pages_workflow
+name: Docs
  
 # execute this workflow automatically when a we push to master
 on:
