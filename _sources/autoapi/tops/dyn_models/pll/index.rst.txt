@@ -1,0 +1,73 @@
+tops.dyn_models.pll
+===================
+
+.. py:module:: tops.dyn_models.pll
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dyn_models.pll.PLL1
+   tops.dyn_models.pll.PLL2
+
+
+Module Contents
+---------------
+
+.. py:class:: PLL1(*args, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.blocks.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:attribute:: bus_idx
+
+
+   .. py:attribute:: bus_idx_red
+
+
+   .. py:method:: bus_ref_spec()
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: freq_est(x, v)
+
+
+   .. py:method:: init_from_load_flow(x_0, v_0, S)
+
+
+.. py:class:: PLL2(*args, **kwargs)
+
+   Bases: :py:obj:`PLL1`
+
+
+   Base class for dynamic models
+
+
+   .. py:attribute:: bus_idx
+
+
+   .. py:attribute:: bus_idx_red
+
+
+   .. py:method:: bus_ref_spec()
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: init_from_load_flow(x_0, v_0, S)
+
+

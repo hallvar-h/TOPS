@@ -1,0 +1,88 @@
+tops.dyn_models.gov
+===================
+
+.. py:module:: tops.dyn_models.gov
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dyn_models.gov.GOV
+   tops.dyn_models.gov.TGOV1
+   tops.dyn_models.gov.HYGOV
+   tops.dyn_models.gov.IEESGO
+
+
+Module Contents
+---------------
+
+.. py:class:: GOV
+
+   .. py:method:: input_list()
+
+
+   .. py:method:: connections()
+
+
+.. py:class:: TGOV1(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`GOV`, :py:obj:`tops.dyn_models.blocks.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: int_par_list()
+
+
+   .. py:method:: init_from_connections(x0, v0, output_0)
+
+
+.. py:class:: HYGOV(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`GOV`, :py:obj:`tops.dyn_models.blocks.DAEModel`
+
+
+   Implementation of the HYGOV model. Some limiters are missing.
+
+
+   .. py:method:: int_par_list()
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: init_from_connections(x0, v0, output_0)
+
+
+.. py:class:: IEESGO(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`GOV`, :py:obj:`tops.dyn_models.blocks.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: int_par_list()
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: init_from_connections(x0, v0, output_0)
+
+

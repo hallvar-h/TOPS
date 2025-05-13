@@ -1,0 +1,141 @@
+tops.dyn_models.gen
+===================
+
+.. py:module:: tops.dyn_models.gen
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dyn_models.gen.GEN
+
+
+Module Contents
+---------------
+
+.. py:class:: GEN(*args, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:attribute:: bus_idx
+
+
+   .. py:attribute:: bus_idx_red
+
+
+   .. py:method:: bus_ref_spec()
+
+
+   .. py:method:: load_flow_pv()
+
+
+   .. py:method:: init_from_load_flow(x_0, v_0, S)
+
+
+   .. py:method:: dyn_const_adm()
+
+
+   .. py:method:: state_list()
+
+      Returns list of states for dynamic model.
+      Should be overwritten (if model has one or more states)
+
+
+
+   .. py:method:: input_list()
+
+      Returns list of inputs for dynamic model.
+      Should be overwritten (if model has one or more inputs)
+
+
+
+   .. py:method:: int_par_list()
+
+
+   .. py:method:: reduced_system()
+
+
+   .. py:method:: current_injections(x, v)
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+   .. py:method:: d(x, v)
+
+
+   .. py:method:: q(x, v)
+
+
+   .. py:method:: v_t(x, v)
+
+
+   .. py:method:: v_t_abs(x, v)
+
+
+   .. py:method:: v_setp(x, v)
+
+
+   .. py:method:: e_q_st(x, v)
+
+
+   .. py:method:: e_d_st(x, v)
+
+
+   .. py:method:: e_q_t(x, v)
+
+
+   .. py:method:: e_d_t(x, v)
+
+
+   .. py:method:: angle(x, v)
+
+
+   .. py:method:: speed(x, v)
+
+
+   .. py:method:: e_st(x, v)
+
+
+   .. py:method:: e_t(x, v)
+
+
+   .. py:method:: i(x, v)
+
+
+   .. py:method:: I(x, v)
+
+
+   .. py:method:: i_d(x, v)
+
+
+   .. py:method:: i_q(x, v)
+
+
+   .. py:method:: s_e(x, v)
+
+
+   .. py:method:: p_e(x, v)
+
+
+   .. py:method:: q_e(x, v)
+
+
+   .. py:method:: S_e(x, v)
+
+
+   .. py:method:: P_e(x, v)
+
+
+   .. py:method:: Q_e(x, v)
+
+
+   .. py:method:: P_nom(x, v)
+
+

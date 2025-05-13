@@ -1,0 +1,19 @@
+tops.ps_models.k2a
+==================
+
+.. py:module:: tops.ps_models.k2a
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   tops.ps_models.k2a.load
+
+
+Module Contents
+---------------
+
+.. py:function:: load()
+

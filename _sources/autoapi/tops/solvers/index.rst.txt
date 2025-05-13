@@ -1,0 +1,97 @@
+tops.solvers
+============
+
+.. py:module:: tops.solvers
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.solvers.Euler
+   tops.solvers.EulerDAE
+   tops.solvers.ModifiedEuler
+   tops.solvers.ModifiedEulerDAE
+   tops.solvers.SimpleRK4
+
+
+Module Contents
+---------------
+
+.. py:class:: Euler(f, t0, x0, t_end=np.inf, dt=0.005, **kwargs)
+
+   .. py:attribute:: f
+
+
+   .. py:attribute:: t
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: y
+
+
+   .. py:attribute:: t_end
+
+
+   .. py:attribute:: dt
+      :value: 0.005
+
+
+
+   .. py:method:: step()
+
+
+.. py:class:: EulerDAE(f, g_inv, *args, **kwargs)
+
+   Bases: :py:obj:`Euler`
+
+
+   .. py:attribute:: g_inv
+
+
+   .. py:attribute:: v
+
+
+   .. py:method:: step()
+
+
+.. py:class:: ModifiedEuler(*args, n_it=1, **kwargs)
+
+   Bases: :py:obj:`Euler`
+
+
+   .. py:attribute:: n_it
+      :value: 1
+
+
+
+   .. py:method:: step()
+
+
+.. py:class:: ModifiedEulerDAE(*args, n_it=1, **kwargs)
+
+   Bases: :py:obj:`EulerDAE`
+
+
+   .. py:attribute:: n_it
+      :value: 1
+
+
+
+   .. py:attribute:: f_ode
+
+
+   .. py:method:: step()
+
+
+.. py:class:: SimpleRK4(*args, **kwargs)
+
+   Bases: :py:obj:`Euler`
+
+
+   .. py:method:: step()
+
+

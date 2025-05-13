@@ -1,0 +1,25 @@
+tops.plotting
+=============
+
+.. py:module:: tops.plotting
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   tops.plotting.plot_eigs
+   tops.plotting.phasor
+   tops.plotting.plot_mode_shape
+
+
+Module Contents
+---------------
+
+.. py:function:: plot_eigs(eigs)
+
+.. py:function:: phasor(vec, start=0j, ax=None, **kwargs)
+
+.. py:function:: plot_mode_shape(mode_shape, ax=None, normalize=False, xy0=np.empty(0), linewidth=2, auto_lim=False, colors=cm.get_cmap('Set1'))
+

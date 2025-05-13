@@ -1,0 +1,408 @@
+tops.dyn_models.blocks
+======================
+
+.. py:module:: tops.dyn_models.blocks
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dyn_models.blocks.PIRegulator
+   tops.dyn_models.blocks.Integrator
+   tops.dyn_models.blocks.Integrator2
+   tops.dyn_models.blocks.Gain
+   tops.dyn_models.blocks.Limiter
+   tops.dyn_models.blocks.Washout
+   tops.dyn_models.blocks.TimeConstant
+   tops.dyn_models.blocks.TimeConstantVar
+   tops.dyn_models.blocks.TimeConstantGain
+   tops.dyn_models.blocks.TimeConstantLims
+   tops.dyn_models.blocks.TimeConstantGainLims
+   tops.dyn_models.blocks.LeadLag
+   tops.dyn_models.blocks.PIRegulator2
+   tops.dyn_models.blocks.PIRegulator2Lims
+   tops.dyn_models.blocks.WashoutGain
+   tops.dyn_models.blocks.Saturation
+   tops.dyn_models.blocks.Backlash
+
+
+Module Contents
+---------------
+
+.. py:class:: PIRegulator(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+.. py:class:: Integrator(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: state_list()
+
+      Returns list of states for dynamic model.
+      Should be overwritten (if model has one or more states)
+
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+.. py:class:: Integrator2(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`Integrator`
+
+
+   Same as Integrator, but with time constant.
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+.. py:class:: Gain(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+.. py:class:: Limiter(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: output(x, v)
+
+
+.. py:class:: Washout(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: state_list()
+
+      Returns list of states for dynamic model.
+      Should be overwritten (if model has one or more states)
+
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+.. py:class:: TimeConstant(*args, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+           ______________
+          |               |
+          |       1       |
+   u ---->|  -----------  |----> y
+          |    1 + s*T    |
+          |_______________|
+
+
+
+
+   .. py:attribute:: zero_idx
+
+
+   .. py:method:: state_list()
+
+      Returns list of states for dynamic model.
+      Should be overwritten (if model has one or more states)
+
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+.. py:class:: TimeConstantVar(*args, **kwargs)
+
+   Bases: :py:obj:`TimeConstant`
+
+
+           ______________
+          |               |
+          |       1       |
+   u ---->|  -----------  |----> y
+          |    K + s*T    |
+          |_______________|
+
+
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+.. py:class:: TimeConstantGain(*args, **kwargs)
+
+   Bases: :py:obj:`TimeConstant`
+
+
+           ______________
+          |               |
+          |       1       |
+   u ---->|  -----------  |----> y
+          |    1 + s*T    |
+          |_______________|
+
+
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+.. py:class:: TimeConstantLims(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+                        ___ V_max
+           ________/_____
+          |               |
+          |       1       |
+   u ---->|  -----------  |----> y
+          |   1 + s*T_2   |
+          |_______________|
+              ___/
+         V_min
+
+
+
+   .. py:method:: state_list()
+
+      Returns list of states for dynamic model.
+      Should be overwritten (if model has one or more states)
+
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+.. py:class:: TimeConstantGainLims(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`TimeConstantLims`
+
+
+                        ___ V_max
+           ________/_____
+          |               |
+          |       K       |
+   u ---->|  -----------  |----> y
+          |   1 + s*T_2   |
+          |_______________|
+              ___/
+         V_min
+
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+.. py:class:: LeadLag(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+           _______________
+          |               |
+          |   1 + s*T_1   |
+   u ---->|  -----------  |----> y
+          |   1 + s*T_2   |
+          |_______________|
+
+
+
+   .. py:method:: state_list()
+
+      Returns list of states for dynamic model.
+      Should be overwritten (if model has one or more states)
+
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+.. py:class:: PIRegulator2(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: state_list()
+
+      Returns list of states for dynamic model.
+      Should be overwritten (if model has one or more states)
+
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+.. py:class:: PIRegulator2Lims(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`PIRegulator2`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+
+.. py:class:: WashoutGain(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+           _______________
+          |               |
+          |      s*K      |
+   u ---->|  -----------  |----> y
+          |    1 + s*T    |
+          |_______________|
+
+   sK/(1+sT) = y/u
+   u*sK = y + sTy
+   s(Ku - Ty) = y
+   x = Ku - Ty
+   sx = y
+   y = 1/T(Ku - x)
+
+
+   .. py:method:: state_list()
+
+      Returns list of states for dynamic model.
+      Should be overwritten (if model has one or more states)
+
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+.. py:class:: Saturation(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Not verified!!
+
+
+   .. py:method:: output(x, v)
+
+
+.. py:class:: Backlash(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Based on PowerFactory implementation
+
+
+   .. py:method:: state_list()
+
+      Returns list of states for dynamic model.
+      Should be overwritten (if model has one or more states)
+
+
+
+   .. py:method:: state_derivatives(dx, x, v)
+
+
+   .. py:method:: output(x, v)
+
+
+   .. py:method:: initialize(x0, v0, output_value)
+
+

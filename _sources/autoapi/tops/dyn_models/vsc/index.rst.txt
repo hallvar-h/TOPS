@@ -1,0 +1,65 @@
+tops.dyn_models.vsc
+===================
+
+.. py:module:: tops.dyn_models.vsc
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dyn_models.vsc.VSC
+
+
+Module Contents
+---------------
+
+.. py:class:: VSC(*args, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.blocks.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:attribute:: bus_idx
+
+
+   .. py:attribute:: bus_idx_red
+
+
+   .. py:method:: bus_ref_spec()
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: I_inj(x, v)
+
+
+   .. py:method:: input_list()
+
+      Returns list of inputs for dynamic model.
+      Should be overwritten (if model has one or more inputs)
+
+
+
+   .. py:method:: P(x, v)
+
+
+   .. py:method:: Q(x, v)
+
+
+   .. py:method:: load_flow_pq()
+
+
+   .. py:method:: init_from_load_flow(x_0, v_0, S)
+
+
+   .. py:method:: current_injections(x, v)
+
+

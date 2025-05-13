@@ -1,0 +1,84 @@
+tops.utility_functions
+======================
+
+.. py:module:: tops.utility_functions
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.utility_functions.DynamicModel
+   tops.utility_functions.EventManager
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   tops.utility_functions.newton_rhapson_power_flow
+   tops.utility_functions.remove_recarray_field
+   tops.utility_functions.combine_recarrays
+   tops.utility_functions.replace_str_col
+   tops.utility_functions.concatenate_structured_arrays
+   tops.utility_functions.structured_array_from_list
+   tops.utility_functions.lookup_strings
+   tops.utility_functions.jacobian_num
+
+
+Module Contents
+---------------
+
+.. py:function:: newton_rhapson_power_flow(y_bus, v_0, p_sum_bus, q_sum_bus, bus_types, tol, pf_max_it)
+
+.. py:function:: remove_recarray_field(a, field)
+
+.. py:function:: combine_recarrays(a, b)
+
+   Combine columns of recarrays
+   :param a:
+   :param b:
+   :return:
+
+
+.. py:function:: replace_str_col(a, col, strings)
+
+   Replaces column with strings (col) in structured array (a) with new strings.
+   dtype is updated if new strings are longer than previous strings.
+   :param a: Structured array
+   :param col: String that points to column of a
+   :param strings: Array of strings that will replace content in a[col]
+   :return: Structured array with updated column
+
+
+.. py:function:: concatenate_structured_arrays(a_list)
+
+   Combine rows of recarrays
+   :param a_list:
+   :return:
+
+
+.. py:function:: structured_array_from_list(names, entries)
+
+.. py:function:: lookup_strings(a, b, return_mask=False)
+
+.. py:function:: jacobian_num(f, x, eps=1e-10, **params)
+
+.. py:class:: DynamicModel
+
+.. py:class:: EventManager(events, event_function)
+
+   .. py:attribute:: events
+
+
+   .. py:attribute:: event_flags
+
+
+   .. py:attribute:: event_function
+
+
+   .. py:method:: update(t_now)
+
+

@@ -1,0 +1,116 @@
+tops.simulator
+==============
+
+.. py:module:: tops.simulator
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.simulator.Simulator
+   tops.simulator.InterfacerDirect
+
+
+Module Contents
+---------------
+
+.. py:class:: Simulator(ps, dt=0.005, solver=dps_sol.ModifiedEulerDAE, t_end=np.inf, log_fun=None, ode_fun=None)
+
+   .. py:attribute:: _stopped
+      :value: False
+
+
+
+   .. py:attribute:: n_markers
+      :value: 20
+
+
+
+   .. py:attribute:: t_end
+
+
+   .. py:attribute:: dt
+      :value: 0.005
+
+
+
+   .. py:attribute:: log_fun
+      :value: None
+
+
+
+   .. py:attribute:: log
+      :value: False
+
+
+
+   .. py:attribute:: ps
+
+
+   .. py:attribute:: sol
+
+
+   .. py:attribute:: new_data_cv
+
+
+   .. py:attribute:: new_data_ready
+      :value: False
+
+
+
+   .. py:attribute:: x
+
+
+   .. py:attribute:: t
+
+
+   .. py:attribute:: interface_functions
+
+
+   .. py:attribute:: interface_functions_lock
+
+
+   .. py:attribute:: interface_timers
+
+
+   .. py:method:: stopped()
+
+
+   .. py:method:: make_simulation_step()
+
+
+   .. py:method:: main_loop()
+
+
+.. py:class:: InterfacerDirect(rts=None, name='InterfacerDirect')
+
+   .. py:attribute:: interface_name
+      :value: 'InterfacerDirect'
+
+
+
+   .. py:attribute:: fs
+      :value: None
+
+
+
+   .. py:method:: connect(rts)
+
+
+   .. py:method:: interface_fun(rts)
+
+
+   .. py:method:: read_input_signal(rts)
+
+
+   .. py:method:: apply_ctrl_signal(rts, ctrl_signal)
+
+
+   .. py:method:: generate_ctrl_signal()
+
+
+   .. py:method:: update(input)
+
+

@@ -1,0 +1,103 @@
+tops.dyn_models.lines
+=====================
+
+.. py:module:: tops.dyn_models.lines
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dyn_models.lines.Line
+
+
+Module Contents
+---------------
+
+.. py:class:: Line(data, sys_par, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:attribute:: data
+
+
+   .. py:attribute:: par
+
+
+   .. py:attribute:: n_units
+
+
+   .. py:attribute:: connected
+
+
+   .. py:attribute:: bus_idx
+
+
+   .. py:attribute:: bus_idx_red
+
+
+   .. py:attribute:: sys_par
+
+
+   .. py:method:: bus_ref_spec()
+
+
+   .. py:method:: event(ps, line_name, event_name)
+
+
+   .. py:method:: init_extras()
+
+
+   .. py:method:: load_flow_adm()
+
+
+   .. py:method:: dyn_const_adm()
+
+
+   .. py:method:: i_from(x, v)
+
+
+   .. py:method:: i_to(x, v)
+
+
+   .. py:method:: I_from(x, v)
+
+
+   .. py:method:: I_to(x, v)
+
+
+   .. py:method:: s_from(x, v)
+
+
+   .. py:method:: s_to(x, v)
+
+
+   .. py:method:: p_from(x, v)
+
+
+   .. py:method:: p_to(x, v)
+
+
+   .. py:method:: q_from(x, v)
+
+
+   .. py:method:: q_to(x, v)
+
+
+   .. py:method:: s_line(x, v)
+
+
+   .. py:method:: p_line(x, v)
+
+
+   .. py:method:: q_line(x, v)
+
+
+   .. py:method:: p_loss_tot(x, v)
+
+
