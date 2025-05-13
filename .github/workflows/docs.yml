@@ -31,7 +31,7 @@ jobs:
 
       - name: make the sphinx docs
         run: |
-          python -m sphinx build docs/source public
+          python -m sphinx build docs/source docs/build
           # make -C docs clean 
           # sphinx-apidoc -f -o docs/source . -H Test -e -t docs/source/_templates
           # make -C docs html
@@ -52,4 +52,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
           force: true
-          directory: ./public
+          directory: ./docs/build
