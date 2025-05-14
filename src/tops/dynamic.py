@@ -88,6 +88,7 @@ class PowerSystemModel:
         self.add_model_data(model)
 
     def add_model_data(self, model_data):
+        # Add model data and try to load corresponding model from library
         for key, val in model_data.items():
             if isinstance(val, dict):
                 category_key = key
@@ -135,6 +136,8 @@ class PowerSystemModel:
             # 'ref'
         ]}
 
+        # Check which models have specific functions, and assemble the ones
+        # which do in lists, which can be looked up later.
         for mdl in self.dyn_mdls:
             for key, fun_list in self.mdl_instructions.items():
                 if hasattr(mdl, key):
@@ -165,6 +168,8 @@ class PowerSystemModel:
         self.setup_ready = True
 
     def build_y_bus_lf(self):
+        # Builds admittance matrix used in load flow by assembling contribitions
+        # from component models.
 
         y_lf = np.zeros((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['load_flow_adm']:
@@ -177,6 +182,10 @@ class PowerSystemModel:
         return y_lf
 
     def build_y_bus_dyn(self):
+        # Builds admittance matrix used in dynamic simulation by assembling
+        # contribitions from component models. Differs from the admittance
+        # matrix used in load flow due to const. impedance load impedances and
+        # generator impedances.
 
         y_dyn = np.zeros((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['dyn_const_adm']:
@@ -189,6 +198,7 @@ class PowerSystemModel:
 
 
     def power_flow(self, print_output=False):
+        # Perform an ordinary Newton Rhapson Power Flow
 
         if not self.setup_ready:
             self.setup()
@@ -209,6 +219,7 @@ class PowerSystemModel:
         p_pv = np.zeros(self.n_bus)
         v_pv = np.ones(self.n_bus)
 
+        # If slack bus is not defined: Choose the first PV bus as the slack bus.
         if not self.slack_bus:
             bus_idx = self.mdl_instructions['load_flow_pv'][0].load_flow_pv()[0]
             sl_idx = bus_idx[0]
@@ -216,6 +227,10 @@ class PowerSystemModel:
         else:
             sl_idx = dps_uf.lookup_strings(self.slack_bus, self.buses['name'])
 
+        # Assemble PV contributions, e.g., models which inject power and keep
+        # the terminal voltage constant. There might be both PV and PQ
+        # contributions on the same bus, but if there are PV contributions, the
+        # bus will be defined as a PV bus.
         for mdl in self.mdl_instructions['load_flow_pv']:
             bus_idx, p, v = mdl.load_flow_pv()
             if sl_idx in bus_idx:
