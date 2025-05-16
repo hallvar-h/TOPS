@@ -27,3 +27,8 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/hallvar-h/TOPS"
 "Bug Tracker" = "https://github.com/hallvar-h/TOPS/issues"
+
+[project.optional-dependencies]
+examples = [
+    "fastparquet>=0.8.1",
+]
