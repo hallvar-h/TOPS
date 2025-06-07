@@ -152,3 +152,28 @@ class DynamicLoadFiltered(DynamicLoad):
 
         self.lpf_g.initialize(x_0, v_0, y_load.real)
         self.lpf_b.initialize(x_0, v_0, y_load.imag)
+
+
+class ConstPowerLoad(DAEModel):
+    def __init__(self, data, sys_par, **kwargs):
+        super().__init__(data, sys_par, **kwargs)
+        self.data = data
+        self.par = data
+        self.n_units = len(data)
+
+        self.bus_idx = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
+        self.bus_idx_red = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
+        self.sys_par = sys_par  # {'s_n': 0, 'f_n': 50, 'bus_v_n': None}
+
+    def bus_ref_spec(self):
+        return {'terminal': self.par['bus']}
+
+    def reduced_system(self):
+        return self.par['bus']
+
+    def load_flow_pq(self):
+        return self.bus_idx['terminal'], self.par['P'], self.par['Q']
+
+    def apparent_power_injections(self, x, v):
+        s_inj = -(self.par['P'] + 1j*self.par['Q'])/self.sys_par['s_n']
+        return self.bus_idx_red['terminal'], s_inj

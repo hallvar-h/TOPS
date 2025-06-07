@@ -5,11 +5,13 @@ import tops.dyn_models as mdl_lib
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
 from scipy.sparse import diags as sp_diags
+from scipy.optimize import fsolve
 
 import json
 import os
 
 import importlib
+import warnings
 importlib.reload(mdl_lib)
 
 
@@ -130,6 +132,7 @@ class PowerSystemModel:
             'dyn_var_adm',
             'init_from_load_flow',
             'current_injections',
+            'apparent_power_injections',
             # 'init_mdl', 'lf_adm', 'dyn_const_adm', 'dyn_var_adm',
             # '_current_injections', 'state_derivatives',
             # 'ref'
@@ -149,6 +152,9 @@ class PowerSystemModel:
         else:
             bus_idx_red = np.arange(self.n_bus)
 
+        self.algebraic_equations_are_linear = len(
+            self.mdl_instructions['apparent_power_injections']) == 0
+        
         # Remove duplicate buses
         bus_idx_red_sort, idx = np.unique(bus_idx_red, return_index=True)
         self.bus_idx_red = bus_idx_red_sort
@@ -351,7 +357,7 @@ class PowerSystemModel:
 
         return dx
 
-    def solve_algebraic(self, t, x):
+    def solve_algebraic(self, t, x, v_0=None):
         '''
         Solves algebraic equations given states
         :param t:
@@ -369,89 +375,92 @@ class PowerSystemModel:
             sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
             y_var += sp_mat.todense()
         y_var = sp.csr_matrix(y_var)
+        if self.algebraic_equations_are_linear:
+            return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
 
-        return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
+        y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
+        s_inj = np.zeros(self.n_bus_red, dtype=complex)
+        for mdl in self.mdl_instructions['apparent_power_injections']:
+            bus_idx_red, s_inj_mdl = mdl.apparent_power_injections(x, None)
+            np.add.at(s_inj, bus_idx_red, s_inj_mdl)
+    
+        v_abs_idx = slice(self.n_bus)
+        v_ang_idx = slice(self.n_bus, 2*self.n_bus)
+        
+        def f(x):
+            v = x[v_abs_idx]*np.exp(1j*x[v_ang_idx])
+            f_complex = y_bus.dot(v)*np.conj(v) - i_inj*np.conj(v) - np.conj(s_inj)
+            return np.concatenate([f_complex.real, f_complex.imag])
+        
+        # v_0 = None
+        v_0 = v_0 if v_0 is not None else np.ones_like(self.v0)
+        x_alg = np.concatenate([abs(v_0), np.angle(v_0)])
 
-    def no_fun(self):
-        pass
-        '''
-        # Interfacing models  with system (current injections)
-        self.i_inj_d = np.zeros(self.n_bus_red, dtype=complex)
-        self.i_inj_q = np.zeros(self.n_bus_red, dtype=complex)
-        for dm in self.mdl_instructions['current_injections']:
-            I_n = dm.par['S_n'] / (np.sqrt(3) * dm.par['V_n'])
-            i_inj_d_mdl, i_inj_q_mdl = dm.current_injections(
-                x[dm.idx].view(dtype=dm.dtypes),
-                dm.input,
-                dm.output,
-                dm.par,
-                dm.int_par,
-            )*I_n/self.i_n[dm.bus_idx]
-            np.add.at(self.i_inj_d, dm.bus_idx_red, i_inj_d_mdl)
-            np.add.at(self.i_inj_q, dm.bus_idx_red, i_inj_q_mdl)
+        with warnings.catch_warnings():
+            # Cause all warnings to always be triggered.
+            warnings.filterwarnings('error')
+            try:
+                x_alg = fsolve(f, x_alg, xtol=1e-10)
+            except RuntimeWarning:
+                x_alg *= np.nan
+                print('Warning: Power flow did not converge.')
+                # raise Warning('''Singular jacobian when solving
+                    # algebraic equations''') 
 
-        self.i_inj[:] = self.i_inj_d + self.i_inj_q
+        # Implementation of Newton's method. Turned out a bit slower than fsolve
+        #tol = 1e-6
+        #max_it = 2000
+        #it = 0
+        # x_alg[v_ang_idx] %= 2*np.pi
 
-        # Get dynamic impedances
-        self.y_bus_red_dyn *= 0
-        for dm in self.mdl_functions['dyn_var_adm']:
-            y_mdl = dm.dyn_var_adm(
-                x[dm.idx].view(dtype=dm.dtypes) if len(dm.state_list) > 0 else None,
-                dm.input, dm.output, dm.par, dm.int_par
-            )
+          
+        # if False:    
+            # print((np.angle(i_inj) - np.angle(i_inj)[0])[:4])
+            error = np.linalg.norm(f(x_alg))
+            # while error > tol and it < max_it:
+            #     A = sp.csr_matrix(dps_uf.jacobian_num(f, x_alg))
+            #     # A += np.random.randn(2*self.n_bus, 2*self.n_bus)
+            #     # if False:  # np.linalg.cond(A) < 1e-10:
+            #         # raise Exception('''Singular jacobian when solving
+            #             # algebraic equations''') 
+            #     b = - f(x_alg)
+            #     try:
+            #         dx = sp_linalg.spsolve(A, b)
+            #     except sp.linalg.MatrixRankWarning:
+            #         # warnings.filterwarnings('default')
+            #         raise Warning('''Singular jacobian when solving
+            #             algebraic equations''') 
 
-            data = np.array(y_mdl).flatten()
-            row_idx = dm.row_idx.flatten()
-            col_idx = dm.col_idx.flatten()
-            sp_mat = sp.csr_matrix((data, (row_idx, col_idx)), shape=(self.n_bus_red,) * 2)
-            self.y_bus_red_dyn += sp_mat
+            #     x_alg += dx
 
-            # np.add.at(self.y_bus_red_dyn, (dm.row_idx, dm.col_idx), y_bus_red_dyn_mdl)
-            # for y_mdl_, row_idx, col_idx in zip(np.array(y_mdl).T, dm.row_idx.T, dm.col_idx.T):
-                # print(row_idx.shape)
-                # print(y_mdl_.shape)
-                # self.y_bus_red_dyn[row_idx, col_idx] = self.y_bus_red_dyn[row_idx, col_idx] + y_mdl_
-            # self.y_bus_red_dyn[dm.row_idx, dm.col_idx] = y_bus_red_dyn_mdl
-
-        # Solve network equations
-        # self.v_red = sp_linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
-        y_bus = self.y_bus_red + self.y_bus_red_dyn + self.y_bus_red_mod
-
-        if self.algebraic_equations_iterate:
-            v_red = self.v_red.copy()
-
-            tol = 1e-10
-            max_it = 10
-            error = 10 * tol
-            it = 0
-
-            # t_tot = time.time()
-            # t_spsolve_cum0 = 0
-            while error > tol and it < max_it:
-                s_v2_diag = np.conj(sp_diags(self.s_inj / v_red ** 2))
-                A = y_bus + s_v2_diag
-                b = np.conj(self.s_inj / v_red) + self.i_inj + s_v2_diag * v_red
-                v_red = sp_linalg.spsolve(A, b)
-                error = np.linalg.norm(y_bus.dot(v_red) - np.conj(self.s_inj / v_red) - self.i_inj)
-                it += 1
-
-            if error > tol:
-                print('Warning: Solution of algebraic equations did not converge.')
-
-            return v_red
-        else:
-            return sp_linalg.spsolve(y_bus, self.i_inj)
-        '''
+            #     # x_alg[v_ang_idx] %= 2*np.pi
+            #     # x_alg[v_abs_idx][x_alg[v_abs_idx] < 0.7] = 0.7
+            #     # x_alg[v_abs_idx][x_alg[v_abs_idx] > 1.3] = 1.3
 
 
-    def ode_fun(self, t, x):
+            #     error = np.linalg.norm(f(x_alg))
+            #     it += 1
+            # #     # print(f"{it} \t {error:.6f}")
+            
+            # if error > tol:
+                # raise Warning('''Solution of algebraic equations did not converge
+                    # due to apparent power injections.''')
+                # print('''Warning: ''')
+                # x_alg *= np.nan
+                # self.it_prev = it
+
+        v = x_alg[v_abs_idx]*np.exp(1j*x_alg[v_ang_idx])
+        return v
+
+
+    def ode_fun(self, t, x, v_0=None):
         '''
         Can be integrated with any ODE-integration method (e.g. Euler, Runge-Kutta etc.)
         :param t:
         :param x:
         :return:
         '''
-        v_red = self.solve_algebraic(t, x)
+        v_red = self.solve_algebraic(t, x, v_0=v_0)
 
         return self.state_derivatives(t, x, v_red)
 
