@@ -1,6 +1,8 @@
 import tops.solvers as dps_sol
 import threading
 import numpy as np
+from collections import defaultdict
+import pandas as pd
 
 
 class Simulator:
@@ -19,7 +21,7 @@ class Simulator:
         else:
             self.ode_fun = self.ps.ode_fun
 
-        self.sol = solver(self.ps.state_derivatives, self.ps.solve_algebraic, 0, self.ps.x0, max_step=self.dt, first_step=self.dt)
+        self.sol = solver(self.ps.state_derivatives, self.ps.solve_algebraic, 0, self.ps.x0, self.ps.v0, max_step=self.dt, first_step=self.dt)
 
         self.new_data_cv = threading.Condition()
         self.new_data_ready = False
@@ -110,3 +112,23 @@ class InterfacerDirect:
     def update(self, input):
         # Update internal states from whatever is returned by "read_input_signal"
         pass
+
+
+class ResultKeeper:
+    def __init__(self, sim, **kwargs):
+        self.t = []
+        self.x = []
+        self.sim = sim
+        self.store = defaultdict(list)
+        self.spec = dict(**kwargs)
+
+    def update(self, sim):
+        self.t.append(sim.sol.t)
+        self.x.append(sim.sol.x.copy())
+        # self.store
+        for key, val in self.spec.items():
+            self.store[key].append(val(sim.sol.x, sim.sol.v).copy())
+        
+    def get_dataframe(self):
+        df = pd.DataFrame(columns=self.sim.ps.state_desc, data=self.x, index=self.t)
+        return df

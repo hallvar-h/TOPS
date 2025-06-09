@@ -18,12 +18,15 @@ classifiers = [
 	"Operating System :: OS Independent",
 ]
 dependencies = [
-	"numpy",
-	"scipy",
-	"matplotlib",
-    "pandas"
-	]
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pandas",
+    "progressbar2>=4.5.0",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/hallvar-h/TOPS"
 "Bug Tracker" = "https://github.com/hallvar-h/TOPS/issues"
+
+[tool.pdm]

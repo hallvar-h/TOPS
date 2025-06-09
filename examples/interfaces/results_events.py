@@ -1,30 +1,9 @@
 import tops.dynamic as dps
-from tops.simulator import Simulator, Events
+from tops.simulator import Simulator, Events, ResultKeeper
 import pandas as pd
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import numpy as np
-
-
-class ResultKeeper:
-    def __init__(self, sim, **kwargs):
-        self.t = []
-        self.x = []
-        self.sim = sim
-        self.store = defaultdict(list)
-        self.spec = dict(**kwargs)
-
-    def update(self, sim):
-        self.t.append(sim.sol.t)
-        self.x.append(sim.sol.x.copy())
-        # self.store
-        for key, val in self.spec.items():
-            self.store[key].append(val(sim.sol.x, sim.sol.v).copy())
-        
-
-    def get_dataframe(self):
-        df = pd.DataFrame(columns=self.sim.ps.state_desc, data=self.x, index=self.t)
-        return df
 
 
 if __name__ == '__main__':
@@ -58,11 +37,7 @@ if __name__ == '__main__':
 
     plt.plot(res_keeper.t, res_keeper.store["p_line_from"])
     plt.show()
-    
-    self = res_keeper
-    index = pd.MultiIndex.from_tuples([tuple(row) for row in sim.ps.state_desc], names=['Model', 'state'])
 
-    df = pd.DataFrame(columns=index, data=self.x, index=self.t)
 
     df[('G1', 'speed')].plot()
     plt.show()
