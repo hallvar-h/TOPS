@@ -1,0 +1,19 @@
+tops.ps_models.sm_load
+======================
+
+.. py:module:: tops.ps_models.sm_load
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   tops.ps_models.sm_load.load
+
+
+Module Contents
+---------------
+
+.. py:function:: load()
+

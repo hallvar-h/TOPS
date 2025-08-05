@@ -1,0 +1,138 @@
+tops.dynamic
+============
+
+.. py:module:: tops.dynamic
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dynamic.PowerSystemModel
+
+
+Module Contents
+---------------
+
+.. py:class:: PowerSystemModel(model, user_mdl_lib=None)
+
+   .. py:attribute:: user_mdl_lib
+      :value: None
+
+
+
+   .. py:attribute:: model
+
+
+   .. py:attribute:: perform_kron_reduction
+      :value: False
+
+
+
+   .. py:attribute:: pf_max_it
+      :value: 10
+
+
+
+   .. py:attribute:: pf_tol
+      :value: 1e-08
+
+
+
+   .. py:attribute:: s_n
+
+
+   .. py:attribute:: f_n
+
+
+   .. py:attribute:: slack_bus
+
+
+   .. py:attribute:: buses
+
+
+   .. py:attribute:: n_bus
+      :value: 1
+
+
+
+   .. py:attribute:: y_bus_lf
+      :value: None
+
+
+
+   .. py:attribute:: power_flow_ready
+      :value: False
+
+
+
+   .. py:attribute:: setup_ready
+      :value: False
+
+
+
+   .. py:attribute:: initialization_ready
+      :value: False
+
+
+
+   .. py:attribute:: sys_data
+
+
+   .. py:attribute:: dyn_mdls
+      :value: []
+
+
+
+   .. py:attribute:: dyn_mdls_dict
+
+
+   .. py:method:: add_model_data(model_data)
+
+
+   .. py:method:: setup()
+
+
+   .. py:method:: build_y_bus_lf()
+
+
+   .. py:method:: build_y_bus_dyn()
+
+
+   .. py:method:: power_flow(print_output=False)
+
+
+   .. py:method:: kron_reduction(y_bus, keep_buses)
+
+
+   .. py:method:: define_state_vector()
+
+
+   .. py:method:: init_dyn_sim()
+
+
+   .. py:method:: state_derivatives(t, x, v_red)
+
+
+   .. py:method:: solve_algebraic(t, x)
+
+      Solves algebraic equations given states
+      :param t:
+      :param x:
+      :return:
+
+
+
+   .. py:method:: no_fun()
+
+
+   .. py:method:: ode_fun(t, x)
+
+      Can be integrated with any ODE-integration method (e.g. Euler, Runge-Kutta etc.)
+      :param t:
+      :param x:
+      :return:
+
+
+

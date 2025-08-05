@@ -1,0 +1,23 @@
+tops
+====
+
+.. py:module:: tops
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/tops/dyn_models/index
+   /autoapi/tops/dynamic/index
+   /autoapi/tops/modal_analysis/index
+   /autoapi/tops/plotting/index
+   /autoapi/tops/ps_models/index
+   /autoapi/tops/simulator/index
+   /autoapi/tops/solvers/index
+   /autoapi/tops/solvers_sde/index
+   /autoapi/tops/utility_functions/index
+
+

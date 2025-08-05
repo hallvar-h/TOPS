@@ -1,0 +1,37 @@
+tops.dyn_models.pss
+===================
+
+.. py:module:: tops.dyn_models.pss
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dyn_models.pss.PSS
+   tops.dyn_models.pss.STAB1
+
+
+Module Contents
+---------------
+
+.. py:class:: PSS
+
+   .. py:method:: connections()
+
+
+.. py:class:: STAB1(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.blocks.DAEModel`, :py:obj:`PSS`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+

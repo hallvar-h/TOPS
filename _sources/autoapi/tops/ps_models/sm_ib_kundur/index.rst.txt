@@ -1,0 +1,19 @@
+tops.ps_models.sm_ib_kundur
+===========================
+
+.. py:module:: tops.ps_models.sm_ib_kundur
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   tops.ps_models.sm_ib_kundur.load
+
+
+Module Contents
+---------------
+
+.. py:function:: load()
+

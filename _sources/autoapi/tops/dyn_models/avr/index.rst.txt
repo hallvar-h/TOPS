@@ -1,0 +1,131 @@
+tops.dyn_models.avr
+===================
+
+.. py:module:: tops.dyn_models.avr
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dyn_models.avr.AVR
+   tops.dyn_models.avr.SEXS
+   tops.dyn_models.avr.SEXS_PI
+   tops.dyn_models.avr.IEEET1
+   tops.dyn_models.avr.SCRX
+
+
+Module Contents
+---------------
+
+.. py:class:: AVR
+
+   .. py:method:: connections()
+
+
+.. py:class:: SEXS(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.blocks.DAEModel`, :py:obj:`AVR`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: input_list()
+
+      Returns list of inputs for dynamic model.
+      Should be overwritten (if model has one or more inputs)
+
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: int_par_list()
+
+
+   .. py:method:: init_from_connections(x0, v0, output_0)
+
+
+.. py:class:: SEXS_PI(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.blocks.DAEModel`, :py:obj:`AVR`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: input_list()
+
+      Returns list of inputs for dynamic model.
+      Should be overwritten (if model has one or more inputs)
+
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: init_from_connections(x0, v0, output_0)
+
+
+.. py:class:: IEEET1(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.blocks.DAEModel`, :py:obj:`AVR`
+
+
+   Saturation not yet included!
+
+
+   .. py:method:: input_list()
+
+      Returns list of inputs for dynamic model.
+      Should be overwritten (if model has one or more inputs)
+
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: int_par_list()
+
+
+   .. py:method:: init_from_connections(x0, v0, output_0)
+
+
+.. py:class:: SCRX(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.blocks.DAEModel`, :py:obj:`AVR`
+
+
+   Missing negative current logic!
+
+
+   .. py:method:: input_list()
+
+      Returns list of inputs for dynamic model.
+      Should be overwritten (if model has one or more inputs)
+
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: int_par_list()
+
+
+   .. py:method:: init_from_connections(x0, v0, output_0)
+
+

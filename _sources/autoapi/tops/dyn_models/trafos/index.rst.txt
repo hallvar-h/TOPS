@@ -1,0 +1,134 @@
+tops.dyn_models.trafos
+======================
+
+.. py:module:: tops.dyn_models.trafos
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dyn_models.trafos.Trafo
+   tops.dyn_models.trafos.DynTrafo
+
+
+Module Contents
+---------------
+
+.. py:class:: Trafo(data, sys_par, **kwargs)
+
+   Bases: :py:obj:`tops.dyn_models.utils.DAEModel`
+
+
+   Base class for dynamic models
+
+
+   .. py:attribute:: data
+
+
+   .. py:attribute:: par
+
+
+   .. py:attribute:: n_units
+
+
+   .. py:attribute:: connected
+
+
+   .. py:attribute:: bus_idx
+
+
+   .. py:attribute:: bus_idx_red
+
+
+   .. py:attribute:: sys_par
+
+
+   .. py:method:: bus_ref_spec()
+
+
+   .. py:method:: init_extras()
+
+
+   .. py:method:: load_flow_adm()
+
+
+   .. py:method:: dyn_const_adm()
+
+
+   .. py:method:: i_from(x, v)
+
+
+   .. py:method:: i_to(x, v)
+
+
+   .. py:method:: I_from(x, v)
+
+
+   .. py:method:: I_to(x, v)
+
+
+   .. py:method:: s_from(x, v)
+
+
+   .. py:method:: s_to(x, v)
+
+
+   .. py:method:: p_from(x, v)
+
+
+   .. py:method:: p_to(x, v)
+
+
+   .. py:method:: q_from(x, v)
+
+
+   .. py:method:: q_to(x, v)
+
+
+   .. py:method:: s_line(x, v)
+
+
+   .. py:method:: p_line(x, v)
+
+
+   .. py:method:: q_line(x, v)
+
+
+   .. py:method:: p_loss_tot(x, v)
+
+
+.. py:class:: DynTrafo(data, sys_par, **kwargs)
+
+   Bases: :py:obj:`Trafo`
+
+
+   Base class for dynamic models
+
+
+   .. py:method:: input_list()
+
+      Returns list of inputs for dynamic model.
+      Should be overwritten (if model has one or more inputs)
+
+
+
+   .. py:method:: load_flow_adm()
+
+
+   .. py:method:: init_from_load_flow(x_0, v_0, S)
+
+
+   .. py:method:: dyn_const_adm()
+
+
+   .. py:method:: dyn_var_adm(x, v)
+
+
+   .. py:method:: i_from(x, v)
+
+
+   .. py:method:: i_to(x, v)
+
+

@@ -1,0 +1,152 @@
+tops.dyn_models.utils
+=====================
+
+.. py:module:: tops.dyn_models.utils
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   tops.dyn_models.utils.DynMdl
+   tops.dyn_models.utils.DAEModel
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   tops.dyn_models.utils.determine_connections
+   tops.dyn_models.utils.get_submodules
+   tops.dyn_models.utils.output
+   tops.dyn_models.utils.auto_init
+
+
+Module Contents
+---------------
+
+.. py:function:: determine_connections(dyn_mdls, order_by='input')
+
+.. py:function:: get_submodules(mdl)
+
+.. py:function:: output(f)
+
+.. py:class:: DynMdl
+
+   .. py:method:: get_states(x)
+
+
+   .. py:method:: set_input(input_name, value, idx=None)
+
+
+.. py:class:: DAEModel(par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs)
+
+   Base class for dynamic models
+
+
+   .. py:attribute:: sys_par
+      :value: None
+
+
+
+   .. py:attribute:: n_units
+
+
+   .. py:attribute:: n_states
+      :value: 0
+
+
+
+   .. py:attribute:: idx
+
+
+   .. py:attribute:: state_desc
+
+
+   .. py:attribute:: dtypes
+
+
+   .. py:attribute:: state_idx
+
+
+   .. py:attribute:: state_idx_global
+
+
+   .. py:attribute:: _output_ready
+
+
+   .. py:attribute:: _output_values
+
+
+   .. py:attribute:: _input_values
+
+
+   .. py:attribute:: _store_output
+      :value: False
+
+
+
+   .. py:attribute:: int_par
+
+
+   .. py:method:: state_list()
+
+      Returns list of states for dynamic model.
+      Should be overwritten (if model has one or more states)
+
+
+
+   .. py:method:: input_list()
+
+      Returns list of inputs for dynamic model.
+      Should be overwritten (if model has one or more inputs)
+
+
+
+   .. py:method:: output_list()
+
+      Returns list of outputs for dynamic model.
+      Should be overwritten (if model has one or more outputs)
+
+
+
+   .. py:method:: int_par_list()
+
+
+   .. py:method:: reset_outputs()
+
+
+   .. py:method:: set_input(input_name, value, idx=None)
+
+
+   .. py:method:: disconnect_input(input_name)
+
+
+   .. py:method:: add_blocks()
+
+      Sub-modules can be specified by overwriting this function
+
+
+
+   .. py:method:: update_block_names()
+
+      Update names of modules and sub-modules
+
+
+
+   .. py:method:: parse_input_data(**kwargs)
+
+      Read parameters from kwargs
+
+
+
+   .. py:method:: local_view(x)
+
+
+   .. py:method:: output(x, v)
+
+
+.. py:function:: auto_init(mdl, x0, v0, output_0)
+

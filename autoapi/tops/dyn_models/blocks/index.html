@@ -1,0 +1,710 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tops.dyn_models.blocks &mdash; TOPS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=fd3f3429" />
+
+  
+      <script src="../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../../../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="tops.dyn_models.gen" href="../gen/index.html" />
+    <link rel="prev" title="tops.dyn_models.avr" href="../avr/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../index.html" class="icon icon-home">
+            TOPS
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html">tops</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../index.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="../index.html">tops.dyn_models</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../dynamic/index.html">tops.dynamic</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../modal_analysis/index.html">tops.modal_analysis</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../plotting/index.html">tops.plotting</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../ps_models/index.html">tops.ps_models</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../simulator/index.html">tops.simulator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../solvers/index.html">tops.solvers</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../solvers_sde/index.html">tops.solvers_sde</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../utility_functions/index.html">tops.utility_functions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">TOPS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../index.html">API Reference</a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">tops</a></li>
+          <li class="breadcrumb-item"><a href="../index.html">tops.dyn_models</a></li>
+      <li class="breadcrumb-item active">tops.dyn_models.blocks</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../../../_sources/autoapi/tops/dyn_models/blocks/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-tops.dyn_models.blocks">
+<span id="tops-dyn-models-blocks"></span><h1>tops.dyn_models.blocks<a class="headerlink" href="#module-tops.dyn_models.blocks" title="Link to this heading"></a></h1>
+<section id="classes">
+<h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.PIRegulator" title="tops.dyn_models.blocks.PIRegulator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PIRegulator</span></code></a></p></td>
+<td><p>Base class for dynamic models</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.Integrator" title="tops.dyn_models.blocks.Integrator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Integrator</span></code></a></p></td>
+<td><p>Base class for dynamic models</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.Integrator2" title="tops.dyn_models.blocks.Integrator2"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Integrator2</span></code></a></p></td>
+<td><p>Same as Integrator, but with time constant.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.Gain" title="tops.dyn_models.blocks.Gain"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Gain</span></code></a></p></td>
+<td><p>Base class for dynamic models</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.Limiter" title="tops.dyn_models.blocks.Limiter"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Limiter</span></code></a></p></td>
+<td><p>Base class for dynamic models</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.Washout" title="tops.dyn_models.blocks.Washout"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Washout</span></code></a></p></td>
+<td><p>Base class for dynamic models</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.TimeConstant" title="tops.dyn_models.blocks.TimeConstant"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimeConstant</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.TimeConstantVar" title="tops.dyn_models.blocks.TimeConstantVar"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimeConstantVar</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.TimeConstantGain" title="tops.dyn_models.blocks.TimeConstantGain"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimeConstantGain</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.TimeConstantLims" title="tops.dyn_models.blocks.TimeConstantLims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimeConstantLims</span></code></a></p></td>
+<td><p>___ V_max</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.TimeConstantGainLims" title="tops.dyn_models.blocks.TimeConstantGainLims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimeConstantGainLims</span></code></a></p></td>
+<td><p>___ V_max</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.LeadLag" title="tops.dyn_models.blocks.LeadLag"><code class="xref py py-obj docutils literal notranslate"><span class="pre">LeadLag</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.PIRegulator2" title="tops.dyn_models.blocks.PIRegulator2"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PIRegulator2</span></code></a></p></td>
+<td><p>Base class for dynamic models</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.PIRegulator2Lims" title="tops.dyn_models.blocks.PIRegulator2Lims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PIRegulator2Lims</span></code></a></p></td>
+<td><p>Base class for dynamic models</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.WashoutGain" title="tops.dyn_models.blocks.WashoutGain"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WashoutGain</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.Saturation" title="tops.dyn_models.blocks.Saturation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Saturation</span></code></a></p></td>
+<td><p>Not verified!!</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#tops.dyn_models.blocks.Backlash" title="tops.dyn_models.blocks.Backlash"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Backlash</span></code></a></p></td>
+<td><p>Based on PowerFactory implementation</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">PIRegulator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<p>Base class for dynamic models</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator.add_blocks">
+<span class="sig-name descname"><span class="pre">add_blocks</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator.add_blocks" title="Link to this definition"></a></dt>
+<dd><p>Sub-modules can be specified by overwriting this function</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Integrator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">Integrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Integrator" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<p>Base class for dynamic models</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Integrator.state_list">
+<span class="sig-name descname"><span class="pre">state_list</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Integrator.state_list" title="Link to this definition"></a></dt>
+<dd><p>Returns list of states for dynamic model.
+Should be overwritten (if model has one or more states)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Integrator.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Integrator.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Integrator.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Integrator.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Integrator.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Integrator.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Integrator2">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">Integrator2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Integrator2" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#tops.dyn_models.blocks.Integrator" title="tops.dyn_models.blocks.Integrator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Integrator</span></code></a></p>
+<p>Same as Integrator, but with time constant.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Integrator2.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Integrator2.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Integrator2.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Integrator2.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Gain">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">Gain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Gain" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<p>Base class for dynamic models</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Gain.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Gain.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Gain.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Gain.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Limiter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">Limiter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Limiter" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<p>Base class for dynamic models</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Limiter.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Limiter.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Washout">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">Washout</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Washout" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<p>Base class for dynamic models</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Washout.state_list">
+<span class="sig-name descname"><span class="pre">state_list</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Washout.state_list" title="Link to this definition"></a></dt>
+<dd><p>Returns list of states for dynamic model.
+Should be overwritten (if model has one or more states)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Washout.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Washout.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Washout.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Washout.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstant">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">TimeConstant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstant" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<blockquote>
+<div><blockquote>
+<div></div></blockquote>
+<div class="line-block">
+<div class="line-block">
+<div class="line"><a href="#id1"><span class="problematic" id="id2">|</span></a></div>
+</div>
+<div class="line">1       |</div>
+</div>
+</div></blockquote>
+<dl>
+<dt>u —-&gt;|  ———–  <a href="#id3"><span class="problematic" id="id4">|</span></a>—-&gt; y</dt><dd><div class="line-block">
+<div class="line">1 + s*T    |</div>
+</div>
+<p><a href="#id29"><span class="problematic" id="id30">|_______________|</span></a></p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstant.zero_idx">
+<span class="sig-name descname"><span class="pre">zero_idx</span></span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstant.zero_idx" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstant.state_list">
+<span class="sig-name descname"><span class="pre">state_list</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstant.state_list" title="Link to this definition"></a></dt>
+<dd><p>Returns list of states for dynamic model.
+Should be overwritten (if model has one or more states)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstant.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstant.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstant.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstant.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstant.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstant.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantVar">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">TimeConstantVar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantVar" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#tops.dyn_models.blocks.TimeConstant" title="tops.dyn_models.blocks.TimeConstant"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimeConstant</span></code></a></p>
+<blockquote>
+<div><blockquote>
+<div></div></blockquote>
+<div class="line-block">
+<div class="line-block">
+<div class="line"><a href="#id5"><span class="problematic" id="id6">|</span></a></div>
+</div>
+<div class="line">1       |</div>
+</div>
+</div></blockquote>
+<dl>
+<dt>u —-&gt;|  ———–  <a href="#id7"><span class="problematic" id="id8">|</span></a>—-&gt; y</dt><dd><div class="line-block">
+<div class="line">K + s*T    |</div>
+</div>
+<p><a href="#id31"><span class="problematic" id="id32">|_______________|</span></a></p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantVar.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantVar.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantVar.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantVar.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantGain">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">TimeConstantGain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantGain" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#tops.dyn_models.blocks.TimeConstant" title="tops.dyn_models.blocks.TimeConstant"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimeConstant</span></code></a></p>
+<blockquote>
+<div><blockquote>
+<div></div></blockquote>
+<div class="line-block">
+<div class="line-block">
+<div class="line"><a href="#id9"><span class="problematic" id="id10">|</span></a></div>
+</div>
+<div class="line">1       |</div>
+</div>
+</div></blockquote>
+<dl>
+<dt>u —-&gt;|  ———–  <a href="#id11"><span class="problematic" id="id12">|</span></a>—-&gt; y</dt><dd><div class="line-block">
+<div class="line">1 + s*T    |</div>
+</div>
+<p><a href="#id33"><span class="problematic" id="id34">|_______________|</span></a></p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantGain.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantGain.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantGain.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantGain.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantLims">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">TimeConstantLims</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantLims" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>___ V_max</p>
+</div></blockquote>
+<p>________/_____</p>
+</div></blockquote>
+<div class="line-block">
+<div class="line-block">
+<div class="line"><a href="#id13"><span class="problematic" id="id14">|</span></a></div>
+</div>
+<div class="line">1       |</div>
+</div>
+</div></blockquote>
+<dl>
+<dt>u —-&gt;|  ———–  <a href="#id15"><span class="problematic" id="id16">|</span></a>—-&gt; y</dt><dd><blockquote>
+<div><div class="line-block">
+<div class="line">1 + s*T_2   |</div>
+</div>
+<dl class="simple">
+<dt><a href="#id35"><span class="problematic" id="id36">|_______________|</span></a></dt><dd><p>___/</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>V_min</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantLims.state_list">
+<span class="sig-name descname"><span class="pre">state_list</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantLims.state_list" title="Link to this definition"></a></dt>
+<dd><p>Returns list of states for dynamic model.
+Should be overwritten (if model has one or more states)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantLims.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantLims.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantLims.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantLims.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantLims.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantLims.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantGainLims">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">TimeConstantGainLims</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantGainLims" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#tops.dyn_models.blocks.TimeConstantLims" title="tops.dyn_models.blocks.TimeConstantLims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TimeConstantLims</span></code></a></p>
+<blockquote>
+<div><blockquote>
+<div><blockquote>
+<div><p>___ V_max</p>
+</div></blockquote>
+<p>________/_____</p>
+</div></blockquote>
+<div class="line-block">
+<div class="line-block">
+<div class="line"><a href="#id17"><span class="problematic" id="id18">|</span></a></div>
+</div>
+<div class="line">K       |</div>
+</div>
+</div></blockquote>
+<dl>
+<dt>u —-&gt;|  ———–  <a href="#id19"><span class="problematic" id="id20">|</span></a>—-&gt; y</dt><dd><blockquote>
+<div><div class="line-block">
+<div class="line">1 + s*T_2   |</div>
+</div>
+<dl class="simple">
+<dt><a href="#id37"><span class="problematic" id="id38">|_______________|</span></a></dt><dd><p>___/</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>V_min</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantGainLims.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantGainLims.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.TimeConstantGainLims.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.TimeConstantGainLims.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.LeadLag">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">LeadLag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.LeadLag" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<blockquote>
+<div><blockquote>
+<div></div></blockquote>
+<div class="line-block">
+<div class="line-block">
+<div class="line"><a href="#id21"><span class="problematic" id="id22">|</span></a></div>
+</div>
+<div class="line">1 + s*T_1   |</div>
+</div>
+</div></blockquote>
+<dl>
+<dt>u —-&gt;|  ———–  <a href="#id23"><span class="problematic" id="id24">|</span></a>—-&gt; y</dt><dd><div class="line-block">
+<div class="line">1 + s*T_2   |</div>
+</div>
+<p><a href="#id39"><span class="problematic" id="id40">|_______________|</span></a></p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.LeadLag.state_list">
+<span class="sig-name descname"><span class="pre">state_list</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.LeadLag.state_list" title="Link to this definition"></a></dt>
+<dd><p>Returns list of states for dynamic model.
+Should be overwritten (if model has one or more states)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.LeadLag.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.LeadLag.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.LeadLag.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.LeadLag.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.LeadLag.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.LeadLag.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator2">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">PIRegulator2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator2" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<p>Base class for dynamic models</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator2.state_list">
+<span class="sig-name descname"><span class="pre">state_list</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator2.state_list" title="Link to this definition"></a></dt>
+<dd><p>Returns list of states for dynamic model.
+Should be overwritten (if model has one or more states)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator2.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator2.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator2.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator2.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator2.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator2.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator2Lims">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">PIRegulator2Lims</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator2Lims" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#tops.dyn_models.blocks.PIRegulator2" title="tops.dyn_models.blocks.PIRegulator2"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PIRegulator2</span></code></a></p>
+<p>Base class for dynamic models</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator2Lims.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator2Lims.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator2Lims.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator2Lims.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.PIRegulator2Lims.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.PIRegulator2Lims.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.WashoutGain">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">WashoutGain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.WashoutGain" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<blockquote>
+<div><blockquote>
+<div></div></blockquote>
+<div class="line-block">
+<div class="line-block">
+<div class="line"><a href="#id25"><span class="problematic" id="id26">|</span></a></div>
+</div>
+<div class="line">s*K      |</div>
+</div>
+</div></blockquote>
+<dl>
+<dt>u —-&gt;|  ———–  <a href="#id27"><span class="problematic" id="id28">|</span></a>—-&gt; y</dt><dd><div class="line-block">
+<div class="line">1 + s*T    |</div>
+</div>
+<p><a href="#id41"><span class="problematic" id="id42">|_______________|</span></a></p>
+</dd>
+</dl>
+<p>sK/(1+sT) = y/u
+u*sK = y + sTy
+s(Ku - Ty) = y
+x = Ku - Ty
+sx = y
+y = 1/T(Ku - x)</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.WashoutGain.state_list">
+<span class="sig-name descname"><span class="pre">state_list</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.WashoutGain.state_list" title="Link to this definition"></a></dt>
+<dd><p>Returns list of states for dynamic model.
+Should be overwritten (if model has one or more states)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.WashoutGain.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.WashoutGain.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.WashoutGain.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.WashoutGain.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Saturation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">Saturation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Saturation" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<p>Not verified!!</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Saturation.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Saturation.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Backlash">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">tops.dyn_models.blocks.</span></span><span class="sig-name descname"><span class="pre">Backlash</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sys_par</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_state_idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Backlash" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="../utils/index.html#tops.dyn_models.utils.DAEModel" title="tops.dyn_models.utils.DAEModel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tops.dyn_models.utils.DAEModel</span></code></a></p>
+<p>Based on PowerFactory implementation</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Backlash.state_list">
+<span class="sig-name descname"><span class="pre">state_list</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Backlash.state_list" title="Link to this definition"></a></dt>
+<dd><p>Returns list of states for dynamic model.
+Should be overwritten (if model has one or more states)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Backlash.state_derivatives">
+<span class="sig-name descname"><span class="pre">state_derivatives</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Backlash.state_derivatives" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Backlash.output">
+<span class="sig-name descname"><span class="pre">output</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Backlash.output" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="tops.dyn_models.blocks.Backlash.initialize">
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#tops.dyn_models.blocks.Backlash.initialize" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../avr/index.html" class="btn btn-neutral float-left" title="tops.dyn_models.avr" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../gen/index.html" class="btn btn-neutral float-right" title="tops.dyn_models.gen" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hallvar Haugdal.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
