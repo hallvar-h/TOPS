@@ -31,15 +31,12 @@ if __name__ == '__main__':
     res = defaultdict(list)
     t_0 = time.time()
 
-    event_flag = True
-
     # Run simulation
     while t < t_end:
         sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
         # Short circuit
-        if t > 1 and event_flag:
-            event_flag = False
+        if t > 1:
             ps.lines['Line'].event(ps, ps.lines['Line'].par['name'][0], 'disconnect')
 
         # Simulate next step

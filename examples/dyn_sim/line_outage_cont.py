@@ -30,24 +30,19 @@ if __name__ == '__main__':
         x_0 = ps.x_0.copy()
 
         # Solver
-        sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x_0, t_end, max_step=5e-3)
+        sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x_0, t_end, max_step=10e-3, n_it=2)
 
         # Initialize simulation
         t = 0
         res = defaultdict(list)
         t_0 = time.time()
-
-        event_flag = True
-
         
-
         # Run simulation
         while t < t_end:
             sys.stdout.write("\r%d%%" % (t/(t_end)*100))
 
             # Line outage
-            if t > 1 and event_flag:
-                event_flag = False
+            if t > 1:
                 ps.lines['Line'].event(ps, line_name, 'disconnect')
 
             # Simulate next step

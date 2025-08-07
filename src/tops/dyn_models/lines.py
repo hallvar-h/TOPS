@@ -22,14 +22,17 @@ class Line(DAEModel):
     def event(self, ps, line_name, event_name):
         line_idx = lookup_strings(line_name, ps.lines['Line'].par['name'])
 
-        if event_name == 'connect':
+        if not event_name in ["connect", "disconnect"]:
+            print(f"Event {event_name} not defined for Line model.")
+            return
+        
+        if event_name == 'connect' and not self.connected[line_idx]:
             sign = 1
             self.connected[line_idx] = True
-        elif event_name == 'disconnect':
+        elif event_name == 'disconnect' and self.connected[line_idx]:
             sign = -1
             self.connected[line_idx] = False
         else:
-            print(f"Event {event_name} not defined for Line model.")
             return
 
         idx_from = self.bus_idx_red['from_bus'][line_idx]
