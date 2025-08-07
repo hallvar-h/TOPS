@@ -91,31 +91,32 @@ class PowerSystemModel:
 
     def add_model_data(self, model_data):
         for key, val in model_data.items():
-            if isinstance(val, dict):
-                category_key = key
-                category = val
-                for mdl_key, mdl_data_raw in category.items():
-                    if hasattr(self.user_mdl_lib, category_key) and hasattr(getattr(self.user_mdl_lib, category_key), mdl_key):
-                        # print('User model: {}, {}'.format(category_key, mdl_key))
-                        mdl_class = getattr(getattr(self.user_mdl_lib, category_key), mdl_key)
-                    elif hasattr(mdl_lib, category_key) and hasattr(getattr(mdl_lib, category_key), mdl_key):
-                        # print('Standard model: {}, {}'.format(category_key, mdl_key))
-                        mdl_class = getattr(getattr(mdl_lib, category_key), mdl_key)
+            if not isinstance(val, dict):
+                continue
+            category_key = key
+            category = val
+            for mdl_key, mdl_data_raw in category.items():
+                if hasattr(self.user_mdl_lib, category_key) and hasattr(getattr(self.user_mdl_lib, category_key), mdl_key):
+                    # print('User model: {}, {}'.format(category_key, mdl_key))
+                    mdl_class = getattr(getattr(self.user_mdl_lib, category_key), mdl_key)
+                elif hasattr(mdl_lib, category_key) and hasattr(getattr(mdl_lib, category_key), mdl_key):
+                    # print('Standard model: {}, {}'.format(category_key, mdl_key))
+                    mdl_class = getattr(getattr(mdl_lib, category_key), mdl_key)
 
-                    else:
-                        print('Model {}:{} not found in model library.'.format(category_key, mdl_key))
-                        continue
+                else:
+                    print('Model {}:{} not found in model library.'.format(category_key, mdl_key))
+                    continue
 
-                    mdl_data = dps_uf.structured_array_from_list(mdl_data_raw[0], mdl_data_raw[1:])
-                    mdl = mdl_class(mdl_data, self.sys_data)
-                    if hasattr(self, category_key):
-                        getattr(self, category_key).update({mdl_key: mdl})
-                        self.dyn_mdls_dict[category_key].update({mdl_key: mdl})
-                    else:
-                        setattr(self, category_key, {mdl_key: mdl})
-                        self.dyn_mdls_dict[category_key] = {mdl_key: mdl}
+                mdl_data = dps_uf.structured_array_from_list(mdl_data_raw[0], mdl_data_raw[1:])
+                mdl = mdl_class(mdl_data, self.sys_data)
+                if hasattr(self, category_key):
+                    getattr(self, category_key).update({mdl_key: mdl})
+                    self.dyn_mdls_dict[category_key].update({mdl_key: mdl})
+                else:
+                    setattr(self, category_key, {mdl_key: mdl})
+                    self.dyn_mdls_dict[category_key] = {mdl_key: mdl}
 
-                    [self.dyn_mdls.append(item) for item in mdl_lib.utils.get_submodules(mdl)]  # [::-1]
+                [self.dyn_mdls.append(item) for item in mdl_lib.utils.get_submodules(mdl)]  # [::-1]
 
     def setup(self):
         self.mdl_instructions = {key: list() for key in [
@@ -176,7 +177,7 @@ class PowerSystemModel:
         for mdl in self.mdl_instructions['load_flow_adm']:
             data, (row_idx, col_idx) = mdl.load_flow_adm()
             sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())),
-                                   shape=(self.n_bus,) * 2)
+                shape=(self.n_bus,) * 2)
             y_lf += sp_mat.todense()
 
         self.y_bus_lf = y_lf
@@ -231,8 +232,6 @@ class PowerSystemModel:
             bus_type[bus_idx] = 'PV'
             np.add.at(p_pv, bus_idx, p / self.s_n)
             v_pv[bus_idx] = v
-            # mdl.lf_idx = slice(k_lf, mdl.n_units)
-            # k_lf += mdl.n_units
 
         bus_type[sl_idx] = 'SL'
 
@@ -309,9 +308,6 @@ class PowerSystemModel:
         self.y_bus_red = sp.csr_matrix(self.y_bus_red_full)
         self.y_bus_red_mod = sp.csr_matrix(self.y_bus_red_full)*0
 
-        # for mdl in self.dyn_mdls:
-        #     mdl.sys_par['red_to_full'] = self.red_to_full
-
         self.mdl_connections = mdl_lib.utils.determine_connections(self.dyn_mdls_dict)
         for mdl, connections in self.mdl_connections.items():
             for input_key, conn in connections.items():
@@ -327,17 +323,18 @@ class PowerSystemModel:
         # Initialize state vector
         self.mdl_connections_by_source = mdl_lib.utils.determine_connections(self.dyn_mdls_dict, order_by='output')
         for mdl, connections in self.mdl_connections_by_source.items():
-            if hasattr(mdl, 'init_from_connections'):
-                output_values = np.zeros(mdl.n_units, [(field, float) for field in mdl.output_list()])
-                for output_key, conn in connections.items():
-                    init_val = np.zeros(mdl.n_units)
-                    for c in conn:
-                        input_fun = getattr(self.dyn_mdls_dict[c['container']][c['mdl']], c['input'])
-                        input_fun = lambda x, v:  self.dyn_mdls_dict[c['container']][c['mdl']]._input_values[c['input']]
-                        np.add.at(init_val, c['source_idx'], input_fun(None, None)[c['dest_idx']])
-                    output_values[output_key] = init_val
+            if not hasattr(mdl, 'init_from_connections'):
+                continue
+            output_values = np.zeros(mdl.n_units, [(field, float) for field in mdl.output_list()])
+            for output_key, conn in connections.items():
+                init_val = np.zeros(mdl.n_units)
+                for c in conn:
+                    input_fun = getattr(self.dyn_mdls_dict[c['container']][c['mdl']], c['input'])
+                    input_fun = lambda x, v:  self.dyn_mdls_dict[c['container']][c['mdl']]._input_values[c['input']]
+                    np.add.at(init_val, c['source_idx'], input_fun(None, None)[c['dest_idx']])
+                output_values[output_key] = init_val
 
-                mdl.init_from_connections(self.x_0, self.v_0, output_values)
+            mdl.init_from_connections(self.x_0, self.v_0, output_values)
 
     
         self.initialization_ready = True

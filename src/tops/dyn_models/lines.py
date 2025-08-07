@@ -22,37 +22,38 @@ class Line(DAEModel):
     def event(self, ps, line_name, event_name):
         line_idx = lookup_strings(line_name, ps.lines['Line'].par['name'])
 
-        if event_name in ['connect', 'disconnect']:
+        if event_name == 'connect':
+            sign = 1
+            self.connected[line_idx] = True
+        elif event_name == 'disconnect':
+            sign = -1
+            self.connected[line_idx] = False
+        else:
+            print(f"Event {event_name} not defined for Line model.")
+            return
 
-            if event_name == 'connect':
-                sign = 1
-                self.connected[line_idx] = True
-            elif event_name == 'disconnect':
-                sign = -1
-                self.connected[line_idx] = False
+        idx_from = self.bus_idx_red['from_bus'][line_idx]
+        idx_to = self.bus_idx_red['to_bus'][line_idx]
 
-            idx_from = self.bus_idx_red['from_bus'][line_idx]
-            idx_to = self.bus_idx_red['to_bus'][line_idx]
+        admittance = self.admittance[line_idx]
+        shunt = self.shunt[line_idx]
 
-            admittance = self.admittance[line_idx]
-            shunt = self.shunt[line_idx]
+        buses_in_red_sys = idx_from in ps.bus_idx_red and idx_to in ps.bus_idx_red
+        data = np.array([admittance + shunt/2,
+                            admittance + shunt/2,
+                            -admittance,
+                            -admittance])
 
-            buses_in_red_sys = idx_from in ps.bus_idx_red and idx_to in ps.bus_idx_red
-            data = np.array([admittance + shunt/2,
-                             admittance + shunt/2,
-                             -admittance,
-                             -admittance])
+        if not buses_in_red_sys:
+            print('Line buses are not in reduced system, line event failed.')
+            return
 
-            if buses_in_red_sys:
-                rows_red = np.array([idx_from, idx_to, idx_from, idx_to])
-                cols_red = np.array([idx_from, idx_to, idx_to, idx_from])
-                y_line_red = lil_matrix((ps.n_bus_red,) * 2, dtype=complex)
-                y_line_red[rows_red, cols_red] = data
-                ps.y_bus_red += y_line_red*sign
-
-            else:
-                print('Line buses are not in reduced system, line event failed.')
-
+        rows_red = np.array([idx_from, idx_to, idx_from, idx_to])
+        cols_red = np.array([idx_from, idx_to, idx_to, idx_from])
+        y_line_red = lil_matrix((ps.n_bus_red,) * 2, dtype=complex)
+        y_line_red[rows_red, cols_red] = data
+        ps.y_bus_red += y_line_red*sign
+        
     def init_extras(self):
         self.idx_from = self.bus_idx_red['from_bus']
         self.idx_to = self.bus_idx_red['to_bus']
@@ -138,7 +139,6 @@ class Line(DAEModel):
     def I_to(self, x, v):
         # Current in kA
         return self.i_to(x, v)*self.I_n
-
 
     def s_from(self, x, v):
         v_full = v
