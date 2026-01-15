@@ -17,61 +17,70 @@ def determine_connections(dyn_mdls, order_by='input'):
 
     for container_key, mdls in dyn_mdls.items():
         for mdl_key, mdl in mdls.items():
-            if hasattr(mdl, 'connections'):
-                connections = mdl.connections().copy()
-                for conn in connections:
-                    if 'source' in conn.keys():
-                        source_container_key = conn['source']['container']
-                        dest_mdl = mdl
-                        dest_mdl_key = mdl_key
-                        dest_container_key = container_key
+            if not hasattr(mdl, 'connections'):
+                continue
+            connections = mdl.connections().copy()
+            for conn in connections:
+                if 'source' in conn.keys():
+                    source_container_key = conn['source']['container']
+                    dest_mdl = mdl
+                    dest_mdl_key = mdl_key
+                    dest_container_key = container_key
 
-                        source_container = dyn_mdls[conn['source']['container']]
-                        for source_mdl_key, source_mdl in source_container.items():
-                            if conn['source']['mdl'] == '*' or conn['source']['mdl'] == source_mdl_key:
-                                source_idx, mask = dps_uf.lookup_strings(
-                                    conn['source']['id'], source_mdl.par['name'], return_mask=True
-                                )
-                                dest_idx = np.where(mask)[0]
-                                if len(source_idx) > 0:
-                                    if order_by == 'input':
-                                        add_entry(
-                                            mdl_connections, dest_mdl, conn['input'],
-                                            {'container': source_container_key, 'mdl': source_mdl_key,
-                                             'source_idx': source_idx, 'dest_idx': dest_idx, 'output': conn['output']}
-                                        )
-                                    elif order_by == 'output':
-                                        add_entry(
-                                            mdl_connections, source_mdl, conn['output'],
-                                            {'container': dest_container_key, 'mdl': dest_mdl_key,
-                                             'source_idx': source_idx, 'dest_idx': dest_idx, 'input': conn['input']}
-                                        )
+                    source_container = dyn_mdls[conn['source']['container']]
+                    for source_mdl_key, source_mdl in source_container.items():
+                        if not(conn['source']['mdl'] == '*' or conn['source']['mdl'] == source_mdl_key):
+                            continue
+                        
+                        source_idx, mask = dps_uf.lookup_strings(
+                            conn['source']['id'], source_mdl.par['name'], return_mask=True
+                        )
+                        dest_idx = np.where(mask)[0]
+                        if not len(source_idx) > 0:
+                            continue
+                        
+                        if order_by == 'input':
+                            add_entry(
+                                mdl_connections, dest_mdl, conn['input'],
+                                {'container': source_container_key, 'mdl': source_mdl_key,
+                                    'source_idx': source_idx, 'dest_idx': dest_idx, 'output': conn['output']}
+                            )
+                        elif order_by == 'output':
+                            add_entry(
+                                mdl_connections, source_mdl, conn['output'],
+                                {'container': dest_container_key, 'mdl': dest_mdl_key,
+                                    'source_idx': source_idx, 'dest_idx': dest_idx, 'input': conn['input']}
+                            )
 
-                    if 'destination' in conn.keys():
-                        source_mdl_key = mdl_key
-                        source_mdl = mdl
-                        source_container_key = container_key
-                        dest_container_key = conn['destination']['container']
-                        dest_container = dyn_mdls[dest_container_key]
-                        for dest_mdl_key, dest_mdl in dest_container.items():
-                            if conn['destination']['mdl'] == '*' or conn['destination']['mdl'] == dest_mdl_key:
-                                dest_idx, mask = dps_uf.lookup_strings(
-                                    conn['destination']['id'], dest_mdl.par['name'], return_mask=True
-                                )
-                                source_idx = np.where(mask)[0]
-                                if len(dest_idx) > 0:
-                                    if order_by == 'input':
-                                        add_entry(
-                                            mdl_connections, dest_mdl, conn['input'],
-                                            {'container': source_container_key, 'mdl': source_mdl_key,
-                                             'source_idx': source_idx, 'dest_idx': dest_idx, 'output': conn['output']}
-                                        )
-                                    elif order_by == 'output':
-                                        add_entry(
-                                            mdl_connections, source_mdl, conn['output'],
-                                            {'container': dest_container_key, 'mdl': dest_mdl_key,
-                                             'source_idx': source_idx, 'dest_idx': dest_idx, 'input': conn['input']}
-                                        )
+                if 'destination' in conn.keys():
+                    source_mdl_key = mdl_key
+                    source_mdl = mdl
+                    source_container_key = container_key
+                    dest_container_key = conn['destination']['container']
+                    dest_container = dyn_mdls[dest_container_key]
+                    for dest_mdl_key, dest_mdl in dest_container.items():
+                        if not(conn['destination']['mdl'] == '*' or conn['destination']['mdl'] == dest_mdl_key):
+                            continue
+
+                        dest_idx, mask = dps_uf.lookup_strings(
+                            conn['destination']['id'], dest_mdl.par['name'], return_mask=True
+                        )
+                        source_idx = np.where(mask)[0]
+                        if not len(dest_idx) > 0:
+                            continue
+
+                        if order_by == 'input':
+                            add_entry(
+                                mdl_connections, dest_mdl, conn['input'],
+                                {'container': source_container_key, 'mdl': source_mdl_key,
+                                    'source_idx': source_idx, 'dest_idx': dest_idx, 'output': conn['output']}
+                            )
+                        elif order_by == 'output':
+                            add_entry(
+                                mdl_connections, source_mdl, conn['output'],
+                                {'container': dest_container_key, 'mdl': dest_mdl_key,
+                                    'source_idx': source_idx, 'dest_idx': dest_idx, 'input': conn['input']}
+                            )
 
     return mdl_connections
 
