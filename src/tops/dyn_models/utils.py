@@ -268,6 +268,19 @@ class DAEModel:
     #     pass
 
 
+
+def summation(*funcs):
+    '''Creates a new function which sums the output of functions and constants/
+    constant arrays specified as arguments
+    '''
+    callables = [func for func in funcs if callable(func)]
+    constants = [func for func in funcs if not callable(func)]
+    def summation(*args):
+        return sum([func(*args) for func in callables] + constants)
+    
+    return summation
+
+
 # class DAEModel(ODEModel):
 #     def disconnect_input(self, input_name):
 #         def input(self, x, v):
