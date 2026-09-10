@@ -137,7 +137,7 @@ class Line(DAEModel):
 
     def I_to(self, x, v):
         # Current in kA
-        return self.i_from(x, v)*self.I_n
+        return self.i_to(x, v)*self.I_n
 
 
     def s_from(self, x, v):
