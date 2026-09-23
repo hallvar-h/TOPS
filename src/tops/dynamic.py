@@ -109,12 +109,12 @@ class PowerSystemModel:
 
                 mdl_data = dps_uf.structured_array_from_list(mdl_data_raw[0], mdl_data_raw[1:])
                 mdl = mdl_class(mdl_data, self.sys_data)
-                if hasattr(self, category_key):
-                    getattr(self, category_key).update({mdl_key: mdl})
-                    self.dyn_mdls_dict[category_key].update({mdl_key: mdl})
-                else:
-                    setattr(self, category_key, {mdl_key: mdl})
-                    self.dyn_mdls_dict[category_key] = {mdl_key: mdl}
+                if not hasattr(self, category_key):
+                    setattr(self, category_key, dps_uf.dotdict())
+                    self.dyn_mdls_dict[category_key] = {}
+                getattr(self, category_key).update({mdl_key: mdl})
+                self.dyn_mdls_dict[category_key].update({mdl_key: mdl})
+                    
 
                 [self.dyn_mdls.append(item) for item in mdl_lib.utils.get_submodules(mdl)]  # [::-1]
 
