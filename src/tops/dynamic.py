@@ -2,12 +2,11 @@ import numpy as np
 
 import tops.utility_functions as dps_uf
 import tops.dyn_models as mdl_lib
+from tops.model_data import load_model_data, find_model_class
+import tops.power_flow as pf
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
 from scipy.optimize import fsolve
-
-import json
-import os
 
 import warnings
 
@@ -15,30 +14,7 @@ import warnings
 class PowerSystemModel:
     def __init__(self, model, user_mdl_lib=None):
         self.user_mdl_lib = user_mdl_lib
-        file_is_json = isinstance(model, str) and model[-5:] == '.json'
-        if file_is_json:
-            try:
-                # Try to open specified path directly
-                with open(model) as f:
-                    data = f.read()
-                model_data = json.loads(data)
-            except IOError:
-                try:
-                    # Try to see if the specified model is available in the ps_models folder of the module
-                    current_folder = os.path.dirname(os.path.abspath(__file__))
-                    model_file_path = os.path.join(current_folder, 'ps_models', model)
-                    with open(model_file_path) as f:
-                        data = f.read()
-                    model_data = json.loads(data)
-                except IOError:
-                    raise FileNotFoundError(f'Power system model data file not found: {model}')
-
-        elif isinstance(model, dict):
-            model_data = model
-        else:
-            raise TypeError(f'model must be a dict or a path to a .json file, not {type(model).__name__}')
-
-        model = model_data.copy()
+        model = load_model_data(model)
         self.model = model
 
         self.perform_kron_reduction = False
@@ -57,23 +33,6 @@ class PowerSystemModel:
         self.setup_ready = False
         self.initialization_ready = False
 
-        if 'transformers' in model:
-            model['trafos'] = model['transformers']
-            model.pop('transformers', None)
-
-        if 'generators' in model:
-            model['gen'] = model['generators']
-            model.pop('generators', None)
-
-        mdl_data = ['lines', 'trafos', 'loads', 'shunts']
-        default_mdls = ['Line', 'Trafo', 'Load', 'Shunt']
-
-        for key, default_mdl in zip(mdl_data, default_mdls):
-            # print(key, default_mdl)
-            if key in model and isinstance(model[key], list) and len(model[key]) > 1:
-                model[key] = {default_mdl: model[key]}
-
-        
         self.sys_data = {
             's_n': self.s_n,
             'f_n': self.f_n,
@@ -94,15 +53,8 @@ class PowerSystemModel:
             category_key = key
             category = val
             for mdl_key, mdl_data_raw in category.items():
-                if hasattr(self.user_mdl_lib, category_key) and hasattr(getattr(self.user_mdl_lib, category_key), mdl_key):
-                    # print('User model: {}, {}'.format(category_key, mdl_key))
-                    mdl_class = getattr(getattr(self.user_mdl_lib, category_key), mdl_key)
-                elif hasattr(mdl_lib, category_key) and hasattr(getattr(mdl_lib, category_key), mdl_key):
-                    # print('Standard model: {}, {}'.format(category_key, mdl_key))
-                    mdl_class = getattr(getattr(mdl_lib, category_key), mdl_key)
-
-                else:
-                    warnings.warn(f'Model {category_key}:{mdl_key} not found in model library.')
+                mdl_class = find_model_class(category_key, mdl_key, self.user_mdl_lib)
+                if mdl_class is None:
                     continue
 
                 mdl_data = dps_uf.structured_array_from_list(mdl_data_raw[0], mdl_data_raw[1:])
@@ -112,8 +64,6 @@ class PowerSystemModel:
                     self.dyn_mdls_dict[category_key] = {}
                 getattr(self, category_key).update({mdl_key: mdl})
                 self.dyn_mdls_dict[category_key].update({mdl_key: mdl})
-                    
-
                 self.dyn_mdls.extend(mdl_lib.utils.get_submodules(mdl))
 
     def setup(self):
@@ -198,64 +148,25 @@ class PowerSystemModel:
         if self.y_bus_lf is None:
             self.build_y_bus_lf()
 
-        bus_type = np.array(['PQ'] * self.n_bus, dtype='<U2')
-
-        p_pq = np.zeros(self.n_bus)
-        q_pq = np.zeros(self.n_bus)
-
-        for mdl in self.mdl_instructions['load_flow_pq']:
-            bus_idx, p, q = mdl.load_flow_pq()
-            np.add.at(p_pq, bus_idx, p / self.s_n)
-            np.add.at(q_pq, bus_idx, q / self.s_n)
-
-        p_pv = np.zeros(self.n_bus)
-        v_pv = np.ones(self.n_bus)
+        pq_mdls = self.mdl_instructions['load_flow_pq']
+        pv_mdls = self.mdl_instructions['load_flow_pv']
 
         if not self.slack_bus:
-            bus_idx = self.mdl_instructions['load_flow_pv'][0].load_flow_pv()[0]
-            sl_idx = bus_idx[0]
+            sl_idx = pf.default_slack_bus_idx(pv_mdls)
             self.slack_bus = self.buses[sl_idx]['name']
         else:
             sl_idx = dps_uf.lookup_strings(self.slack_bus, self.buses['name'])
 
-        for mdl in self.mdl_instructions['load_flow_pv']:
-            bus_idx, p, v = mdl.load_flow_pv()
-            if sl_idx in bus_idx:
-                unit_idx = np.argmax(bus_idx == sl_idx)
-                slack_unit = (mdl, unit_idx)
-                self.slack_unit = slack_unit
-            bus_type[bus_idx] = 'PV'
-            np.add.at(p_pv, bus_idx, p / self.s_n)
-            v_pv[bus_idx] = v
+        result = pf.solve_power_flow(self.y_bus_lf, pq_mdls, pv_mdls, self.s_n, sl_idx, self.pf_tol, self.pf_max_it)
 
-        bus_type[sl_idx] = 'SL'
-
-        self.v_0, self.s_0, converged = dps_uf.newton_rhapson_power_flow(self.y_bus_lf, v_pv, p_pv + p_pq, q_pq, bus_type,
-                                                              self.pf_tol, self.pf_max_it)
+        self.v_0 = result.v
         self.v0 = self.v_0
+        self.s_0 = result.s
+        if result.slack_unit is not None:
+            self.slack_unit = result.slack_unit
+        self.load_flow_soln = result.unit_injections
 
-        pv_units_per_bus = np.zeros(self.n_bus, dtype=int)
-        for mdl in self.mdl_instructions['load_flow_pv']:
-            bus_idx = mdl.load_flow_pv()[0]
-            np.add.at(pv_units_per_bus, bus_idx, 1)
-
-        a = self.s_0.imag + q_pq
-        b = pv_units_per_bus
-        q_per_pv_unit = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
-
-        self.load_flow_soln = {}
-        for mdl in self.mdl_instructions['load_flow_pv']:
-            bus_idx, p_setp, v = mdl.load_flow_pv()
-            q = q_per_pv_unit[bus_idx]
-            p = -p_setp / self.s_n
-            if sl_idx in bus_idx:
-                unit_idx = np.argmax(bus_idx == sl_idx)
-                p[unit_idx] = self.s_0[sl_idx].real + -p_setp[unit_idx] / self.s_n + p_pv[sl_idx] + p_pq[sl_idx]
-                # p[unit_idx] /= mdl.par['n_par'][unit_idx]
-
-            self.load_flow_soln[mdl] = (p + 1j * q) * self.s_n
-        
-        if converged:
+        if result.converged:
             self.power_flow_ready = True
 
     def kron_reduction(self, y_bus, keep_buses):
