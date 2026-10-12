@@ -1,4 +1,8 @@
+import logging
+
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 class Euler:
@@ -42,7 +46,7 @@ class EulerDAE(Euler):
             self.v[:] = self.g_inv(self.t, self.x, self.v)
 
         else:
-            print('End of simulation time reached.')
+            logger.info('End of simulation time reached.')
 
 
 class ModifiedEuler(Euler):
@@ -63,7 +67,7 @@ class ModifiedEuler(Euler):
             self.t += self.dt
 
         else:
-            print('End of simulation time reached.')
+            logger.info('End of simulation time reached.')
 
 
 class ModifiedEulerDAE(EulerDAE):
@@ -86,7 +90,7 @@ class ModifiedEulerDAE(EulerDAE):
             self.t += self.dt
 
         else:
-            print('End of simulation time reached.')
+            logger.info('End of simulation time reached.')
 
 
 class SimpleRK4(Euler):
@@ -107,6 +111,6 @@ class SimpleRK4(Euler):
             self.x[:] = x + (dt / 6) * (k_1 + 2 * k_2 + 2 * k_3 + k_4)
             self.t = t + dt
         else:
-            print('End of simulation time reached.')
+            logger.info('End of simulation time reached.')
 
 

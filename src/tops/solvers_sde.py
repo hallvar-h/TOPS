@@ -1,5 +1,10 @@
-from tops.solvers import EulerDAE
+import logging
+
 import numpy as np
+from tops.solvers import EulerDAE
+
+logger = logging.getLogger(__name__)
+
 
 class EulerDAE_SDE(EulerDAE):
     def __init__(self, *args, dim_w=0, **kwargs):
@@ -21,4 +26,4 @@ class EulerDAE_SDE(EulerDAE):
             self.v[:] = self.g_inv(self.t, self.x)
 
         else:
-            print('End of simulation time reached.')
+            logger.info('End of simulation time reached.')

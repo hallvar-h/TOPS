@@ -200,28 +200,6 @@ def jacobian_num(f, x, eps=1e-10, **params):
     return J
 
 
-class DynamicModel:  # This is not used anymore?
-    # Empty dummy-class for dynamic models (Gen, AVR, GOV, PSS etc.)
-    def __init__(self):
-        pass
-
-
-class EventManager:
-    # Not in use?
-    def __init__(self, events, event_function):
-        self.events = events
-        self.event_flags = np.ones(len(self.events), dtype=bool)
-        self.event_function = event_function
-
-    def update(self, t_now):
-        for i, (t_event, sub_events) in enumerate(self.events):
-            if t_now >= t_event and self.event_flags[i]:
-                self.event_flags[i] = False
-                for element_type, name, action in sub_events:
-                    self.event_function(element_type, name, action)
-                    print(name + ' was ' + action + 'ed.')
-
-
 class dotdict(dict):
     """https://stackoverflow.com/questions/2352181/how-to-use-a-dot-to-access-members-of-dictionary#23689767"""
     __getattr__ = dict.get
