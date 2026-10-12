@@ -16,6 +16,16 @@ The package can be installed using pip, as follows:
 
 `pip install git+https://github.com/hallvar-h/tops`
 
+# Development
+The project uses [uv](https://docs.astral.sh/uv/). To set up an environment and run the tests:
+
+```
+uv sync
+uv run pytest            # fast tests
+uv run pytest -m slow    # full-length validation against PowerFactory
+uv run pytest -m ""      # everything (as in CI)
+```
+
 # Citing
 If you use this code for your research, please cite [this paper](https://arxiv.org/abs/2101.02937).
 
