@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 from tops.dyn_models.utils import DAEModel
 from tops.utility_functions import lookup_strings
 from scipy.sparse import lil_matrix
@@ -23,8 +24,7 @@ class Line(DAEModel):
         line_idx = lookup_strings(line_name, ps.lines['Line'].par['name'])
 
         if not event_name in ["connect", "disconnect"]:
-            print(f"Event {event_name} not defined for Line model.")
-            return
+            raise ValueError(f"Event {event_name} not defined for Line model.")
         
         if event_name == 'connect' and not self.connected[line_idx]:
             sign = 1
@@ -48,7 +48,7 @@ class Line(DAEModel):
                             -admittance])
 
         if not buses_in_red_sys:
-            print('Line buses are not in reduced system, line event failed.')
+            warnings.warn('Line buses are not in reduced system, line event failed.')
             return
 
         rows_red = np.array([idx_from, idx_to, idx_from, idx_to])

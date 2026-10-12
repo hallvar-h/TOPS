@@ -1,6 +1,7 @@
 import numpy as np
 import inspect
 import functools
+import warnings
 import tops.utility_functions as dps_uf
 from scipy.optimize import least_squares
 
@@ -371,7 +372,7 @@ def auto_init(mdl, x0, v0, output_0):
     mdl.int_par[:] = x_sol_best[int_par_idx]
         
     if np.linalg.norm(mdl.output(x_sol_all, v0) - output_0) > 1e-6:
-        print(f'Model {mdl.__class__} was potentially not initialized properly (error: {err}).')
+        warnings.warn(f'Model {mdl.__class__} was potentially not initialized properly (error: {err}).')
     # assert max(abs(ps.state_derivatives(0, x_sol_all, ps.v_0))) < 1e-6
     x0[:] = x_sol_all
     x0

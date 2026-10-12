@@ -34,12 +34,13 @@ class PowerSystemModel:
                         data = f.read()
                     model_data = json.loads(data)
                 except IOError:
-                    print('Power System Model Data File not found. Aborting.')
-                    return
+                    raise FileNotFoundError(f'Power system model data file not found: {model}')
 
         elif isinstance(model, dict):
             model_data = model
-        
+        else:
+            raise TypeError(f'model must be a dict or a path to a .json file, not {type(model).__name__}')
+
         model = model_data.copy()
         self.model = model
 
@@ -104,7 +105,7 @@ class PowerSystemModel:
                     mdl_class = getattr(getattr(mdl_lib, category_key), mdl_key)
 
                 else:
-                    print('Model {}:{} not found in model library.'.format(category_key, mdl_key))
+                    warnings.warn(f'Model {category_key}:{mdl_key} not found in model library.')
                     continue
 
                 mdl_data = dps_uf.structured_array_from_list(mdl_data_raw[0], mdl_data_raw[1:])
@@ -329,7 +330,6 @@ class PowerSystemModel:
             for output_key, conn in connections.items():
                 init_val = np.zeros(mdl.n_units)
                 for c in conn:
-                    input_fun = getattr(self.dyn_mdls_dict[c['container']][c['mdl']], c['input'])
                     input_fun = lambda x, v:  self.dyn_mdls_dict[c['container']][c['mdl']]._input_values[c['input']]
                     np.add.at(init_val, c['source_idx'], input_fun(None, None)[c['dest_idx']])
                 output_values[output_key] = init_val
@@ -393,58 +393,19 @@ class PowerSystemModel:
         v_0 = v_0 if v_0 is not None else np.ones_like(self.v0)
         x_alg = np.concatenate([abs(v_0), np.angle(v_0)])
 
+        converged = True
         with warnings.catch_warnings():
-            # Cause all warnings to always be triggered.
+            # Turn fsolve's RuntimeWarning into an exception, so non-convergence can be detected
             warnings.filterwarnings('error')
             try:
                 x_alg = fsolve(f, x_alg, xtol=1e-10)
             except RuntimeWarning:
                 x_alg *= np.nan
-                print('Warning: Power flow did not converge.')
-                # raise Warning('''Singular jacobian when solving
-                    # algebraic equations''') 
+                converged = False
 
-        # Implementation of Newton's method. Turned out a bit slower than fsolve
-        #tol = 1e-6
-        #max_it = 2000
-        #it = 0
-        # x_alg[v_ang_idx] %= 2*np.pi
-
-          
-        # if False:    
-            # print((np.angle(i_inj) - np.angle(i_inj)[0])[:4])
-            error = np.linalg.norm(f(x_alg))
-            # while error > tol and it < max_it:
-            #     A = sp.csr_matrix(dps_uf.jacobian_num(f, x_alg))
-            #     # A += np.random.randn(2*self.n_bus, 2*self.n_bus)
-            #     # if False:  # np.linalg.cond(A) < 1e-10:
-            #         # raise Exception('''Singular jacobian when solving
-            #             # algebraic equations''') 
-            #     b = - f(x_alg)
-            #     try:
-            #         dx = sp_linalg.spsolve(A, b)
-            #     except sp.linalg.MatrixRankWarning:
-            #         # warnings.filterwarnings('default')
-            #         raise Warning('''Singular jacobian when solving
-            #             algebraic equations''') 
-
-            #     x_alg += dx
-
-            #     # x_alg[v_ang_idx] %= 2*np.pi
-            #     # x_alg[v_abs_idx][x_alg[v_abs_idx] < 0.7] = 0.7
-            #     # x_alg[v_abs_idx][x_alg[v_abs_idx] > 1.3] = 1.3
-
-
-            #     error = np.linalg.norm(f(x_alg))
-            #     it += 1
-            # #     # print(f"{it} \t {error:.6f}")
-            
-            # if error > tol:
-                # raise Warning('''Solution of algebraic equations did not converge
-                    # due to apparent power injections.''')
-                # print('''Warning: ''')
-                # x_alg *= np.nan
-                # self.it_prev = it
+        if not converged:
+            # Warn outside the catch_warnings block, where warnings are turned into errors
+            warnings.warn('Solution of algebraic equations did not converge.', RuntimeWarning)
 
         v = x_alg[v_abs_idx]*np.exp(1j*x_alg[v_ang_idx])
         return v

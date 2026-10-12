@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 from tops.solvers import Euler, ModifiedEuler, SimpleRK4
 
 
@@ -66,7 +67,7 @@ def newton_rhapson_power_flow(y_bus, v_0, p_sum_bus, q_sum_bus, bus_types, tol, 
             # if print_output:
             #     print('Power flow converged.')
         if i == pf_max_it:
-            print('Warning: Power flow did not converge in {} iterations.'.format(pf_max_it))
+            warnings.warn(f'Power flow did not converge in {pf_max_it} iterations.', RuntimeWarning)
 
     v_sol = x_to_v(x)
     s_sol = v_sol * np.conj(y_bus.dot(v_sol))
