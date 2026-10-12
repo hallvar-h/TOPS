@@ -18,3 +18,15 @@ def test_unknown_model_warns():
     model['loads'] = {'NoSuchLoadModel': model['loads']}
     with pytest.warns(UserWarning, match='NoSuchLoadModel'):
         dps.PowerSystemModel(model=model)
+
+
+def test_repeated_init_keeps_state_indices():
+    import tops.ps_models.k2a as model_data
+    ps = dps.PowerSystemModel(model=model_data.load())
+    ps.init_dyn_sim()
+    idx_first = ps.gen['GEN'].state_idx_global['speed'].copy()
+    ps.init_dyn_sim()
+    idx_second = ps.gen['GEN'].state_idx_global['speed']
+
+    assert (idx_first == idx_second).all()
+    assert (ps.state_desc[idx_second, 1] == 'speed').all()
