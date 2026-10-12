@@ -1,4 +1,6 @@
-from tops.dyn_models.blocks import *
+import numpy as np
+from tops.dyn_models.utils import DAEModel
+from tops.dyn_models.blocks import PIRegulator, Integrator, TimeConstant
 
 class PLL1(DAEModel):
     def __init__(self, *args, **kwargs):

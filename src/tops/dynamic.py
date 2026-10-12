@@ -4,15 +4,12 @@ import tops.utility_functions as dps_uf
 import tops.dyn_models as mdl_lib
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
-from scipy.sparse import diags as sp_diags
 from scipy.optimize import fsolve
 
 import json
 import os
 
-import importlib
 import warnings
-importlib.reload(mdl_lib)
 
 
 class PowerSystemModel:
@@ -117,7 +114,7 @@ class PowerSystemModel:
                 self.dyn_mdls_dict[category_key].update({mdl_key: mdl})
                     
 
-                [self.dyn_mdls.append(item) for item in mdl_lib.utils.get_submodules(mdl)]  # [::-1]
+                self.dyn_mdls.extend(mdl_lib.utils.get_submodules(mdl))
 
     def setup(self):
         self.mdl_instructions = {key: list() for key in [
@@ -148,7 +145,7 @@ class PowerSystemModel:
         if self.perform_kron_reduction:
             buses_red = []
             for mdl in self.mdl_instructions['reduced_system']:
-                [buses_red.append(bus) for bus in mdl.reduced_system()]
+                buses_red.extend(mdl.reduced_system())
 
             bus_idx_red = dps_uf.lookup_strings(buses_red, self.buses['name'])
         else:
@@ -177,9 +174,7 @@ class PowerSystemModel:
         y_lf = np.zeros((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['load_flow_adm']:
             data, (row_idx, col_idx) = mdl.load_flow_adm()
-            sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())),
-                shape=(self.n_bus,) * 2)
-            y_lf += sp_mat.todense()
+            np.add.at(y_lf, (row_idx.flatten(), col_idx.flatten()), data.flatten())
 
         self.y_bus_lf = y_lf
         return y_lf
@@ -189,8 +184,7 @@ class PowerSystemModel:
         y_dyn = np.zeros((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['dyn_const_adm']:
             data, (row_idx, col_idx) = mdl.dyn_const_adm()
-            sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
-            y_dyn += sp_mat.todense()
+            np.add.at(y_dyn, (row_idx.flatten(), col_idx.flatten()), data.flatten())
 
         self.y_bus_dyn = y_dyn
         return y_dyn
@@ -236,7 +230,6 @@ class PowerSystemModel:
 
         bus_type[sl_idx] = 'SL'
 
-        phi_0 = np.zeros(self.n_bus)
         self.v_0, self.s_0, converged = dps_uf.newton_rhapson_power_flow(self.y_bus_lf, v_pv, p_pv + p_pq, q_pq, bus_type,
                                                               self.pf_tol, self.pf_max_it)
         self.v0 = self.v_0
@@ -366,12 +359,10 @@ class PowerSystemModel:
             bus_idx_red, i_inj_mdl = mdl.current_injections(x, None)
             np.add.at(i_inj, bus_idx_red, i_inj_mdl)
 
-        y_var = np.zeros((self.n_bus,) * 2, dtype=complex)
+        y_var = sp.csr_matrix((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['dyn_var_adm']:
             data, (row_idx, col_idx) = mdl.dyn_var_adm(x, None)
-            sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
-            y_var += sp_mat.todense()
-        y_var = sp.csr_matrix(y_var)
+            y_var += sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
         if self.algebraic_equations_are_linear:
             return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
 

@@ -93,7 +93,7 @@ def get_submodules(mdl):
     for attr, typ in attributes:
         if issubclass(type(typ), DAEModel):
             submodule = getattr(mdl, attr)
-            [output.append(sm) for sm in get_submodules(submodule)]
+            output.extend(get_submodules(submodule))
     return output
 
 
@@ -222,7 +222,7 @@ class DAEModel:
         new_names = []
         for mdl in get_submodules(self)[1:]:
             # print(mdl.par['name'])
-            concat_str = np.core.defchararray.add
+            concat_str = np.char.add
             new_names.append(concat_str(self.par['name'], concat_str('/', mdl.par['name'])))
 
         unique, counts = np.unique(np.array(new_names), return_counts=True, axis=0)
@@ -316,7 +316,6 @@ def auto_init(mdl, x0, v0, output_0):
             state_idx_local.append(slice(start_idx, start_idx + n_states_mdl))
             start_idx += n_states_mdl
     
-    init_val = 1
     n_int_par = len(mdl.int_par_list())
     n_units = mdl.n_units
     n_sol = n_states + n_int_par*n_units

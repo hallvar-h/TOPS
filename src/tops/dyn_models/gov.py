@@ -1,4 +1,9 @@
-from tops.dyn_models.blocks import *
+import numpy as np
+from tops.dyn_models.utils import DAEModel
+from tops.dyn_models.blocks import (
+    Integrator2, Gain, Limiter, TimeConstant, TimeConstantGain, TimeConstantLims, LeadLag,
+    PIRegulator2Lims, Backlash,
+)
 from tops.dyn_models.utils import auto_init
 
 
@@ -59,7 +64,6 @@ class TGOV1(GOV, DAEModel):
 
     def init_from_connections(self, x0, v0, output_0):
         # auto_init(self, x0, v0, output_0['output'])
-        p = self.par
         self.int_par['bias'] = self.droop.initialize(
             x0, v0, self.time_constant_lim.initialize(
                 x0, v0, self.lead_lag.initialize(x0, v0, output_0['output'])

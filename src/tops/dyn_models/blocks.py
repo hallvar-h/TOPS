@@ -29,7 +29,6 @@ class Integrator(DAEModel):
 
     def state_derivatives(self, dx, x, v):
         dX = self.local_view(dx)
-        X = self.local_view(x)
 
         dX['x_i'][:] = self.input(x, v)
 
@@ -84,7 +83,6 @@ class Washout(DAEModel):
 
     def state_derivatives(self, dx, x, v):
         dX = self.local_view(dx)
-        X = self.local_view(x)
 
         dX['x'][:] = self.output(x, v)
 
@@ -270,7 +268,6 @@ class PIRegulator2(DAEModel):
 
     def state_derivatives(self, dx, x, v):
         dX = self.local_view(dx)
-        X = self.local_view(x)
         dX['x'][:] = self.input(x, v)/self.par['T_2']
 
     def initialize(self, x0, v0, output_value):

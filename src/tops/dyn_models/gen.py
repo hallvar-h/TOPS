@@ -47,8 +47,6 @@ class GEN(DAEModel):
         angle = np.angle(e_q_tmp)
         speed = np.zeros_like(angle)
 
-        d = np.exp(1j * (angle - np.pi / 2))
-        q = np.exp(1j * angle)
 
         I_g_dq = I_g * np.exp(1j * (np.pi / 2 - angle))
         I_d = I_g_dq.real
@@ -60,14 +58,11 @@ class GEN(DAEModel):
 
         e_q_t = v_q + p['X_d_t'] * I_d
         e_d_t = v_d - p['X_q_t'] * I_q
-        e_t = e_q_t * q + e_d_t * d
 
         e_q_st = v_q + p['X_d_st'] * I_d
         e_d_st = v_d - p['X_q_st'] * I_q
-        e_st = e_q_st * q + e_d_st * d
 
         e_q = e_q_t + I_d * (p['X_d'] - p['X_d_t'])
-        e = e_q * np.exp(1j * angle)
         e_q_0 = e_q.copy()
 
         PF_n = p['PF_n'] if 'PF_n' in p.dtype.names else 1
