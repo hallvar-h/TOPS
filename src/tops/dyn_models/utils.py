@@ -108,6 +108,11 @@ class DAEModel:
     def __init__(self, par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs):
         # type(self)._ids = count(0)
         # self.id = next(type(self)._ids)
+        if hasattr(self, 'int_par_list'):
+            raise TypeError(
+                f'{type(self).__name__} defines int_par_list(), but int_par has been removed. '
+                f'Add the parameters to input_list() instead, and set them in _input_values.'
+            )
 
         if n_units is not None:
             name = self.__class__.__name__
@@ -149,7 +154,12 @@ class DAEModel:
         self._store_output = False
         [self.disconnect_input(inp) for inp in self.input_list()]
 
-        self.int_par = np.zeros(self.n_units, dtype=[(var, float) for var in self.int_par_list()])
+    @property
+    def int_par(self):
+        raise AttributeError(
+            f'{type(self).__name__}.int_par has been removed. Former internal parameters (e.g. bias) '
+            f"are now inputs: read with mdl.bias(x, v) and set with mdl.set_input('bias', value)."
+        )
 
     def state_list(self):
         """
@@ -171,9 +181,6 @@ class DAEModel:
         Should be overwritten (if model has one or more outputs)
         """
         return ['output']
-
-    def int_par_list(self):
-        return []
 
     def reset_outputs(self):
         self._output_ready[:] = False
@@ -279,80 +286,75 @@ def summation(*funcs):
 #         setattr(type(self), input_name, input)
 
 
-def auto_init(mdl, x0, v0, output_0):
-    submodules = get_submodules(mdl)
-    n_states_all = len(x0)
-    
-    # Find states belonging to model:
-    state_idx = []
-    state_idx_local = []
-    n_states = 0
-    start_idx = 0
-    for submodule in submodules:
-        state_list = submodule.state_list()
-        if len(state_list) > 0:
-            state_idx.append(submodule.idx)
-            n_states_mdl = submodule.idx.stop - submodule.idx.start
-            n_states += n_states_mdl
-            state_idx_local.append(slice(start_idx, start_idx + n_states_mdl))
-            start_idx += n_states_mdl
-    
-    n_int_par = len(mdl.int_par_list())
-    n_units = mdl.n_units
-    n_sol = n_states + n_int_par*n_units
-    int_par_idx = slice(n_states, None)
-    x_test = np.ones(n_sol)
+def auto_init(mdl, x0, v0, output_0, free_inputs=(), tol=1e-6):
+    """Numerically initialize ``mdl`` (including its submodules) to a steady state.
 
-    def ode_fun_mdl(x_test):
-        int_par = x_test[int_par_idx]
-        mdl.int_par[:] = int_par
-        x_all_test = np.zeros_like(x0)
-        for idx, idx_local in zip(state_idx, state_idx_local):
-            x_all_test[idx] = x_test[idx_local]
-        
+    Solves for the states and the given ``free_inputs`` such that all state derivatives are zero
+    and ``mdl.output`` equals ``output_0``. Each unit is solved separately, since the units of a
+    model are independent (all model equations are elementwise over units). This keeps the number
+    of free variables per solve at ``n_states_per_unit + len(free_inputs)``, regardless of
+    ``n_units``. The residual is still evaluated for all units (the models are vectorized), but only
+    the entries of the unit being solved are used.
+
+    ``free_inputs`` are inputs of ``mdl`` that are not connected to other models (typically a
+    'bias' input). Their solved values are stored in ``mdl._input_values``.
+    """
+    submodules = get_submodules(mdl)
+    state_submodules = [sm for sm in submodules if sm.n_states > 0]
+
+    # Global state indices of each unit, shape (n_units, n_states_per_unit)
+    unit_state_idx = np.hstack([
+        np.column_stack([sm.state_idx_global[state] for state in sm.state_list()])
+        for sm in state_submodules
+    ]) if state_submodules else np.zeros((mdl.n_units, 0), dtype=int)
+    n_states_unit = unit_state_idx.shape[1]
+    n_free = n_states_unit + len(free_inputs)
+
+    x_all = x0.copy()
+
+    def residual(z, i):
+        x_all[unit_state_idx[i]] = z[:n_states_unit]
+        for input_name, val in zip(free_inputs, z[n_states_unit:]):
+            mdl._input_values[input_name][i] = val
+
         for submodule in submodules:
             submodule.reset_outputs()
             submodule._store_output = True
 
-        dx_all = np.zeros(n_states_all)
-        for submodule in submodules:
-            if hasattr(submodule, 'state_derivatives'):
-                submodule.state_derivatives(dx_all, x_all_test, v0)
+        dx_all = np.zeros_like(x0)
+        with np.errstate(all='ignore'):  # Other units may be evaluated at meaningless points
+            for submodule in state_submodules:
+                submodule.state_derivatives(dx_all, x_all, v0)
+            output_err = mdl.output(x_all, v0)[i] - output_0[i]
 
         for submodule in submodules:
             submodule._store_output = False
 
-        dx_mdl = []
-        for idx in state_idx:
-            dx_mdl.append(dx_all[idx])
+        return np.append(dx_all[unit_state_idx[i]], output_err)
 
-        output_err = mdl.output(x_all_test, v0) - output_0
-        return np.concatenate(dx_mdl + [output_err])
-
-    x_test = np.concatenate([x0[:n_states], mdl.int_par['bias']])
-    x_test[:] = 1
-
-    x_sol_best = np.ones(n_sol)
-    err_best = 1e6
-    err = err_best
-    for init_conditions in [np.ones(n_sol), np.zeros(n_sol), np.random.randn(n_sol)]:
-        try:
-            sol = least_squares(ode_fun_mdl, init_conditions)
-            err = np.linalg.norm(ode_fun_mdl(sol['x']))
+    rng = np.random.default_rng(0)
+    for i in range(mdl.n_units):
+        z_best, err_best = None, np.inf
+        for z_init in [np.ones(n_free), np.zeros(n_free), rng.standard_normal(n_free)]:
+            try:
+                sol = least_squares(residual, z_init, args=(i,))
+            except ValueError:
+                continue
+            err = np.linalg.norm(residual(sol.x, i))
             if err < err_best:
-                x_sol_best = sol['x']
-                err_best = err
-        except ValueError:
+                z_best, err_best = sol.x, err
+            if err_best < tol:
+                break
+
+        if z_best is None:
+            warnings.warn(f'Initialization of {mdl.par["name"][i]} ({mdl.__class__.__name__}) failed.')
             continue
 
-    x_sol_all = x0.copy()
-    for idx, idx_local in zip(state_idx, state_idx_local):
-        x_sol_all[idx] = x_sol_best[idx_local]
+        residual(z_best, i)  # Leave x_all and inputs at the best solution
+        if err_best > tol:
+            warnings.warn(
+                f'{mdl.par["name"][i]} ({mdl.__class__.__name__}) was potentially not initialized '
+                f'properly (error: {err_best:.2e}).'
+            )
 
-    mdl.int_par[:] = x_sol_best[int_par_idx]
-        
-    if np.linalg.norm(mdl.output(x_sol_all, v0) - output_0) > 1e-6:
-        warnings.warn(f'Model {mdl.__class__} was potentially not initialized properly (error: {err}).')
-    # assert max(abs(ps.state_derivatives(0, x_sol_all, ps.v_0))) < 1e-6
-    x0[:] = x_sol_all
-    x0
+    x0[:] = x_all

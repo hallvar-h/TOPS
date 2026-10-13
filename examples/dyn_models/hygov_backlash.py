@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     sc_bus_idx = ps.gen['GEN'].bus_idx_red['terminal'][0]
 
-    initial_bias = ps.gov['HYGOV'].int_par['bias'].copy()
+    initial_bias = ps.gov['HYGOV'].bias(None, None).copy()
 
     # Run simulation
     while t < t_end:
@@ -51,7 +51,7 @@ if __name__ == '__main__':
             # ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 1e6
         # else:
             # ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 0
-        ps.gov['HYGOV'].int_par['bias'] = initial_bias + np.sin(t)*0.01
+        ps.gov['HYGOV'].set_input('bias', initial_bias + np.sin(t)*0.01)
 
         # Simulate next step
         result = sol.step()

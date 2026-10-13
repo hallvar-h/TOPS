@@ -92,9 +92,6 @@ class GEN(DAEModel):
     def input_list(self):
         return ['V_t_abs', 'V_t_angle', 'P_m', 'E_f', 'v_aux', 'v_pss']
 
-    def int_par_list(self):
-        return ['f']
-
     def reduced_system(self):
         return self.par['bus']
 
