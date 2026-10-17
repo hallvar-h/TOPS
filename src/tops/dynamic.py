@@ -2,7 +2,7 @@ import numpy as np
 
 import tops.utility_functions as dps_uf
 import tops.dyn_models as mdl_lib
-from tops.model_data import load_model_data, find_model_class
+from tops.model_data import load_model_data, find_model_class, read_table
 import tops.power_flow as pf
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
@@ -24,7 +24,7 @@ class PowerSystemModel:
         self.s_n = model['base_mva']
         self.f_n = model['f']
         self.slack_bus = model['slack_bus'] if 'slack_bus' in model else None
-        self.buses = dps_uf.structured_array_from_list(model['buses'][0], model['buses'][1:])
+        self.buses = read_table(model['buses'])
         self.n_bus = len(self.buses)
 
         self.y_bus_lf = None
@@ -57,7 +57,7 @@ class PowerSystemModel:
                 if mdl_class is None:
                     continue
 
-                mdl_data = dps_uf.structured_array_from_list(mdl_data_raw[0], mdl_data_raw[1:])
+                mdl_data = read_table(mdl_data_raw)
                 mdl = mdl_class(mdl_data, self.sys_data)
                 if not hasattr(self, category_key):
                     setattr(self, category_key, dps_uf.dotdict())

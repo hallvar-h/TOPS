@@ -205,3 +205,14 @@ class dotdict(dict):
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
+
+
+def structured_array_from_dataframe(data):
+    """Convert a DataFrame to a structured array. The index is ignored.
+
+    Column dtypes are inferred by numpy (as in structured_array_from_list), so string columns become unicode
+    fields rather than object/StringDtype fields.
+    """
+    columns = [np.array(data[col].tolist()) for col in data.columns]
+    dtypes = [(str(name), col.dtype) for name, col in zip(data.columns, columns)]
+    return np.array(list(zip(*columns)), dtype=dtypes)

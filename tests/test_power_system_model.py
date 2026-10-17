@@ -30,3 +30,22 @@ def test_repeated_init_keeps_state_indices():
 
     assert (idx_first == idx_second).all()
     assert (ps.state_desc[idx_second, 1] == 'speed').all()
+
+
+def test_dataframe_input_matches_list_input():
+    import numpy as np
+    import pandas as pd
+    import tops.ps_models.k2a as model_data
+
+    def to_dataframes(data):
+        if isinstance(data, list) and len(data) > 0 and isinstance(data[0], list):
+            return pd.DataFrame(data[1:], columns=data[0])
+        if isinstance(data, dict):
+            return {key: to_dataframes(val) for key, val in data.items()}
+        return data
+
+    ps_list = dps.PowerSystemModel(model=model_data.load())
+    ps_list.init_dyn_sim()
+    ps_df = dps.PowerSystemModel(model=to_dataframes(model_data.load()))
+    ps_df.init_dyn_sim()
+    assert np.allclose(ps_df.x0, ps_list.x0)

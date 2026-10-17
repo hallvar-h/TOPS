@@ -2,7 +2,9 @@
 import json
 import os
 import warnings
+import pandas as pd
 
+import tops.utility_functions as dps_uf
 import tops.dyn_models as mdl_lib
 
 PS_MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ps_models')
@@ -45,7 +47,7 @@ def load_model_data(model):
             model_data[key] = model_data.pop(alias)
 
     for key, default_mdl in DEFAULT_MODELS.items():
-        if key in model_data and isinstance(model_data[key], list) and len(model_data[key]) > 1:
+        if key in model_data and is_table(model_data[key]):
             model_data[key] = {default_mdl: model_data[key]}
 
     return model_data
@@ -63,3 +65,17 @@ def find_model_class(category_key, mdl_key, user_mdl_lib=None):
 
     warnings.warn(f'Model {category_key}:{mdl_key} not found in model library.')
     return None
+
+
+def is_table(data):
+    """Check if data is a single table (list with header row and at least one entry, or a DataFrame)."""
+    return isinstance(data, pd.DataFrame) or (isinstance(data, list) and len(data) > 1)
+
+
+def read_table(data):
+    """Convert a table given as a list (header row followed by entries) or a DataFrame to a structured array."""
+    if isinstance(data, list):
+        return dps_uf.structured_array_from_list(data[0], data[1:])
+    elif isinstance(data, pd.DataFrame):
+        return dps_uf.structured_array_from_dataframe(data)
+    raise TypeError(f'Table data must be a list or a pandas DataFrame, not {type(data).__name__}')
