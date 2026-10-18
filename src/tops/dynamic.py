@@ -3,6 +3,7 @@ import numpy as np
 import tops.utility_functions as dps_uf
 import tops.dyn_models as mdl_lib
 from tops.model_data import load_model_data, find_model_class, read_table
+from tops.events import AdmittanceChange, BusEvents, EventSchedule
 import tops.power_flow as pf
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
@@ -45,6 +46,9 @@ class PowerSystemModel:
         self.dyn_mdls_dict = {}
 
         self.add_model_data(model)
+
+        self.event_schedule = EventSchedule(read_table(model['events']) if 'events' in model else None)
+        self.bus_events = None
 
     def add_model_data(self, model_data):
         for key, val in model_data.items():
@@ -241,8 +245,40 @@ class PowerSystemModel:
 
             mdl.init_from_connections(self.x_0, self.v_0, output_values)
 
-    
+        self.bus_events = BusEvents(self.buses['name'], self.bus_idx_red)
+        self.event_schedule.reset()
+        for _, category, mdl_key, unit, action in self.event_schedule.events:
+            self.get_events(category, mdl_key).check(unit, action)
+
         self.initialization_ready = True
+
+    def get_events(self, category, mdl_key=None):
+        """Return the events object (see tops.events) of a model, or of the buses if category is 'buses'."""
+        if category == 'buses':
+            return self.bus_events
+        mdl = self.dyn_mdls_dict.get(category, {}).get(mdl_key)
+        if mdl is None:
+            raise KeyError(f'Event target {category}:{mdl_key} not found.')
+        if mdl.events is None:
+            raise ValueError(f'Model {category}:{mdl_key} has no events.')
+        return mdl.events
+
+    def apply_event(self, category, mdl_key, unit, action, **kwargs):
+        """Apply an event immediately, e.g. apply_event('lines', 'Line', 'L1-2', 'disconnect')."""
+        for effect in self.get_events(category, mdl_key).apply(unit, action, **kwargs):
+            self.apply_effect(effect)
+
+    def apply_effect(self, effect):
+        if isinstance(effect, AdmittanceChange):
+            self.y_bus_red = self.y_bus_red + sp.csr_matrix(
+                (effect.data, (effect.rows, effect.cols)), shape=(self.n_bus_red,) * 2)
+        else:
+            raise TypeError(f'Unknown event effect: {type(effect).__name__}')
+
+    def update_events(self, t):
+        """Apply events from the event schedule with time <= t that have not been applied yet."""
+        for _, category, mdl_key, unit, action in self.event_schedule.pop_due(t):
+            self.apply_event(category, mdl_key, unit, action)
 
     def state_derivatives(self, t, x, v_red):
 

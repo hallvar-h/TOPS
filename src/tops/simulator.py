@@ -39,6 +39,7 @@ class Simulator:
     def make_simulation_step(self):
         # Simulate next step
             with self.new_data_cv:
+                self.ps.update_events(self.sol.t)
                 self.sol.step()
 
                 with self.interface_functions_lock:
@@ -56,23 +57,22 @@ class Simulator:
 
 
 class Events:
+    """Events given as a list of (t, ('line', line_name, action)).
+
+    Kept for backwards compatibility. Events can instead be given in the model definition (model['events']).
+    """
     def __init__(self, sim, data):
-        self.data = data
-        self.next_event_time = None
-        self.next_event_data = None
+        self.data = sorted(data, key=lambda event: event[0])
+        self._next = 0
 
     def update(self, sim):
-        if len(self.data) == 0 and self.next_event_time is None:
-            # Could be stopped
-            return
-        
-        if self.next_event_time is None:
-            self.next_event_time, self.next_event_data = self.data.pop(0)
+        while self._next < len(self.data) and self.data[self._next][0] <= sim.sol.t:
+            _, (category, name, action) = self.data[self._next]
+            if category != 'line':
+                raise ValueError(f'Events only supports line events, not "{category}". Use model["events"] instead.')
+            sim.ps.apply_event('lines', 'Line', name, action)
+            self._next += 1
 
-        if self.next_event_time <= sim.sol.t:
-            if self.next_event_data[0] == 'line':
-                sim.ps.lines['Line'].event(sim.ps, self.next_event_data[1], self.next_event_data[2])
-            self.next_event_time = None
 
 class InterfacerDirect:
     def __init__(self, rts=None, name='InterfacerDirect'):

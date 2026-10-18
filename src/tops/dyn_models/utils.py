@@ -105,6 +105,8 @@ class DynMdl:
 
 class DAEModel:
     """Base class for dynamic models"""
+    events_class = None  # Subclass of tops.events.ModelEvents, defining the events of the model
+
     def __init__(self, par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs):
         # type(self)._ids = count(0)
         # self.id = next(type(self)._ids)
@@ -153,6 +155,8 @@ class DAEModel:
         self._input_values = np.zeros(self.n_units, dtype=[(var, float) for var in self.input_list()])
         self._store_output = False
         [self.disconnect_input(inp) for inp in self.input_list()]
+
+        self.events = self.events_class(self) if self.events_class is not None else None
 
     @property
     def int_par(self):

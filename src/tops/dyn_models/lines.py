@@ -1,11 +1,29 @@
 import numpy as np
-import warnings
 from tops.dyn_models.utils import DAEModel
-from tops.utility_functions import lookup_strings
-from scipy.sparse import lil_matrix
+from tops.events import ModelEvents, AdmittanceChange
+
+
+class LineEvents(ModelEvents):
+    actions = ('connect', 'disconnect')
+
+    def connect(self, line_name):
+        idx = self._unit_idx(line_name)
+        if self.mdl.connected[idx]:
+            return []
+        self.mdl.connected[idx] = True
+        return [self.mdl.admittance_change(idx, sign=1)]
+
+    def disconnect(self, line_name):
+        idx = self._unit_idx(line_name)
+        if not self.mdl.connected[idx]:
+            return []
+        self.mdl.connected[idx] = False
+        return [self.mdl.admittance_change(idx, sign=-1)]
 
 
 class Line(DAEModel):
+    events_class = LineEvents
+
     def __init__(self, data, sys_par, **kwargs):
         super().__init__(data, sys_par, **kwargs)
         self.data = data
@@ -21,42 +39,24 @@ class Line(DAEModel):
         return {'from_bus': self.par['from_bus'], 'to_bus': self.par['to_bus']}
 
     def event(self, ps, line_name, event_name):
-        line_idx = lookup_strings(line_name, ps.lines['Line'].par['name'])
+        """Apply a line event directly (connect/disconnect). Kept for backwards compatibility, see LineEvents."""
+        for effect in self.events.apply(line_name, event_name):
+            ps.apply_effect(effect)
 
-        if not event_name in ["connect", "disconnect"]:
-            raise ValueError(f"Event {event_name} not defined for Line model.")
-        
-        if event_name == 'connect' and not self.connected[line_idx]:
-            sign = 1
-            self.connected[line_idx] = True
-        elif event_name == 'disconnect' and self.connected[line_idx]:
-            sign = -1
-            self.connected[line_idx] = False
-        else:
-            return
-
+    def admittance_change(self, line_idx, sign):
+        """Change in the reduced admittance matrix when connecting (sign=1) or disconnecting (sign=-1) a line."""
         idx_from = self.bus_idx_red['from_bus'][line_idx]
         idx_to = self.bus_idx_red['to_bus'][line_idx]
+        if idx_from < 0 or idx_to < 0:
+            raise ValueError(f'Buses of line {self.par["name"][line_idx]} are not in the reduced system.')
 
         admittance = self.admittance[line_idx]
         shunt = self.shunt[line_idx]
+        data = sign*np.array([admittance + shunt/2, admittance + shunt/2, -admittance, -admittance])
+        rows = np.array([idx_from, idx_to, idx_from, idx_to])
+        cols = np.array([idx_from, idx_to, idx_to, idx_from])
+        return AdmittanceChange(data, rows, cols)
 
-        buses_in_red_sys = idx_from in ps.bus_idx_red and idx_to in ps.bus_idx_red
-        data = np.array([admittance + shunt/2,
-                            admittance + shunt/2,
-                            -admittance,
-                            -admittance])
-
-        if not buses_in_red_sys:
-            warnings.warn('Line buses are not in reduced system, line event failed.')
-            return
-
-        rows_red = np.array([idx_from, idx_to, idx_from, idx_to])
-        cols_red = np.array([idx_from, idx_to, idx_to, idx_from])
-        y_line_red = lil_matrix((ps.n_bus_red,) * 2, dtype=complex)
-        y_line_red[rows_red, cols_red] = data
-        ps.y_bus_red += y_line_red*sign
-        
     def init_extras(self):
         self.idx_from = self.bus_idx_red['from_bus']
         self.idx_to = self.bus_idx_red['to_bus']
