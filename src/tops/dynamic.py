@@ -220,9 +220,9 @@ class PowerSystemModel:
         self.mdl_connections = mdl_lib.utils.determine_connections(self.dyn_mdls_dict)
         for mdl, connections in self.mdl_connections.items():
             for input_key, conn in connections.items():
-                init_vals = mdl._input_values[input_key].copy()
-                def new_input_fun(x, v, conn=conn, mdl=mdl, init_vals=init_vals):
-                    input = init_vals
+                def new_input_fun(x, v, conn=conn, mdl=mdl, input_key=input_key):
+                    # Unconnected units take their value from _input_values (i.e. follow set_input)
+                    input = mdl._input_values[input_key].copy()
                     for c in conn:
                         source_fun = getattr(self.dyn_mdls_dict[c['container']][c['mdl']], c['output'])
                         input[c['dest_idx']] = source_fun(x, v)[c['source_idx']]

@@ -1,5 +1,4 @@
 import numpy as np
-import inspect
 import functools
 import warnings
 from typing import NamedTuple
@@ -68,13 +67,10 @@ def _resolve_connection(dyn_mdls, container_key, mdl_key, mdl, conn):
 
 
 def get_submodules(mdl):
-    attributes = inspect.getmembers(mdl)
-    attributes = [a for a in attributes if not (a[0].startswith('__') and a[0].endswith('__'))]
+    """Return ``mdl`` followed by all its blocks (recursively), in the order they were created."""
     output = [mdl]
-    for attr, typ in attributes:
-        if issubclass(type(typ), DAEModel):
-            submodule = getattr(mdl, attr)
-            output.extend(get_submodules(submodule))
+    for block in mdl.blocks.values():
+        output.extend(get_submodules(block))
     return output
 
 
@@ -154,7 +150,8 @@ class DAEModel:
         self._output_values = np.zeros(self.n_units, dtype=[(var, float) for var in self.output_list()])
         self._input_values = np.zeros(self.n_units, dtype=[(var, float) for var in self.input_list()])
         self._store_output = False
-        [self.disconnect_input(inp) for inp in self.input_list()]
+        for input_name in self.input_list():
+            self.disconnect_input(input_name)
 
         self.events = self.events_class(self) if self.events_class is not None else None
 
@@ -192,53 +189,59 @@ class DAEModel:
         #     self._output_ready[key] = False
 
     def set_input(self, input_name, value, idx=None):
+        """Set the value of an input. Units where the input is connected to another model's output
+        are not affected, since their value is given by the connection."""
         if idx is not None:
             self._input_values[input_name][idx] = value
         else:
             self._input_values[input_name] = value
 
     def disconnect_input(self, input_name):
-        def input(self, x, v):
-            return self._input_values[input_name]
-        setattr(type(self), input_name, input)
+        """Make the input read its value from _input_values (set with set_input), replacing any
+        connection. Set on the instance, so that other instances and the class are not affected."""
+        setattr(self, input_name, functools.partial(self._read_input, input_name))
+
+    def _read_input(self, input_name, x, v):
+        return self._input_values[input_name]
+
+    def __setattr__(self, name, value):
+        # Blocks (sub-models) are registered when assigned to an attribute, e.g. self.gain = Gain(...)
+        blocks = self.__dict__.get('_blocks')
+        if isinstance(value, DAEModel):
+            if blocks is None:
+                blocks = self.__dict__['_blocks'] = {}
+            for other_name, block in blocks.items():
+                if block is value and other_name != name:
+                    raise ValueError(
+                        f'{type(self).__name__}: block is already assigned to self.{other_name}, '
+                        f'cannot also assign it to self.{name}.')
+            blocks[name] = value
+        elif blocks is not None:
+            blocks.pop(name, None)
+        object.__setattr__(self, name, value)
+
+    @property
+    def blocks(self):
+        """Blocks (sub-models) of the model, by attribute name, in the order they were created."""
+        return self.__dict__.get('_blocks', {})
 
     def add_blocks(self):
-        """Sub-modules can be specified by overwriting this function"""
+        """Create blocks (sub-models) by assigning them to attributes, e.g. self.gain = Gain(...).
+        Should be overwritten (if model has blocks)."""
         pass
 
     def update_block_names(self):
-        """Update names of modules and sub-modules"""
-        # names = [mdl.par['name'] for mdl in get_submodules(mdl_0)[1:]]
-        # np.array(names)[:, 1]
-
-        new_names = []
-        for mdl in get_submodules(self)[1:]:
-            # print(mdl.par['name'])
-            concat_str = np.char.add
-            new_names.append(concat_str(self.par['name'], concat_str('/', mdl.par['name'])))
-
-        unique, counts = np.unique(np.array(new_names), return_counts=True, axis=0)
-
-        for x in unique:
-            number = 0
-            for i in range(0, len(new_names)):
-                if np.array_equal(new_names[i], x):
-                    number += 1
-
-                    if number >= 2:
-                        # print(number, new_names[i])
-                        new_names[i] = concat_str(new_names[i], f'-{number}')
-
-        for mdl, names in zip(get_submodules(self)[1:], new_names):
-
-            if mdl.n_states > 0:
-                mdl.state_desc = np.vstack([
-                    np.repeat(names, mdl.n_states),
-                    np.tile(mdl.state_list(), mdl.n_units)]
+        """Name the blocks (recursively) after their attribute, e.g. 'AVR1/gain' or 'VSC1/pll/filter'."""
+        for attr, block in self.blocks.items():
+            names = np.char.add(self.par['name'].astype(str), f'/{attr}')
+            other_par = dps_uf.remove_recarray_field(block.par, 'name')
+            block.par = dps_uf.combine_recarrays(np.array(names, dtype=[('name', names.dtype)]), other_par)
+            if block.n_states > 0:
+                block.state_desc = np.vstack([
+                    np.repeat(block.par['name'], block.n_states),
+                    np.tile(block.state_list(), block.n_units)]
                 ).T
-            names = np.array(names, dtype=[('name', names.dtype)])
-            old_par = dps_uf.remove_recarray_field(mdl.par, 'name')
-            mdl.par = dps_uf.combine_recarrays(names, old_par)
+            block.update_block_names()
 
     def parse_input_data(self, **kwargs):
         """Read parameters from kwargs"""
