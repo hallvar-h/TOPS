@@ -1,4 +1,6 @@
-from tops.dyn_models.blocks import *
+import numpy as np
+from tops.dyn_models.utils import DAEModel
+from tops.dyn_models.blocks import PIRegulator, TimeConstant
 from .pll import PLL1
 
 class VSC(DAEModel):

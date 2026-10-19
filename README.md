@@ -25,6 +25,16 @@ Pull request titles must follow the [Conventional Commits](https://www.conventio
 
 [Release Please](https://github.com/googleapis/release-please) maintains a release pull request on `main`. That pull request updates `CHANGELOG.md` and the package version in `pyproject.toml`. Because Release Please uses the repository `GITHUB_TOKEN`, run the **Tests** workflow manually against the generated release branch before merging it. Merging the release pull request creates a version tag and GitHub release, builds and validates the distributions, and starts the protected `pypi` environment deployment.
 
+# Development
+The project uses [uv](https://docs.astral.sh/uv/). To set up an environment and run the tests:
+
+```
+uv sync
+uv run pytest            # fast tests
+uv run pytest -m slow    # full-length validation against PowerFactory
+uv run pytest -m ""      # everything (as in CI)
+```
+
 # Citing
 If you use this code for your research, please cite [this paper](https://ieeexplore.ieee.org/document/9494770).
 

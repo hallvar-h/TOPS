@@ -1,12 +1,8 @@
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "tops"
 description = 'Tiny open power system simulator'
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 license = {file="LICENSE"}
 version = "0.3.0"
 keywords = []
@@ -18,12 +14,28 @@ classifiers = [
 	"Operating System :: OS Independent",
 ]
 dependencies = [
-	"numpy",
-	"scipy",
-	"matplotlib",
-    "pandas"
-	]
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pandas",
+    "progressbar2",
+]
+
+[project.optional-dependencies]
+dev = ["ipython"]
+
+[dependency-groups]
+dev = ["pytest"]
 
 [project.urls]
 "Homepage" = "https://github.com/hallvar-h/TOPS"
 "Bug Tracker" = "https://github.com/hallvar-h/TOPS/issues"
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: long-running validation simulations (run with -m slow, or -m \"\" for everything)"]
+addopts = "-m 'not slow'"

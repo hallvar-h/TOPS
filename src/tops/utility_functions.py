@@ -1,5 +1,5 @@
 import numpy as np
-from tops.solvers import Euler, ModifiedEuler, SimpleRK4
+import warnings
 
 
 def newton_rhapson_power_flow(y_bus, v_0, p_sum_bus, q_sum_bus, bus_types, tol, pf_max_it):
@@ -66,7 +66,7 @@ def newton_rhapson_power_flow(y_bus, v_0, p_sum_bus, q_sum_bus, bus_types, tol, 
             # if print_output:
             #     print('Power flow converged.')
         if i == pf_max_it:
-            print('Warning: Power flow did not converge in {} iterations.'.format(pf_max_it))
+            warnings.warn(f'Power flow did not converge in {pf_max_it} iterations.', RuntimeWarning)
 
     v_sol = x_to_v(x)
     s_sol = v_sol * np.conj(y_bus.dot(v_sol))
@@ -200,25 +200,19 @@ def jacobian_num(f, x, eps=1e-10, **params):
     return J
 
 
-class DynamicModel:  # This is not used anymore?
-    # Empty dummy-class for dynamic models (Gen, AVR, GOV, PSS etc.)
-    def __init__(self):
-        pass
+class dotdict(dict):
+    """https://stackoverflow.com/questions/2352181/how-to-use-a-dot-to-access-members-of-dictionary#23689767"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
 
 
-class EventManager:
-    # Not in use?
-    def __init__(self, events, event_function):
-        self.events = events
-        self.event_flags = np.ones(len(self.events), dtype=bool)
-        self.event_function = event_function
+def structured_array_from_dataframe(data):
+    """Convert a DataFrame to a structured array. The index is ignored.
 
-    def update(self, t_now):
-        for i, (t_event, sub_events) in enumerate(self.events):
-            if t_now >= t_event and self.event_flags[i]:
-                self.event_flags[i] = False
-                for element_type, name, action in sub_events:
-                    self.event_function(element_type, name, action)
-                    print(name + ' was ' + action + 'ed.')
-
-
+    Column dtypes are inferred by numpy (as in structured_array_from_list), so string columns become unicode
+    fields rather than object/StringDtype fields.
+    """
+    columns = [np.array(data[col].tolist()) for col in data.columns]
+    dtypes = [(str(name), col.dtype) for name, col in zip(data.columns, columns)]
+    return np.array(list(zip(*columns)), dtype=dtypes)

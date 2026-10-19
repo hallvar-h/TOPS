@@ -2,43 +2,20 @@ import numpy as np
 
 import tops.utility_functions as dps_uf
 import tops.dyn_models as mdl_lib
+from tops.model_data import load_model_data, find_model_class, read_table
+from tops.events import AdmittanceChange, BusEvents
+import tops.power_flow as pf
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
-from scipy.sparse import diags as sp_diags
+from scipy.optimize import fsolve
 
-import json
-import os
-
-import importlib
-importlib.reload(mdl_lib)
+import warnings
 
 
 class PowerSystemModel:
     def __init__(self, model, user_mdl_lib=None):
         self.user_mdl_lib = user_mdl_lib
-        file_is_json = isinstance(model, str) and model[-5:] == '.json'
-        if file_is_json:
-            try:
-                # Try to open specified path directly
-                with open(model) as f:
-                    data = f.read()
-                model_data = json.loads(data)
-            except IOError:
-                try:
-                    # Try to see if the specified model is available in the ps_models folder of the module
-                    current_folder = os.path.dirname(os.path.abspath(__file__))
-                    model_file_path = os.path.join(current_folder, 'ps_models', model)
-                    with open(model_file_path) as f:
-                        data = f.read()
-                    model_data = json.loads(data)
-                except IOError:
-                    print('Power System Model Data File not found. Aborting.')
-                    return
-
-        elif isinstance(model, dict):
-            model_data = model
-        
-        model = model_data.copy()
+        model = load_model_data(model)
         self.model = model
 
         self.perform_kron_reduction = False
@@ -48,7 +25,7 @@ class PowerSystemModel:
         self.s_n = model['base_mva']
         self.f_n = model['f']
         self.slack_bus = model['slack_bus'] if 'slack_bus' in model else None
-        self.buses = dps_uf.structured_array_from_list(model['buses'][0], model['buses'][1:])
+        self.buses = read_table(model['buses'])
         self.n_bus = len(self.buses)
 
         self.y_bus_lf = None
@@ -57,23 +34,6 @@ class PowerSystemModel:
         self.setup_ready = False
         self.initialization_ready = False
 
-        if 'transformers' in model:
-            model['trafos'] = model['transformers']
-            model.pop('transformers', None)
-
-        if 'generators' in model:
-            model['gen'] = model['generators']
-            model.pop('generators', None)
-
-        mdl_data = ['lines', 'trafos', 'loads', 'shunts']
-        default_mdls = ['Line', 'Trafo', 'Load', 'Shunt']
-
-        for key, default_mdl in zip(mdl_data, default_mdls):
-            # print(key, default_mdl)
-            if key in model and isinstance(model[key], list) and len(model[key]) > 1:
-                model[key] = {default_mdl: model[key]}
-
-        
         self.sys_data = {
             's_n': self.s_n,
             'f_n': self.f_n,
@@ -87,33 +47,27 @@ class PowerSystemModel:
 
         self.add_model_data(model)
 
+        self.bus_events = None
+
     def add_model_data(self, model_data):
         for key, val in model_data.items():
-            if isinstance(val, dict):
-                category_key = key
-                category = val
-                for mdl_key, mdl_data_raw in category.items():
-                    if hasattr(self.user_mdl_lib, category_key) and hasattr(getattr(self.user_mdl_lib, category_key), mdl_key):
-                        # print('User model: {}, {}'.format(category_key, mdl_key))
-                        mdl_class = getattr(getattr(self.user_mdl_lib, category_key), mdl_key)
-                    elif hasattr(mdl_lib, category_key) and hasattr(getattr(mdl_lib, category_key), mdl_key):
-                        # print('Standard model: {}, {}'.format(category_key, mdl_key))
-                        mdl_class = getattr(getattr(mdl_lib, category_key), mdl_key)
+            if not isinstance(val, dict):
+                continue
+            category_key = key
+            category = val
+            for mdl_key, mdl_data_raw in category.items():
+                mdl_class = find_model_class(category_key, mdl_key, self.user_mdl_lib)
+                if mdl_class is None:
+                    continue
 
-                    else:
-                        print('Model {}:{} not found in model library.'.format(category_key, mdl_key))
-                        continue
-
-                    mdl_data = dps_uf.structured_array_from_list(mdl_data_raw[0], mdl_data_raw[1:])
-                    mdl = mdl_class(mdl_data, self.sys_data)
-                    if hasattr(self, category_key):
-                        getattr(self, category_key).update({mdl_key: mdl})
-                        self.dyn_mdls_dict[category_key].update({mdl_key: mdl})
-                    else:
-                        setattr(self, category_key, {mdl_key: mdl})
-                        self.dyn_mdls_dict[category_key] = {mdl_key: mdl}
-
-                    [self.dyn_mdls.append(item) for item in mdl_lib.utils.get_submodules(mdl)]  # [::-1]
+                mdl_data = read_table(mdl_data_raw)
+                mdl = mdl_class(mdl_data, self.sys_data)
+                if not hasattr(self, category_key):
+                    setattr(self, category_key, dps_uf.dotdict())
+                    self.dyn_mdls_dict[category_key] = {}
+                getattr(self, category_key).update({mdl_key: mdl})
+                self.dyn_mdls_dict[category_key].update({mdl_key: mdl})
+                self.dyn_mdls.extend(mdl_lib.utils.get_submodules(mdl))
 
     def setup(self):
         self.mdl_instructions = {key: list() for key in [
@@ -130,6 +84,7 @@ class PowerSystemModel:
             'dyn_var_adm',
             'init_from_load_flow',
             'current_injections',
+            'apparent_power_injections',
             # 'init_mdl', 'lf_adm', 'dyn_const_adm', 'dyn_var_adm',
             # '_current_injections', 'state_derivatives',
             # 'ref'
@@ -143,12 +98,15 @@ class PowerSystemModel:
         if self.perform_kron_reduction:
             buses_red = []
             for mdl in self.mdl_instructions['reduced_system']:
-                [buses_red.append(bus) for bus in mdl.reduced_system()]
+                buses_red.extend(mdl.reduced_system())
 
             bus_idx_red = dps_uf.lookup_strings(buses_red, self.buses['name'])
         else:
             bus_idx_red = np.arange(self.n_bus)
 
+        self.algebraic_equations_are_linear = len(
+            self.mdl_instructions['apparent_power_injections']) == 0
+        
         # Remove duplicate buses
         bus_idx_red_sort, idx = np.unique(bus_idx_red, return_index=True)
         self.bus_idx_red = bus_idx_red_sort
@@ -169,9 +127,7 @@ class PowerSystemModel:
         y_lf = np.zeros((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['load_flow_adm']:
             data, (row_idx, col_idx) = mdl.load_flow_adm()
-            sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())),
-                                   shape=(self.n_bus,) * 2)
-            y_lf += sp_mat.todense()
+            np.add.at(y_lf, (row_idx.flatten(), col_idx.flatten()), data.flatten())
 
         self.y_bus_lf = y_lf
         return y_lf
@@ -181,8 +137,7 @@ class PowerSystemModel:
         y_dyn = np.zeros((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['dyn_const_adm']:
             data, (row_idx, col_idx) = mdl.dyn_const_adm()
-            sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
-            y_dyn += sp_mat.todense()
+            np.add.at(y_dyn, (row_idx.flatten(), col_idx.flatten()), data.flatten())
 
         self.y_bus_dyn = y_dyn
         return y_dyn
@@ -196,67 +151,25 @@ class PowerSystemModel:
         if self.y_bus_lf is None:
             self.build_y_bus_lf()
 
-        bus_type = np.array(['PQ'] * self.n_bus, dtype='<U2')
-
-        p_pq = np.zeros(self.n_bus)
-        q_pq = np.zeros(self.n_bus)
-
-        for mdl in self.mdl_instructions['load_flow_pq']:
-            bus_idx, p, q = mdl.load_flow_pq()
-            np.add.at(p_pq, bus_idx, p / self.s_n)
-            np.add.at(q_pq, bus_idx, q / self.s_n)
-
-        p_pv = np.zeros(self.n_bus)
-        v_pv = np.ones(self.n_bus)
+        pq_mdls = self.mdl_instructions['load_flow_pq']
+        pv_mdls = self.mdl_instructions['load_flow_pv']
 
         if not self.slack_bus:
-            bus_idx = self.mdl_instructions['load_flow_pv'][0].load_flow_pv()[0]
-            sl_idx = bus_idx[0]
+            sl_idx = pf.default_slack_bus_idx(pv_mdls)
             self.slack_bus = self.buses[sl_idx]['name']
         else:
             sl_idx = dps_uf.lookup_strings(self.slack_bus, self.buses['name'])
 
-        for mdl in self.mdl_instructions['load_flow_pv']:
-            bus_idx, p, v = mdl.load_flow_pv()
-            if sl_idx in bus_idx:
-                unit_idx = np.argmax(bus_idx == sl_idx)
-                slack_unit = (mdl, unit_idx)
-                self.slack_unit = slack_unit
-            bus_type[bus_idx] = 'PV'
-            np.add.at(p_pv, bus_idx, p / self.s_n)
-            v_pv[bus_idx] = v
-            # mdl.lf_idx = slice(k_lf, mdl.n_units)
-            # k_lf += mdl.n_units
+        result = pf.solve_power_flow(self.y_bus_lf, pq_mdls, pv_mdls, self.s_n, sl_idx, self.pf_tol, self.pf_max_it)
 
-        bus_type[sl_idx] = 'SL'
-
-        phi_0 = np.zeros(self.n_bus)
-        self.v_0, self.s_0, converged = dps_uf.newton_rhapson_power_flow(self.y_bus_lf, v_pv, p_pv + p_pq, q_pq, bus_type,
-                                                              self.pf_tol, self.pf_max_it)
+        self.v_0 = result.v
         self.v0 = self.v_0
+        self.s_0 = result.s
+        if result.slack_unit is not None:
+            self.slack_unit = result.slack_unit
+        self.load_flow_soln = result.unit_injections
 
-        pv_units_per_bus = np.zeros(self.n_bus, dtype=int)
-        for mdl in self.mdl_instructions['load_flow_pv']:
-            bus_idx = mdl.load_flow_pv()[0]
-            np.add.at(pv_units_per_bus, bus_idx, 1)
-
-        a = self.s_0.imag + q_pq
-        b = pv_units_per_bus
-        q_per_pv_unit = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
-
-        self.load_flow_soln = {}
-        for mdl in self.mdl_instructions['load_flow_pv']:
-            bus_idx, p_setp, v = mdl.load_flow_pv()
-            q = q_per_pv_unit[bus_idx]
-            p = -p_setp / self.s_n
-            if sl_idx in bus_idx:
-                unit_idx = np.argmax(bus_idx == sl_idx)
-                p[unit_idx] = self.s_0[sl_idx].real + -p_setp[unit_idx] / self.s_n + p_pv[sl_idx] + p_pq[sl_idx]
-                # p[unit_idx] /= mdl.par['n_par'][unit_idx]
-
-            self.load_flow_soln[mdl] = (p + 1j * q) * self.s_n
-        
-        if converged:
+        if result.converged:
             self.power_flow_ready = True
 
     def kron_reduction(self, y_bus, keep_buses):
@@ -278,7 +191,8 @@ class PowerSystemModel:
         for mdl in self.dyn_mdls:
             mdl.idx = slice(self.n_states, mdl.idx.stop - mdl.idx.start + self.n_states)
             for field in mdl.state_idx_global.dtype.names:
-                mdl.state_idx_global[field] += mdl.idx.start
+                # Computed from local indices (not +=), so that repeated calls give the same result
+                mdl.state_idx_global[field] = mdl.state_idx[field] + mdl.idx.start
             self.n_states += mdl.n_states * mdl.n_units
             self.state_desc = np.vstack([self.state_desc, mdl.state_desc])
 
@@ -303,9 +217,6 @@ class PowerSystemModel:
         self.y_bus_red = sp.csr_matrix(self.y_bus_red_full)
         self.y_bus_red_mod = sp.csr_matrix(self.y_bus_red_full)*0
 
-        # for mdl in self.dyn_mdls:
-        #     mdl.sys_par['red_to_full'] = self.red_to_full
-
         self.mdl_connections = mdl_lib.utils.determine_connections(self.dyn_mdls_dict)
         for mdl, connections in self.mdl_connections.items():
             for input_key, conn in connections.items():
@@ -321,20 +232,44 @@ class PowerSystemModel:
         # Initialize state vector
         self.mdl_connections_by_source = mdl_lib.utils.determine_connections(self.dyn_mdls_dict, order_by='output')
         for mdl, connections in self.mdl_connections_by_source.items():
-            if hasattr(mdl, 'init_from_connections'):
-                output_values = np.zeros(mdl.n_units, [(field, float) for field in mdl.output_list()])
-                for output_key, conn in connections.items():
-                    init_val = np.zeros(mdl.n_units)
-                    for c in conn:
-                        input_fun = getattr(self.dyn_mdls_dict[c['container']][c['mdl']], c['input'])
-                        input_fun = lambda x, v:  self.dyn_mdls_dict[c['container']][c['mdl']]._input_values[c['input']]
-                        np.add.at(init_val, c['source_idx'], input_fun(None, None)[c['dest_idx']])
-                    output_values[output_key] = init_val
+            if not hasattr(mdl, 'init_from_connections'):
+                continue
+            output_values = np.zeros(mdl.n_units, [(field, float) for field in mdl.output_list()])
+            for output_key, conn in connections.items():
+                init_val = np.zeros(mdl.n_units)
+                for c in conn:
+                    input_fun = lambda x, v:  self.dyn_mdls_dict[c['container']][c['mdl']]._input_values[c['input']]
+                    np.add.at(init_val, c['source_idx'], input_fun(None, None)[c['dest_idx']])
+                output_values[output_key] = init_val
 
-                mdl.init_from_connections(self.x_0, self.v_0, output_values)
+            mdl.init_from_connections(self.x_0, self.v_0, output_values)
 
-    
+        self.bus_events = BusEvents(self.buses['name'], self.bus_idx_red)
+
         self.initialization_ready = True
+
+    def get_events(self, category, mdl_key=None):
+        """Return the events object (see tops.events) of a model, or of the buses if category is 'buses'."""
+        if category == 'buses':
+            return self.bus_events
+        mdl = self.dyn_mdls_dict.get(category, {}).get(mdl_key)
+        if mdl is None:
+            raise KeyError(f'Event target {category}:{mdl_key} not found.')
+        if mdl.events is None:
+            raise ValueError(f'Model {category}:{mdl_key} has no events.')
+        return mdl.events
+
+    def apply_event(self, category, mdl_key, unit, action, **kwargs):
+        """Apply an event immediately, e.g. apply_event('lines', 'Line', 'L1-2', 'disconnect')."""
+        for effect in self.get_events(category, mdl_key).apply(unit, action, **kwargs):
+            self.apply_effect(effect)
+
+    def apply_effect(self, effect):
+        if isinstance(effect, AdmittanceChange):
+            self.y_bus_red = self.y_bus_red + sp.csr_matrix(
+                (effect.data, (effect.rows, effect.cols)), shape=(self.n_bus_red,) * 2)
+        else:
+            raise TypeError(f'Unknown event effect: {type(effect).__name__}')
 
     def state_derivatives(self, t, x, v_red):
 
@@ -351,7 +286,7 @@ class PowerSystemModel:
 
         return dx
 
-    def solve_algebraic(self, t, x):
+    def solve_algebraic(self, t, x, v_0=None):
         '''
         Solves algebraic equations given states
         :param t:
@@ -363,156 +298,57 @@ class PowerSystemModel:
             bus_idx_red, i_inj_mdl = mdl.current_injections(x, None)
             np.add.at(i_inj, bus_idx_red, i_inj_mdl)
 
-        y_var = np.zeros((self.n_bus,) * 2, dtype=complex)
+        y_var = sp.csr_matrix((self.n_bus,) * 2, dtype=complex)
         for mdl in self.mdl_instructions['dyn_var_adm']:
             data, (row_idx, col_idx) = mdl.dyn_var_adm(x, None)
-            sp_mat = sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
-            y_var += sp_mat.todense()
-        y_var = sp.csr_matrix(y_var)
+            y_var += sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
+        if self.algebraic_equations_are_linear:
+            return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
 
-        return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
+        y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
+        s_inj = np.zeros(self.n_bus_red, dtype=complex)
+        for mdl in self.mdl_instructions['apparent_power_injections']:
+            bus_idx_red, s_inj_mdl = mdl.apparent_power_injections(x, None)
+            np.add.at(s_inj, bus_idx_red, s_inj_mdl)
+    
+        v_abs_idx = slice(self.n_bus)
+        v_ang_idx = slice(self.n_bus, 2*self.n_bus)
+        
+        def f(x):
+            v = x[v_abs_idx]*np.exp(1j*x[v_ang_idx])
+            f_complex = y_bus.dot(v)*np.conj(v) - i_inj*np.conj(v) - np.conj(s_inj)
+            return np.concatenate([f_complex.real, f_complex.imag])
+        
+        # v_0 = None
+        v_0 = v_0 if v_0 is not None else np.ones_like(self.v0)
+        x_alg = np.concatenate([abs(v_0), np.angle(v_0)])
 
-    def no_fun(self):
-        pass
-        '''
-        # Interfacing models  with system (current injections)
-        self.i_inj_d = np.zeros(self.n_bus_red, dtype=complex)
-        self.i_inj_q = np.zeros(self.n_bus_red, dtype=complex)
-        for dm in self.mdl_instructions['current_injections']:
-            I_n = dm.par['S_n'] / (np.sqrt(3) * dm.par['V_n'])
-            i_inj_d_mdl, i_inj_q_mdl = dm.current_injections(
-                x[dm.idx].view(dtype=dm.dtypes),
-                dm.input,
-                dm.output,
-                dm.par,
-                dm.int_par,
-            )*I_n/self.i_n[dm.bus_idx]
-            np.add.at(self.i_inj_d, dm.bus_idx_red, i_inj_d_mdl)
-            np.add.at(self.i_inj_q, dm.bus_idx_red, i_inj_q_mdl)
+        converged = True
+        with warnings.catch_warnings():
+            # Turn fsolve's RuntimeWarning into an exception, so non-convergence can be detected
+            warnings.filterwarnings('error')
+            try:
+                x_alg = fsolve(f, x_alg, xtol=1e-10)
+            except RuntimeWarning:
+                x_alg *= np.nan
+                converged = False
 
-        self.i_inj[:] = self.i_inj_d + self.i_inj_q
+        if not converged:
+            # Warn outside the catch_warnings block, where warnings are turned into errors
+            warnings.warn('Solution of algebraic equations did not converge.', RuntimeWarning)
 
-        # Get dynamic impedances
-        self.y_bus_red_dyn *= 0
-        for dm in self.mdl_functions['dyn_var_adm']:
-            y_mdl = dm.dyn_var_adm(
-                x[dm.idx].view(dtype=dm.dtypes) if len(dm.state_list) > 0 else None,
-                dm.input, dm.output, dm.par, dm.int_par
-            )
-
-            data = np.array(y_mdl).flatten()
-            row_idx = dm.row_idx.flatten()
-            col_idx = dm.col_idx.flatten()
-            sp_mat = sp.csr_matrix((data, (row_idx, col_idx)), shape=(self.n_bus_red,) * 2)
-            self.y_bus_red_dyn += sp_mat
-
-            # np.add.at(self.y_bus_red_dyn, (dm.row_idx, dm.col_idx), y_bus_red_dyn_mdl)
-            # for y_mdl_, row_idx, col_idx in zip(np.array(y_mdl).T, dm.row_idx.T, dm.col_idx.T):
-                # print(row_idx.shape)
-                # print(y_mdl_.shape)
-                # self.y_bus_red_dyn[row_idx, col_idx] = self.y_bus_red_dyn[row_idx, col_idx] + y_mdl_
-            # self.y_bus_red_dyn[dm.row_idx, dm.col_idx] = y_bus_red_dyn_mdl
-
-        # Solve network equations
-        # self.v_red = sp_linalg.spsolve(self.y_bus_red + self.y_bus_red_mod, self.i_inj)
-        y_bus = self.y_bus_red + self.y_bus_red_dyn + self.y_bus_red_mod
-
-        if self.algebraic_equations_iterate:
-            v_red = self.v_red.copy()
-
-            tol = 1e-10
-            max_it = 10
-            error = 10 * tol
-            it = 0
-
-            # t_tot = time.time()
-            # t_spsolve_cum0 = 0
-            while error > tol and it < max_it:
-                s_v2_diag = np.conj(sp_diags(self.s_inj / v_red ** 2))
-                A = y_bus + s_v2_diag
-                b = np.conj(self.s_inj / v_red) + self.i_inj + s_v2_diag * v_red
-                v_red = sp_linalg.spsolve(A, b)
-                error = np.linalg.norm(y_bus.dot(v_red) - np.conj(self.s_inj / v_red) - self.i_inj)
-                it += 1
-
-            if error > tol:
-                print('Warning: Solution of algebraic equations did not converge.')
-
-            return v_red
-        else:
-            return sp_linalg.spsolve(y_bus, self.i_inj)
-        '''
+        v = x_alg[v_abs_idx]*np.exp(1j*x_alg[v_ang_idx])
+        return v
 
 
-    def ode_fun(self, t, x):
+    def ode_fun(self, t, x, v_0=None):
         '''
         Can be integrated with any ODE-integration method (e.g. Euler, Runge-Kutta etc.)
         :param t:
         :param x:
         :return:
         '''
-        v_red = self.solve_algebraic(t, x)
+        v_red = self.solve_algebraic(t, x, v_0=v_0)
 
         return self.state_derivatives(t, x, v_red)
 
-
-# if __name__ == '__main__':
-
-#     from collections import defaultdict
-#     import time
-#     import tops.solvers as dps_sol
-#     import sys
-
-#     # Load model
-#     import tops.ps_models.k2a as model_data
-
-#     importlib.reload(model_data)
-#     model = model_data.load()
-
-#     # Power system model
-#     ps = dps.PowerSystemModel(model=model)
-#     ps.init_dyn_sim()
-#     print(max(abs(ps.state_derivatives(0, ps.x_0, ps.v_0))))
-
-#     t_end = 10
-#     x_0 = ps.x_0.copy()
-
-#     # Solver
-#     sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x_0, t_end, max_step=5e-3)
-
-#     # Initialize simulation
-#     t = 0
-#     result_dict = defaultdict(list)
-#     t_0 = time.time()
-
-#     sc_bus_idx = ps.gen['GEN'].bus_idx_red['terminal'][0]
-
-#     # Run simulation
-#     while t < t_end:
-#         sys.stdout.write("\r%d%%" % (t / (t_end) * 100))
-
-#         # Short circuit
-#         if t >= 1 and t <= 1.05:
-#             ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 1e6
-#         else:
-#             ps.y_bus_red_mod[(sc_bus_idx,) * 2] = 0
-
-#         # Simulate next step
-#         result = sol.step()
-#         x = sol.y
-#         t = sol.t
-
-#         dx = ps.ode_fun(0, ps.x_0)
-
-#         # Store result
-#         result_dict['Global', 't'].append(sol.t)
-#         [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc, x)]
-#         [result_dict[tuple(desc)].append(state) for desc, state in zip(ps.state_desc_der, dx)]
-
-#     print('Simulation completed in {:.2f} seconds.'.format(time.time() - t_0))
-
-#     plt.figure()
-#     state = 'speed'
-#     for i, gen in enumerate(ps.gen['GEN'].par['name']):
-#         plt.plot(result_dict[('Global', 't')], result_dict[(gen, f'{state}')], color=f'C{i}', alpha=0.5)
-#     plt.show()
