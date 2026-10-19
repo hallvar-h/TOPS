@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 
 import tops.dynamic as dps
-from tops.dyn_models.blocks import Gain, TimeConstant
-from tops.dyn_models.utils import DAEModel, get_submodules
+from tops.dyn_models.blocks import Gain, Integrator, TimeConstant
+from tops.dyn_models.utils import AlgebraicLoopError, DAEModel, get_submodules, output, store_outputs
 
 
 class Inner(DAEModel):
@@ -74,3 +74,58 @@ def test_set_input_affects_unconnected_units_of_connected_input():
     assert v_pss[3] == 0.1
     assert np.allclose(v_pss[:3], pss.output(x, ps.v_0))
     assert gen.v_pss(x, ps.v_0) is not v_pss  # A new array is returned on each call
+
+
+class CountingGain(Gain):
+    calls = 0
+
+    @output
+    def output(self, x, v):
+        self.calls += 1
+        return 2*super().output(x, v)  # Overriding output calling super().output is not a loop
+
+
+def connect_in_loop(a, b):
+    a.input = lambda x, v: b.output(x, v)
+    b.input = lambda x, v: a.output(x, v)
+
+
+@pytest.mark.parametrize('store', [True, False])
+def test_algebraic_loop_raises(store):
+    a, b = Gain(K=np.ones(1)), Gain(K=np.ones(1))
+    connect_in_loop(a, b)
+    with pytest.raises(AlgebraicLoopError, match='algebraic loop'):
+        if store:
+            with store_outputs([a, b]):
+                a.output(None, None)
+        else:
+            a.output(None, None)
+    assert not a._outputs_in_progress and not b._outputs_in_progress
+    assert not a._store_output and not a._stored_outputs
+
+
+def test_loop_through_state_is_evaluated():
+    gain, lag = Gain(K=2*np.ones(1)), TimeConstant(T=np.ones(1))
+    connect_in_loop(gain, lag)
+    with store_outputs([gain, lag]):
+        assert gain.output(np.array([3.0]), None) == 6.0
+
+
+def test_outputs_are_computed_once_per_evaluation():
+    mdl = CountingGain(K=np.ones(1))
+    mdl.set_input('input', 1.0)
+    with store_outputs([mdl]):
+        assert mdl.output(None, None) == 2.0
+        assert mdl.output(None, None) == 2.0
+    assert mdl.calls == 1
+    with store_outputs([mdl]):
+        mdl.output(None, None)
+    assert mdl.calls == 2
+
+
+def test_stored_output_is_not_a_view_of_states():
+    mdl = Integrator(n_units=2)
+    x = np.array([1.0, 2.0])
+    with store_outputs([mdl]):
+        mdl.output(x, None)[:] = 0
+    assert x.tolist() == [1.0, 2.0]

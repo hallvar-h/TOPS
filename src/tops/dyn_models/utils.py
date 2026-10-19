@@ -1,4 +1,5 @@
 import numpy as np
+import contextlib
 import functools
 import warnings
 from typing import NamedTuple
@@ -74,18 +75,54 @@ def get_submodules(mdl):
     return output
 
 
+class AlgebraicLoopError(RuntimeError):
+    """Raised when an output depends on itself without passing through a state."""
+
+
 def output(f):
+    """Decorator for output methods of models.
+
+    While outputs are stored (within ``store_outputs``), each output is computed once and the stored
+    value is returned on later calls, so that an output used by several blocks is only computed once
+    per evaluation.
+
+    An output that depends on itself without passing through a state (an algebraic loop) raises
+    AlgebraicLoopError. Loops through a state are fine, since outputs of states do not depend on
+    inputs.
+    """
     @functools.wraps(f)
     def wrap(self, *args):
+        # Keyed by f (not by name), so that an overriding output can call super().output
+        if self._store_output and f in self._stored_outputs:
+            return self._stored_outputs[f]
+        if f in self._outputs_in_progress:
+            raise AlgebraicLoopError(
+                f'{type(self).__name__}.{f.__name__} ({", ".join(self.par["name"][:3])}) depends on '
+                f'itself without passing through a state (algebraic loop).')
+        self._outputs_in_progress.add(f)
+        try:
+            value = f(self, *args)
+        finally:
+            self._outputs_in_progress.discard(f)
         if self._store_output:
-            if not self._output_ready[f.__name__]:
-                # print('Output not ready, calculating output')
-                self._output_values[f.__name__] = f(self, *args)
-                self._output_ready[f.__name__] = True
-            return self._output_values[f.__name__]
-        else:
-            return f(self, *args)
+            value = self._stored_outputs[f] = np.copy(value)  # Copy, since value may be a view of x
+        return value
     return wrap
+
+
+@contextlib.contextmanager
+def store_outputs(mdls):
+    """Within the context, each output of the models is computed once and then stored (see output).
+    Should be entered for each evaluation, since stored outputs do not depend on (x, v)."""
+    for mdl in mdls:
+        mdl._stored_outputs.clear()
+        mdl._store_output = True
+    try:
+        yield
+    finally:
+        for mdl in mdls:
+            mdl._store_output = False
+            mdl._stored_outputs.clear()
 
 
 class DynMdl:
@@ -146,8 +183,8 @@ class DAEModel:
         self.add_blocks()
         self.update_block_names()
 
-        self._output_ready = np.zeros(1, dtype=[(var, bool) for var in self.output_list()])
-        self._output_values = np.zeros(self.n_units, dtype=[(var, float) for var in self.output_list()])
+        self._stored_outputs = {}  # See output and store_outputs
+        self._outputs_in_progress = set()
         self._input_values = np.zeros(self.n_units, dtype=[(var, float) for var in self.input_list()])
         self._store_output = False
         for input_name in self.input_list():
@@ -184,9 +221,7 @@ class DAEModel:
         return ['output']
 
     def reset_outputs(self):
-        self._output_ready[:] = False
-        # for key in self._output_ready.keys():
-        #     self._output_ready[key] = False
+        self._stored_outputs.clear()
 
     def set_input(self, input_name, value, idx=None):
         """Set the value of an input. Units where the input is connected to another model's output
@@ -324,18 +359,12 @@ def auto_init(mdl, x0, v0, output_0, free_inputs=(), tol=1e-6):
         for input_name, val in zip(free_inputs, z[n_states_unit:]):
             mdl._input_values[input_name][i] = val
 
-        for submodule in submodules:
-            submodule.reset_outputs()
-            submodule._store_output = True
-
         dx_all = np.zeros_like(x0)
-        with np.errstate(all='ignore'):  # Other units may be evaluated at meaningless points
+        # Other units may be evaluated at meaningless points, hence errstate
+        with store_outputs(submodules), np.errstate(all='ignore'):
             for submodule in state_submodules:
                 submodule.state_derivatives(dx_all, x_all, v0)
             output_err = mdl.output(x_all, v0)[i] - output_0[i]
-
-        for submodule in submodules:
-            submodule._store_output = False
 
         return np.append(dx_all[unit_state_idx[i]], output_err)
 

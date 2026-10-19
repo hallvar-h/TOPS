@@ -272,17 +272,10 @@ class PowerSystemModel:
             raise TypeError(f'Unknown event effect: {type(effect).__name__}')
 
     def state_derivatives(self, t, x, v_red):
-
-        for mdl in self.dyn_mdls:
-            mdl.reset_outputs()
-            mdl._store_output = True
-
         dx = np.zeros(self.n_states)
-        for mdl in self.mdl_instructions['state_derivatives']:
-            mdl.state_derivatives(dx, x, v_red)
-
-        for mdl in self.dyn_mdls:
-            mdl._store_output = False
+        with mdl_lib.utils.store_outputs(self.dyn_mdls):
+            for mdl in self.mdl_instructions['state_derivatives']:
+                mdl.state_derivatives(dx, x, v_red)
 
         return dx
 
