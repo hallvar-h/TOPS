@@ -202,14 +202,14 @@ class DAEModel:
         Returns list of inputs for dynamic model.
         Should be overwritten (if model has one or more inputs)
         """
-        return ['input']
+        return []
 
     def output_list(self):
         """
         Returns list of outputs for dynamic model.
         Should be overwritten (if model has one or more outputs)
         """
-        return ['output']
+        return []
 
     def reset_outputs(self):
         self._stored_outputs.clear()
@@ -295,7 +295,7 @@ class DAEModel:
         return x[self.idx].view(dtype=self.dtypes)
 
     def output(self, x, v):
-        pass
+        raise NotImplementedError(f'{type(self).__name__} has no output.')
 
 
 def summation(*funcs):

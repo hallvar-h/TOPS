@@ -2,7 +2,16 @@ from tops.dyn_models.utils import DAEModel, output
 import numpy as np
 
 
-class PIRegulator(DAEModel):
+class Block(DAEModel):
+    """Base class for control blocks, with one input and one output."""
+    def input_list(self):
+        return ['input']
+
+    def output_list(self):
+        return ['output']
+
+
+class PIRegulator(Block):
 
     def add_blocks(self):
         self.integrator = Integrator(n_units=self.n_units)
@@ -18,7 +27,7 @@ class PIRegulator(DAEModel):
         return input_value
 
 
-class Integrator(DAEModel):
+class Integrator(Block):
     def state_list(self):
         return ['x_i']
 
@@ -55,7 +64,7 @@ class Integrator2(Integrator):
         return input_value*0
 
 
-class Gain(DAEModel):
+class Gain(Block):
     @output
     def output(self, x, v):
         # X = self.local_view(x)
@@ -65,14 +74,14 @@ class Gain(DAEModel):
         return output_value/self.par['K']
 
 
-class Limiter(DAEModel):
+class Limiter(Block):
     @output
     def output(self, x, v):
         # X = self.local_view(x)
         return np.minimum(np.maximum(self.input(x, v), self.par['Min']), self.par['Max'])
 
 
-class Washout(DAEModel):
+class Washout(Block):
     def state_list(self):
         return ['x']
 
@@ -87,7 +96,7 @@ class Washout(DAEModel):
         dX['x'][:] = self.output(x, v)
 
 
-class TimeConstant(DAEModel):
+class TimeConstant(Block):
     '''
             ______________	
            |               |
@@ -157,7 +166,7 @@ class TimeConstantGain(TimeConstant):
         return super().initialize(x0, v0, output_value/self.par['K'])
 
 
-class TimeConstantLims(DAEModel):
+class TimeConstantLims(Block):
     '''
 	                 ___ V_max
             ________/_____	
@@ -225,7 +234,7 @@ class TimeConstantGainLims(TimeConstantLims):
     def initialize(self, x0, v0, output_value):
         return super().initialize(x0, v0, output_value/self.par['K'])
 
-class LeadLag(DAEModel):
+class LeadLag(Block):
     '''
             _______________
            |               |
@@ -257,7 +266,7 @@ class LeadLag(DAEModel):
         dX['x'][:] = (self.par['T_1']/self.par['T_2'] - 1)*self.input(x, v) - 1/self.par['T_2']*X['x']
 
 
-class PIRegulator2(DAEModel):
+class PIRegulator2(Block):
     def state_list(self):
         return ['x']
 
@@ -301,7 +310,7 @@ class PIRegulator2Lims(PIRegulator2):
         return np.zeros(self.n_units)   
 
 
-class WashoutGain(DAEModel):
+class WashoutGain(Block):
     '''
             _______________
            |               |
@@ -334,7 +343,7 @@ class WashoutGain(DAEModel):
         # pass
 
 
-class Saturation(DAEModel):
+class Saturation(Block):
     '''
     Not verified!!
     '''
@@ -360,7 +369,7 @@ class Saturation(DAEModel):
         return SE
     
 
-class Backlash(DAEModel):
+class Backlash(Block):
     """Based on PowerFactory implementation"""
     def state_list(self):
         return ['x']

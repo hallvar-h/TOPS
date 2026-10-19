@@ -7,6 +7,9 @@ from tops.dyn_models.utils import auto_init
 
 
 class AVR:
+    def output_list(self):
+        return ['output']
+
     def connections(self):
         return [
             {
@@ -48,7 +51,7 @@ class AVR:
         ]
 
 
-class SEXS(DAEModel, AVR):
+class SEXS(AVR, DAEModel):
     def input_list(self):
         return ['v_setp', 'v_t', 'v_pss', 'bias']
 
@@ -73,7 +76,7 @@ class SEXS(DAEModel, AVR):
 
 
 
-class SEXS_PI(DAEModel, AVR):
+class SEXS_PI(AVR, DAEModel):
     def input_list(self):
         return ['v_setp', 'v_t', 'v_pss']
 
@@ -108,7 +111,7 @@ class SEXS_PI(DAEModel, AVR):
         )
 
 
-class IEEET1(DAEModel, AVR):
+class IEEET1(AVR, DAEModel):
     '''
     Saturation not yet included!
     '''
@@ -136,7 +139,7 @@ class IEEET1(DAEModel, AVR):
         auto_init(self, x0, v0, output_0['output'], free_inputs=['bias'])
 
 
-class SCRX(DAEModel, AVR):
+class SCRX(AVR, DAEModel):
     '''
     Missing negative current logic!
     '''

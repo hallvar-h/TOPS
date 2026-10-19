@@ -1,7 +1,10 @@
+import types
+
 import numpy as np
 import pytest
 
 import tops.dynamic as dps
+from tops.dyn_models.avr import SEXS
 from tops.dyn_models.blocks import Gain, Integrator, TimeConstant
 from tops.dyn_models.utils import AlgebraicLoopError, DAEModel, get_submodules, output, store_outputs
 
@@ -157,3 +160,32 @@ def test_state_idx_matches_state_desc():
     for state in ['a', 'b']:
         assert mdl.state_idx[state].tolist() == np.where(mdl.state_desc[:, 1] == state)[0].tolist()
     assert mdl.state_idx_global['b'].tolist() == [11, 13, 15]
+
+
+def test_models_have_no_inputs_or_outputs_by_default():
+    mdl = TwoStates(n_units=1)
+    assert mdl.input_list() == [] and mdl.output_list() == []
+    assert mdl._input_values.dtype.names == ()
+    assert not hasattr(mdl, 'input')
+    with pytest.raises(NotImplementedError, match='TwoStates has no output'):
+        mdl.output(None, None)
+
+
+def test_blocks_have_one_input_and_output():
+    mdl = Gain(K=np.ones(1))
+    assert mdl.input_list() == ['input'] and mdl.output_list() == ['output']
+
+
+class SEXSWithoutOutputList(SEXS):
+    def output_list(self):
+        return []  # As for a user model class SEXS_mod(DAEModel, AVR), where DAEModel's default wins
+
+
+def test_connected_outputs_are_initialized_without_output_list():
+    import tops.ps_models.k2a as model_data
+    model = model_data.load()
+    model['avr'] = {'SEXSWithoutOutputList': model['avr']['SEXS']}
+    user_lib = types.SimpleNamespace(avr=types.SimpleNamespace(SEXSWithoutOutputList=SEXSWithoutOutputList))
+    ps = dps.PowerSystemModel(model=model, user_mdl_lib=user_lib)
+    ps.init_dyn_sim()
+    assert max(abs(ps.ode_fun(0, ps.x_0))) < 1e-8

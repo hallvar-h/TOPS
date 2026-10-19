@@ -234,7 +234,10 @@ class PowerSystemModel:
         for mdl, connections in self.mdl_connections_by_source.items():
             if not hasattr(mdl, 'init_from_connections'):
                 continue
-            output_values = np.zeros(mdl.n_units, [(field, float) for field in mdl.output_list()])
+            # Connected outputs are included even if not in output_list (which could be shadowed by
+            # DAEModel's default, e.g. for class SEXS_mod(DAEModel, AVR))
+            fields = dict.fromkeys([*mdl.output_list(), *connections])
+            output_values = np.zeros(mdl.n_units, [(field, float) for field in fields])
             for output_key, conn in connections.items():
                 init_val = np.zeros(mdl.n_units)
                 for c in conn:
