@@ -3,7 +3,7 @@ import numpy as np
 import tops.utility_functions as dps_uf
 import tops.dyn_models as mdl_lib
 from tops.model_data import load_model_data, find_model_class, read_table
-from tops.events import AdmittanceChange, BusEvents, EventSchedule
+from tops.events import AdmittanceChange, BusEvents
 import tops.power_flow as pf
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
@@ -47,7 +47,6 @@ class PowerSystemModel:
 
         self.add_model_data(model)
 
-        self.event_schedule = EventSchedule(read_table(model['events']) if 'events' in model else None)
         self.bus_events = None
 
     def add_model_data(self, model_data):
@@ -246,9 +245,6 @@ class PowerSystemModel:
             mdl.init_from_connections(self.x_0, self.v_0, output_values)
 
         self.bus_events = BusEvents(self.buses['name'], self.bus_idx_red)
-        self.event_schedule.reset()
-        for _, category, mdl_key, unit, action in self.event_schedule.events:
-            self.get_events(category, mdl_key).check(unit, action)
 
         self.initialization_ready = True
 
@@ -274,11 +270,6 @@ class PowerSystemModel:
                 (effect.data, (effect.rows, effect.cols)), shape=(self.n_bus_red,) * 2)
         else:
             raise TypeError(f'Unknown event effect: {type(effect).__name__}')
-
-    def update_events(self, t):
-        """Apply events from the event schedule with time <= t that have not been applied yet."""
-        for _, category, mdl_key, unit, action in self.event_schedule.pop_due(t):
-            self.apply_event(category, mdl_key, unit, action)
 
     def state_derivatives(self, t, x, v_red):
 

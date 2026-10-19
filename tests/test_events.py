@@ -1,25 +1,24 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 import tops.dynamic as dps
-from tops.events import AdmittanceChange, BusEvents, EventSchedule
-from tops.model_data import read_table
-from tops.simulator import Simulator, Events
+from tops.events import AdmittanceChange, BusEvents
+from tops.simulator import Simulator, Events, EventSchedule
+
+EVENT_COLUMNS = ['t', 'category', 'model', 'unit', 'action']
 
 
-def k2a_model(events=None):
+def k2a_model():
     import tops.ps_models.k2a as model_data
-    model = model_data.load()
-    if events is not None:
-        model['events'] = events
-    return model
+    return model_data.load()
 
 
-def simulate(ps, t_end=0.5, events=None):
-    sim = Simulator(ps, dt=5e-3, t_end=t_end)
+def simulate(ps, t_end=0.5, events=None, legacy_events=None):
+    sim = Simulator(ps, dt=5e-3, t_end=t_end, events=events)
     speed = []
-    if events is not None:
-        sim.interface_functions['Events'] = Events(sim, events).update
+    if legacy_events is not None:
+        sim.interface_functions['Events'] = Events(sim, legacy_events).update
     sim.interface_functions['speed'] = lambda sim: speed.append(ps.gen['GEN'].speed(sim.sol.x, sim.sol.v).copy())
     sim.main_loop()
     return np.array(speed)
@@ -60,49 +59,77 @@ def test_bus_events_use_reduced_indices():
 
 
 def test_schedule_is_sorted_and_returns_simultaneous_events_together():
-    schedule = EventSchedule(read_table([
-        ['t', 'category', 'model', 'unit', 'action'],
+    schedule = EventSchedule([
+        EVENT_COLUMNS,
         [0.2, 'lines', 'Line', 'L1', 'connect'],
         [0.1, 'lines', 'Line', 'L1', 'disconnect'],
         [0.1, 'lines', 'Line', 'L2', 'disconnect'],
-    ]))
+    ])
     assert schedule.pop_due(0.05) == []
     assert [event[3] for event in schedule.pop_due(0.15)] == ['L1', 'L2']
     assert [event[4] for event in schedule.pop_due(1)] == ['connect']
 
 
-def test_events_in_model_definition():
+def test_events_in_simulator():
     events = [
-        ['t', 'category', 'model', 'unit', 'action'],
+        EVENT_COLUMNS,
         [0.1, 'buses', '', 'B8', 'short_circuit'],
         [0.15, 'buses', '', 'B8', 'clear_short_circuit'],
         [0.15, 'lines', 'Line', 'L7-8-1', 'disconnect'],
         [0.3, 'lines', 'Line', 'L7-8-1', 'connect'],
     ]
-    ps = dps.PowerSystemModel(model=k2a_model(events))
+    ps = dps.PowerSystemModel(model=k2a_model())
     ps.init_dyn_sim()
     y_bus_red = ps.y_bus_red.copy()
-    speed = simulate(ps)
+    speed = simulate(ps, events=events)
 
     assert np.ptp(speed) > 0
     assert ps.lines['Line'].connected.all()
     assert np.allclose((ps.y_bus_red - y_bus_red).toarray(), 0)
 
 
-def test_events_in_model_definition_match_events_class():
+def test_same_system_simulated_with_different_events():
+    ps = dps.PowerSystemModel(model=k2a_model())
+    speeds = {}
+    for line in ['L7-8-1', 'L8-9-1']:
+        ps.init_dyn_sim()
+        speeds[line] = simulate(ps, events=[EVENT_COLUMNS, [0.1, 'lines', 'Line', line, 'disconnect']])
+        ps.apply_event('lines', 'Line', line, 'connect')
+    assert not np.allclose(speeds['L7-8-1'], speeds['L8-9-1'])
+
+
+def test_events_as_dataframe_match_list():
+    rows = [[0.1, 'lines', 'Line', 'L7-8-1', 'disconnect'], [0.3, 'lines', 'Line', 'L7-8-1', 'connect']]
+    results = []
+    for events in [[EVENT_COLUMNS] + rows, pd.DataFrame(rows, columns=EVENT_COLUMNS)]:
+        ps = dps.PowerSystemModel(model=k2a_model())
+        ps.init_dyn_sim()
+        results.append(simulate(ps, events=events))
+    assert np.allclose(*results)
+
+
+def test_events_in_simulator_match_events_class():
     line_events = [(0.1, ('line', 'L7-8-1', 'disconnect')), (0.3, ('line', 'L7-8-1', 'connect'))]
-    table = [['t', 'category', 'model', 'unit', 'action']] + [[t, 'lines', 'Line', name, action] for t, (_, name, action) in line_events]
+    table = [EVENT_COLUMNS] + [[t, 'lines', 'Line', name, action] for t, (_, name, action) in line_events]
 
     ps_events_class = dps.PowerSystemModel(model=k2a_model())
     ps_events_class.init_dyn_sim()
-    ps_model_events = dps.PowerSystemModel(model=k2a_model(table))
-    ps_model_events.init_dyn_sim()
+    ps_simulator_events = dps.PowerSystemModel(model=k2a_model())
+    ps_simulator_events.init_dyn_sim()
 
-    assert np.allclose(simulate(ps_events_class, events=line_events), simulate(ps_model_events))
+    assert np.allclose(simulate(ps_events_class, legacy_events=line_events),
+                       simulate(ps_simulator_events, events=table))
 
 
-def test_invalid_event_in_model_definition_raises_at_init():
-    events = [['t', 'category', 'model', 'unit', 'action'], [0.1, 'lines', 'Line', 'NoSuchLine', 'disconnect']]
-    ps = dps.PowerSystemModel(model=k2a_model(events))
+def test_invalid_event_raises_when_simulator_is_created():
+    ps = dps.PowerSystemModel(model=k2a_model())
+    ps.init_dyn_sim()
     with pytest.raises(KeyError, match='NoSuchLine'):
-        ps.init_dyn_sim()
+        Simulator(ps, events=[EVENT_COLUMNS, [0.1, 'lines', 'Line', 'NoSuchLine', 'disconnect']])
+
+
+def test_events_in_model_data_raise():
+    model = k2a_model()
+    model['events'] = [EVENT_COLUMNS, [0.1, 'lines', 'Line', 'L7-8-1', 'disconnect']]
+    with pytest.raises(ValueError, match='Simulator'):
+        dps.PowerSystemModel(model=model)

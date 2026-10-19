@@ -1,5 +1,5 @@
 import tops.dynamic as dps
-from tops.simulator import Simulator, Events, ResultKeeper
+from tops.simulator import Simulator, ResultKeeper
 import pandas as pd
 import matplotlib.pyplot as plt
 from collections import defaultdict
@@ -15,18 +15,18 @@ if __name__ == '__main__':
     ps = dps.PowerSystemModel(model=model)
     ps.init_dyn_sim()
 
-    # ps.ode_fun(0, ps.x0)
-    sim = Simulator(ps, dt=5e-3, t_end=10)
+    events = [
+        ['t', 'category', 'model', 'unit', 'action'],
+        [1, 'lines', 'Line', 'L16-19', 'disconnect'],
+        [1.2, 'lines', 'Line', 'L16-19', 'connect'],
+    ]
+
+    sim = Simulator(ps, dt=5e-3, t_end=10, events=events)
     res_keeper = ResultKeeper(sim,
         gen_speed=ps.gen["GEN"].speed,
         p_line_from=ps.lines["Line"].p_from)
-    events = Events(sim, [
-        (1, ('line', 'L16-19', 'disconnect')),
-        (1.2, ('line', 'L16-19', 'connect')),
-    ])
 
     sim.interface_functions['ResultKeeper'] = res_keeper.update
-    sim.interface_functions['Events'] = events.update
     sim.main_loop()
     
     print('Done')

@@ -4,9 +4,17 @@ import numpy as np
 from collections import defaultdict
 import pandas as pd
 
+from tops.model_data import read_table
+
 
 class Simulator:
-    def __init__(self, ps, dt=5e-3, solver=dps_sol.ModifiedEulerDAE, t_end=np.inf, log_fun=None, ode_fun=None):
+    def __init__(self, ps, dt=5e-3, solver=dps_sol.ModifiedEulerDAE, t_end=np.inf, log_fun=None, ode_fun=None,
+                 events=None):
+        """
+        :param ps: Initialized PowerSystemModel.
+        :param events: Events to apply during the simulation, as a table (list with header row, or DataFrame)
+            with columns t, category, model, unit, action. See EventSchedule.
+        """
 
         self._stopped = False
         self.n_markers = 20
@@ -15,6 +23,8 @@ class Simulator:
         self.log_fun = log_fun
         self.log = callable(self.log_fun)
         self.ps = ps
+        self.events = EventSchedule(events)
+        self.events.check(self.ps)
 
         if callable(ode_fun):
             self.ode_fun = ode_fun
@@ -39,7 +49,7 @@ class Simulator:
     def make_simulation_step(self):
         # Simulate next step
             with self.new_data_cv:
-                self.ps.update_events(self.sol.t)
+                self.events.apply_due(self.ps, self.sol.t)
                 self.sol.step()
 
                 with self.interface_functions_lock:
@@ -56,10 +66,61 @@ class Simulator:
             t = self.sol.t
 
 
+class EventSchedule:
+    """Events to be applied at given times.
+
+    Events are given as a table (list with header row, or DataFrame) with columns t, category, model, unit, action,
+    e.g. [0.1, 'lines', 'Line', 'L1-2', 'disconnect'] or [0.1, 'buses', '', 'B1', 'short_circuit']. The model column
+    is ignored for category 'buses'.
+
+    Used by the Simulator, or directly in a custom simulation loop:
+
+        schedule = EventSchedule(events)
+        schedule.check(ps)
+        while t < t_end:
+            schedule.apply_due(ps, t)
+            ...
+    """
+    fields = ('t', 'category', 'model', 'unit', 'action')
+
+    def __init__(self, events=None):
+        table = read_table(events) if events is not None else None
+        if table is None or len(table) == 0:
+            self.events = []
+        else:
+            missing = [field for field in self.fields if field not in table.dtype.names]
+            if missing:
+                raise ValueError(f'Event table is missing fields: {missing}')
+            order = np.argsort(table['t'], kind='stable')
+            self.events = [tuple(table[field][i].item() for field in self.fields) for i in order]
+        self.reset()
+
+    def reset(self):
+        self._next = 0
+
+    def check(self, ps):
+        """Check that all events exist in the (initialized) power system model."""
+        for _, category, mdl_key, unit, action in self.events:
+            ps.get_events(category, mdl_key).check(unit, action)
+
+    def pop_due(self, t):
+        """Return events with time <= t that have not been returned before."""
+        due = []
+        while self._next < len(self.events) and self.events[self._next][0] <= t:
+            due.append(self.events[self._next])
+            self._next += 1
+        return due
+
+    def apply_due(self, ps, t):
+        """Apply events with time <= t that have not been applied before."""
+        for _, category, mdl_key, unit, action in self.pop_due(t):
+            ps.apply_event(category, mdl_key, unit, action)
+
+
 class Events:
     """Events given as a list of (t, ('line', line_name, action)).
 
-    Kept for backwards compatibility. Events can instead be given in the model definition (model['events']).
+    Kept for backwards compatibility. Events can instead be given to the Simulator (Simulator(ps, ..., events=...)).
     """
     def __init__(self, sim, data):
         self.data = sorted(data, key=lambda event: event[0])
@@ -69,7 +130,7 @@ class Events:
         while self._next < len(self.data) and self.data[self._next][0] <= sim.sol.t:
             _, (category, name, action) = self.data[self._next]
             if category != 'line':
-                raise ValueError(f'Events only supports line events, not "{category}". Use model["events"] instead.')
+                raise ValueError(f'Events only supports line events, not "{category}". Use Simulator(ps, ..., events=...) instead.')
             sim.ps.apply_event('lines', 'Line', name, action)
             self._next += 1
 

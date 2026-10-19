@@ -3,6 +3,8 @@
 Events of a model are defined in a ModelEvents subclass, which is set as the model's events_class. Event methods may
 modify the model they belong to, but other parts of the system are only affected through the effects they return
 (e.g. AdmittanceChange), which are applied by PowerSystemModel.apply_effect.
+
+Scheduling events in time is handled by tops.simulator.EventSchedule.
 """
 from typing import NamedTuple
 
@@ -20,7 +22,7 @@ class ModelEvents:
     """Base class for the events of a model (or of the buses).
 
     Event methods take the unit name (and possibly keyword arguments), and return a list of effects. Only methods
-    listed in `actions` can be triggered by name (e.g. from the event table in the model definition).
+    listed in `actions` can be triggered by name (e.g. from an event table given to the Simulator).
     """
     actions = ()
 
@@ -82,32 +84,3 @@ class BusEvents(ModelEvents):
         self.y_fault[idx] = 0
         return [AdmittanceChange(np.array([-y]), idx_red, idx_red)]
 
-
-class EventSchedule:
-    """Events to be applied at given times, from a table with fields t, category, model, unit, action.
-
-    The model field is ignored for category 'buses'.
-    """
-    fields = ('t', 'category', 'model', 'unit', 'action')
-
-    def __init__(self, table=None):
-        if table is None or len(table) == 0:
-            self.events = []
-        else:
-            missing = [field for field in self.fields if field not in table.dtype.names]
-            if missing:
-                raise ValueError(f'Event table is missing fields: {missing}')
-            order = np.argsort(table['t'], kind='stable')
-            self.events = [tuple(table[field][i].item() for field in self.fields) for i in order]
-        self.reset()
-
-    def reset(self):
-        self._next = 0
-
-    def pop_due(self, t):
-        """Return events with time <= t that have not been returned before."""
-        due = []
-        while self._next < len(self.events) and self.events[self._next][0] <= t:
-            due.append(self.events[self._next])
-            self._next += 1
-        return due

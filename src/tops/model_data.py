@@ -40,6 +40,10 @@ def load_model_data(model):
     else:
         raise TypeError(f'model must be a dict or a path to a .json file, not {type(model).__name__}')
 
+    if 'events' in model_data:
+        raise ValueError('Events are not part of the model data. Give them to the Simulator instead: '
+                         'Simulator(ps, ..., events=events).')
+
     model_data = model_data.copy()
 
     for alias, key in CATEGORY_ALIASES.items():
