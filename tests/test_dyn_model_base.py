@@ -129,3 +129,31 @@ def test_stored_output_is_not_a_view_of_states():
     with store_outputs([mdl]):
         mdl.output(x, None)[:] = 0
     assert x.tolist() == [1.0, 2.0]
+
+
+@pytest.mark.parametrize('kwargs, match', [
+    ({}, 'exactly one of'),
+    ({'par': np.zeros(2, dtype=[('name', 'U4')]), 'n_units': 2}, 'got par and n_units'),
+    ({'n_units': 2, 'K': np.ones(2)}, 'got n_units and parameters'),
+])
+def test_parameters_must_be_given_one_way(kwargs, match):
+    with pytest.raises(TypeError, match=match):
+        Gain(**kwargs)
+
+
+@pytest.mark.parametrize('kwargs', [{'K': np.ones(2), 'T': np.ones(3)}, {'K': 1.0}])
+def test_parameters_must_have_one_value_per_unit(kwargs):
+    with pytest.raises(ValueError, match='equal length'):
+        Gain(**kwargs)
+
+
+class TwoStates(DAEModel):
+    def state_list(self):
+        return ['a', 'b']
+
+
+def test_state_idx_matches_state_desc():
+    mdl = TwoStates(n_units=3, first_state_idx=10)
+    for state in ['a', 'b']:
+        assert mdl.state_idx[state].tolist() == np.where(mdl.state_desc[:, 1] == state)[0].tolist()
+    assert mdl.state_idx_global['b'].tolist() == [11, 13, 15]

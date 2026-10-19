@@ -125,43 +125,36 @@ def store_outputs(mdls):
             mdl._stored_outputs.clear()
 
 
-class DynMdl:
-    def get_states(self, x):
-        return x[self.idx].view(dtype=self.dtypes)
-
-    def set_input(self, input_name, value, idx=None):
-        if idx is not None:
-            self.input[input_name][idx] = value
-        else:
-            self.input[input_name] = value
-
-
 class DAEModel:
-    """Base class for dynamic models"""
+    """Base class for dynamic models.
+
+    Parameters are given in one of three ways: as a structured array (par), as keyword arguments
+    with one array per parameter (e.g. Gain(K=k)), or as the number of units (n_units) for models
+    without parameters.
+    """
     events_class = None  # Subclass of tops.events.ModelEvents, defining the events of the model
 
     def __init__(self, par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs):
-        # type(self)._ids = count(0)
-        # self.id = next(type(self)._ids)
         if hasattr(self, 'int_par_list'):
             raise TypeError(
                 f'{type(self).__name__} defines int_par_list(), but int_par has been removed. '
                 f'Add the parameters to input_list() instead, and set them in _input_values.'
             )
 
-        if n_units is not None:
-            name = self.__class__.__name__
-            # print(name, n_units, np.array((name,)*n_units, dtype=[('name', '<U32')]))
-            # print([name] * n_units)
-            self.par = dps_uf.structured_array_from_list(names=['name'], entries=[(name,)]*n_units)
+        given = [arg for arg, used in [('par', par is not None), ('n_units', n_units is not None),
+                                       ('parameters as keyword arguments', bool(kwargs))] if used]
+        if len(given) != 1:
+            raise TypeError(
+                f'{type(self).__name__}: give exactly one of par, n_units or parameters as keyword '
+                f'arguments' + (f' (got {" and ".join(given)})' if given else '') + '.')
 
+        if n_units is not None:
+            self.par = dps_uf.structured_array_from_list(names=['name'], entries=[(type(self).__name__,)]*n_units)
         else:
             self.par = par if par is not None else self.parse_input_data(**kwargs)
-        self.sys_par = sys_par
+        self.sys_par = sys_par  # Used by subclasses (e.g. s_n, f_n)
 
         self.n_units = len(self.par)
-        # self.output_value = np.zeros(self.n_units)
-        # self._input_value = np.zeros(self.n_units)
         self.n_states = len(self.state_list())
         self.idx = slice(first_state_idx, first_state_idx + self.n_states*self.n_units)  # This will be shifted from outside
 
@@ -170,15 +163,13 @@ class DAEModel:
             np.tile(self.state_list(), self.n_units)]
         ).T
 
+        # States are ordered by unit, then by state: [unit_0 states, unit_1 states, ...]
         self.dtypes = [(state, float) for state in self.state_list()]
         self.state_idx = np.zeros((self.n_units,), dtype=[(state, int) for state in self.state_list()])
         self.state_idx_global = np.zeros((self.n_units,), dtype=[(state, int) for state in self.state_list()])
-        # self.state_idx_global = np.zeros((self.n_units,), dtype=[(state, int) for state in self.state_list()])
         for i, state in enumerate(self.state_list()):
-            idx = np.where(self.state_desc[:, 1] == state)[0]
-            self.state_idx[state] = idx
-            self.state_idx_global[state] = idx + first_state_idx
-            # mdl.state_idx_global[state] = idx
+            self.state_idx[state] = np.arange(self.n_units)*self.n_states + i
+            self.state_idx_global[state] = self.state_idx[state] + first_state_idx
 
         self.add_blocks()
         self.update_block_names()
@@ -279,18 +270,20 @@ class DAEModel:
             block.update_block_names()
 
     def parse_input_data(self, **kwargs):
-        """Read parameters from kwargs"""
-        # p = dm.par
-        # kwargs = dict(K_a=p['K'], T=p['T_a'])
-        names = []
-        data = []
-        for arg, val in kwargs.items():
-            names.append(arg)
-            data.append(val)
+        """Read parameters from kwargs, with one array (with one value per unit) per parameter."""
+        names = list(kwargs.keys())
+        data = [np.asarray(val) for val in kwargs.values()]
 
-        if not 'name' in names:
+        lengths = {name: len(col) if col.ndim == 1 else None for name, col in zip(names, data)}
+        if None in lengths.values() or len(set(lengths.values())) != 1:
+            raise ValueError(
+                f'{type(self).__name__}: parameters must be 1D arrays of equal length (one value per '
+                f'unit), got lengths ' + ', '.join(f'{k}={v if v is not None else "scalar/nD"}'
+                                                   for k, v in lengths.items()) + '.')
+
+        if 'name' not in names:
             names.append('name')
-            data.append(np.array([self.__class__.__name__]*len(list(kwargs.values())[0])))
+            data.append(np.array([type(self).__name__]*len(data[0])))
 
         entries = [entry for entry in zip(*data)]
         col_dtypes = [np.array(col).dtype for col in data]
@@ -304,10 +297,6 @@ class DAEModel:
     def output(self, x, v):
         pass
 
-    # def state_derivatives(self, dx, x, v):
-    #     pass
-
-
 
 def summation(*funcs):
     '''Creates a new function which sums the output of functions and constants/
@@ -319,13 +308,6 @@ def summation(*funcs):
         return sum([func(*args) for func in callables] + constants)
     
     return summation
-
-
-# class DAEModel(ODEModel):
-#     def disconnect_input(self, input_name):
-#         def input(self, x, v):
-#             return self._input_values[input_name]
-#         setattr(type(self), input_name, input)
 
 
 def auto_init(mdl, x0, v0, output_0, free_inputs=(), tol=1e-6):
