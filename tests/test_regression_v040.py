@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from golden_scenarios import EVENT_COLUMNS, LINE_TRIP, k2a_ps, run
+from golden_scenarios import EVENT_COLUMNS, LINE_TRIP, k2a_ps, outputs, run
 from tops.simulator import EventSchedule, InterfacerDirect
 
 GOLDEN = Path(__file__).parent / 'data' / 'v040_k2a.npz'
@@ -18,20 +18,28 @@ def golden():
         return {key: data[key] for key in data.files}
 
 
+def assert_matches(golden, prefix, actual):
+    """Every output of `actual` equals the golden one named prefix_output, and none is missing on either side."""
+    expected = {key[len(prefix) + 1:]: value for key, value in golden.items() if key.startswith(prefix + '_')}
+    assert sorted(expected) == sorted(actual) == ['angle', 'p_e', 'speed', 'v']
+    for key in expected:
+        assert np.allclose(actual[key], expected[key], **TOL), f'{prefix}_{key}'
+
+
 def test_initial_state_matches_v040(golden):
     ps = k2a_ps()
     assert np.allclose(ps.y_bus_lf, golden['y_bus_lf'], **TOL)
     assert np.allclose(ps.y_bus_red.toarray(), golden['y_bus_red'], **TOL)
     assert np.allclose(ps.v_0, golden['v_0'], **TOL)
-    assert np.allclose(ps.x0, golden['x_0'], **TOL)
+    assert_matches(golden, 'init', outputs(ps, ps.x0, ps.v_0))
 
 
 def test_free_simulation_matches_v040(golden):
-    assert np.allclose(run(k2a_ps()), golden['x_free'], **TOL)
+    assert_matches(golden, 'free', run(k2a_ps()))
 
 
 def test_line_trip_simulation_matches_v040(golden):
-    assert np.allclose(run(k2a_ps(), events=LINE_TRIP), golden['x_line_trip'], **TOL)
+    assert_matches(golden, 'trip', run(k2a_ps(), events=LINE_TRIP))
 
 
 def test_legacy_line_event_equals_apply_event():
