@@ -149,11 +149,11 @@ class Events:
 
 
 class InterfacerDirect:
-    def __init__(self, rts=None, name='InterfacerDirect'):
+    def __init__(self, rts=None, name='InterfacerDirect', fs=None):
+        """:param fs: Updates per second of simulated time, or None to update at every step."""
         self.interface_name = name
-        self.fs = None
-        if self.fs:
-            self._timer = 0
+        self.fs = fs
+        self._timer = 0
 
         if rts:
             self.connect(rts)

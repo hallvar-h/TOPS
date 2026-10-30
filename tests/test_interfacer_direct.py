@@ -37,3 +37,40 @@ def test_a_registered_interfacer_is_called_after_every_step_of_a_simulation():
     interfacer = Counter(sim)
     sim.main_loop()
     assert interfacer.calls == len(steps) >= 10
+
+
+def times(interfacer, instants):
+    """The instants at which the interfacer updates, when the simulator is at each of `instants`."""
+    rts = SimpleNamespace(sol=SimpleNamespace(t=0.0), interface_functions={})
+    updated = []
+    interfacer.update = lambda input: updated.append(rts.sol.t)
+    for t in instants:
+        rts.sol.t = t
+        interfacer.interface_fun(rts)
+    return updated
+
+
+INSTANTS = [0, 0.03, 0.06, 0.1, 0.14, 0.2, 0.25]
+
+
+def test_without_fs_the_interfacer_updates_at_every_step():
+    assert times(InterfacerDirect(), INSTANTS) == INSTANTS
+
+
+def test_fs_limits_the_updates_to_that_many_per_second_of_simulated_time():
+    assert times(InterfacerDirect(fs=10), INSTANTS) == [0, 0.1, 0.2]
+
+
+def test_a_subclass_may_set_fs_after_the_constructor():
+    class Slow(InterfacerDirect):
+        def __init__(self):
+            super().__init__()
+            self.fs = 10
+
+    assert times(Slow(), INSTANTS) == [0, 0.1, 0.2]
+
+
+def test_fs_goes_with_a_simulator_given_to_the_constructor():
+    rts = SimpleNamespace(interface_functions={})
+    interfacer = InterfacerDirect(rts, name='slow', fs=5)
+    assert interfacer.fs == 5 and list(rts.interface_functions) == ['slow']
