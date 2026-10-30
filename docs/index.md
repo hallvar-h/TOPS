@@ -7,3 +7,4 @@ simulation in Python.
 
     This documentation is being written. See the
     [README](https://github.com/hallvar-h/TOPS#readme) in the meantime.
+Next: [Install](start/install.md).
