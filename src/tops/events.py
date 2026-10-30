@@ -11,6 +11,14 @@ from typing import NamedTuple
 import numpy as np
 
 
+class DeadBusWarning(RuntimeWarning):
+    """Buses have no admittance left (e.g. a bay node whose switches are all open), so they are pinned to 0 V.
+
+    Silence with warnings.filterwarnings('ignore', category=DeadBusWarning), or turn the pinning off with
+    PowerSystemModel.pin_dead_buses = False.
+    """
+
+
 class AdmittanceChange(NamedTuple):
     """Change in the reduced bus admittance matrix. Rows and columns are indices in the reduced system."""
     data: np.ndarray
