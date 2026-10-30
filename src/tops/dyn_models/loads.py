@@ -1,9 +1,40 @@
 import numpy as np
 from tops.dyn_models.utils import DAEModel
 from tops.dyn_models.blocks import TimeConstant
+from tops.events import ModelEvents, AdmittanceChange
+
+
+def read_power(column, value):
+    """A power in MW or Mvar given to set_power, as a finite float."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = np.nan
+    if not np.isfinite(number):
+        raise ValueError(f'{column} must be a finite number, got {value!r}.')
+    return number
+
+
+def float_power_columns(par):
+    """The load table with float P and Q, as set_power must not truncate the integer columns a table may have."""
+    if par['P'].dtype.kind == 'f' and par['Q'].dtype.kind == 'f':
+        return par
+    dtype = [(name, float if name in ('P', 'Q') else par.dtype[name]) for name in par.dtype.names]
+    return par.astype(dtype)
+
+
+class LoadEvents(ModelEvents):
+    actions = ('set_power',)
+
+    def set_power(self, load_name, P=None, Q=None):
+        idx = self._unit_idx(load_name)
+        change = self.mdl.power_change(idx, P, Q)
+        return [] if change is None else [change]
 
 
 class Load(DAEModel):
+    events_class = LoadEvents
+
     def __init__(self, data, sys_par, **kwargs):
         super().__init__(data, sys_par, **kwargs)
         self.data = data
@@ -34,6 +65,28 @@ class Load(DAEModel):
 
     def dyn_const_adm(self):
         return self.y_load, (self.bus_idx_red['terminal'],)*2
+
+    def power_change(self, load_idx, P=None, Q=None):
+        """Set the power of a load in MW and Mvar (None keeps it), at the voltage of the load flow.
+
+        Returns the change in the reduced admittance matrix, or None if the power is as it was.
+        """
+        bus = self.bus_idx_red['terminal'][load_idx]
+        if bus < 0:
+            raise ValueError(f'Bus of load {self.par["name"][load_idx]} is not in the reduced system.')
+        p = self.par['P'][load_idx] if P is None else read_power('P', P)
+        q = self.par['Q'][load_idx] if Q is None else read_power('Q', Q)
+        if p == self.par['P'][load_idx] and q == self.par['Q'][load_idx]:
+            return None
+
+        self.par = self.data = float_power_columns(self.par)
+        self.par['P'][load_idx] = p
+        self.par['Q'][load_idx] = q
+        s_load = (p + 1j*q)/self.sys_par['s_n']
+        y_load = np.conj(s_load)/abs(self.v_0[load_idx])**2
+        change = y_load - self.y_load[load_idx]
+        self.y_load[load_idx] = y_load
+        return AdmittanceChange(np.array([change]), np.array([bus]), np.array([bus]))
 
     def i(self, x, v):
         return v[self.bus_idx_red['terminal']]*self.y_load
