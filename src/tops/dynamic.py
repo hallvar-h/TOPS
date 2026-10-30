@@ -3,7 +3,7 @@ import numpy as np
 import tops.utility_functions as dps_uf
 import tops.dyn_models as mdl_lib
 from tops.model_data import load_model_data, find_model_class, read_table
-from tops.events import AdmittanceChange, BusEvents
+from tops.events import AdmittanceChange, BusEvents, DeadBusWarning
 import tops.power_flow as pf
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
@@ -22,6 +22,7 @@ class PowerSystemModel:
         self.perform_kron_reduction = False
         self.pf_max_it = 10
         self.pf_tol = 1e-8
+        self.pin_dead_buses = True  # solve dead buses (see dead_buses) as 0 V, with a DeadBusWarning
         self.dead_bus_rtol = 1e-12  # a bus is dead when its admittance is below this fraction of its initial value
 
         self.s_n = model['base_mva']
@@ -268,6 +269,8 @@ class PowerSystemModel:
 
         self.bus_events = BusEvents(self.buses['name'], self.bus_idx_red)
         self._row_admittance_0 = self._row_admittance(self.x0)
+        self._dead_idx = np.zeros(0, dtype=int)
+        self._dead_dirty = True
 
         self.initialization_ready = True
 
@@ -286,8 +289,10 @@ class PowerSystemModel:
         """Apply an event immediately, e.g. apply_event('lines', 'Line', 'L1-2', 'disconnect')."""
         for effect in self.get_events(category, mdl_key).apply(unit, action, **kwargs):
             self.apply_effect(effect)
+        self._dead_dirty = True  # also for events without effect, such as those of a DynTrafo
 
     def apply_effect(self, effect):
+        self._dead_dirty = True
         if isinstance(effect, AdmittanceChange):
             self.y_bus_red = self.y_bus_red + sp.csr_matrix(
                 (effect.data, (effect.rows, effect.cols)), shape=(self.n_bus_red,) * 2)
@@ -332,6 +337,26 @@ class PowerSystemModel:
         x = self.x0 if x is None else x
         return self.buses['name'][self.bus_idx_red[self._dead_bus_idx(x)]]
 
+    def _dead_buses_now(self, x):
+        """Indices of the dead buses. They are looked for again only after an event, the only thing that can change
+        them, and a DeadBusWarning is given when they are not the same as before."""
+        if self._dead_dirty:
+            dead = self._dead_bus_idx(x)
+            if not np.array_equal(dead, self._dead_idx):
+                self._dead_idx = dead
+                self._live = np.ones(self.n_bus_red)
+                self._live[dead] = 0
+                if len(dead):
+                    names = list(self.buses['name'][self.bus_idx_red[dead]])
+                    warnings.warn(DeadBusWarning(f'Buses {names} have no admittance and are pinned to 0 V.'))
+            self._dead_dirty = False
+        return self._dead_idx
+
+    def _pin_dead_buses(self, y_bus):
+        """The admittance matrix without the rows and columns of the dead buses, which get a one on the diagonal."""
+        live = sp.diags(self._live)
+        return live @ y_bus @ live + sp.diags(1 - self._live)
+
     def solve_algebraic(self, t, x, v_0=None):
         '''
         Solves algebraic equations given states
@@ -346,7 +371,10 @@ class PowerSystemModel:
 
         y_var = self._y_var(x)
         if self.algebraic_equations_are_linear:
-            return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
+            y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
+            if self.pin_dead_buses and len(self._dead_buses_now(x)):
+                y_bus, i_inj = self._pin_dead_buses(y_bus), i_inj*self._live
+            return sp_linalg.spsolve(y_bus, i_inj)
 
         y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
         s_inj = np.zeros(self.n_bus_red, dtype=complex)
