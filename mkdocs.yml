@@ -113,3 +113,4 @@ nav:
       - Running a simulation: guide/simulation.md
       - Events: guide/events.md
       - Modal analysis: guide/modal-analysis.md
+      - Dynamic models: guide/dyn-models.md
