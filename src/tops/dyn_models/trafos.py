@@ -188,7 +188,7 @@ class DynTrafo(Trafo):
         self._input_values['ratio_to'] = self.ratio_to_0
 
     def dyn_const_adm(self):
-        return np.ones(0), (np.ones(0),)*2
+        return np.zeros(0, dtype=complex), (np.zeros(0, dtype=int),)*2
 
     def dyn_var_adm(self, x, v):
         ratio_from = self.ratio_from(x, v)
