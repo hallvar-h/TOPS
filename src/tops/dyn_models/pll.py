@@ -17,7 +17,9 @@ class PLL1(DAEModel):
         self.filter = TimeConstant(T=p['T_filter'])
 
         def angle_measurement(x, v):
-            v_angle = np.angle(v[self.bus_idx_red['terminal']])
+            v_terminal = v[self.bus_idx_red['terminal']]
+            # A bus without voltage (dead bus) has no angle: the filter holds the value it has
+            v_angle = np.where(abs(v_terminal) < 1e-9, self.output(x, v), np.angle(v_terminal))
 
             # np.unwrap(np.vstack([np.array([0, 3 * np.pi, 0]), np.array([0, np.pi + 1e-10 + 2 * np.pi, 0])]), axis=0)[1, :]
             return np.unwrap(np.vstack([self.output(x, v), v_angle]), axis=0)[1, :]
