@@ -150,13 +150,13 @@ class Events:
 
 class InterfacerDirect:
     def __init__(self, rts=None, name='InterfacerDirect'):
-        if rts:
-            self.connect(rts)
-
         self.interface_name = name
         self.fs = None
         if self.fs:
             self._timer = 0
+
+        if rts:
+            self.connect(rts)
 
     def connect(self, rts):
         rts.interface_functions[self.interface_name] = self.interface_fun
