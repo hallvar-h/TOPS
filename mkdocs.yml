@@ -110,3 +110,4 @@ nav:
       - Included test systems: start/test-systems.md
   - Guide:
       - Model format: guide/model-format.md
+      - Running a simulation: guide/simulation.md
