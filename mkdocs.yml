@@ -108,3 +108,5 @@ nav:
       - Install: start/install.md
       - Quickstart: start/quickstart.md
       - Included test systems: start/test-systems.md
+  - Guide:
+      - Model format: guide/model-format.md
