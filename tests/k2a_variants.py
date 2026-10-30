@@ -52,3 +52,24 @@ def y_bus_red(ps):
 
 def trafo_index(ps, kind):
     return np.where(ps.trafos[kind].par['name'] == TRAFO)[0][0]
+
+
+def bay_model(switches=('LS',), via='Line', shunt_mvar=None):
+    """K2A with a bus B12 that nothing but `switches` (and a shunt of `shunt_mvar`) connects to B5.
+
+    A switch is a branch without shunt admittance (B = 0), so a bay node whose switches are all open is floating.
+    With via='DynTrafo' the one switch is a DynTrafo, which stamps its admittance at every step, not into the
+    constant matrix.
+    """
+    if via == 'DynTrafo':
+        model = trafo_model('DynTrafo')
+        model['trafos']['DynTrafo'].append(['TS', 'B5', 'B12', 900, 230, 230, 0, 1e-4, 1, 1])
+    else:
+        model = k2a_model()
+        # Each switch has its own impedance, so that taking them out one by one leaves rounding, as real stamps do
+        model['lines'] += [[name, 'B5', 'B12', 1, 100, 230, 'p.u.', 1e-5*(1 + 0.37*i), 1e-4*(1 + 0.37*i), 0]
+                           for i, name in enumerate(switches)]
+    model['buses'].append(['B12', 230])
+    if shunt_mvar is not None:
+        model['shunts'].append(['C3', 'B12', 230, shunt_mvar, 'Z'])
+    return model
