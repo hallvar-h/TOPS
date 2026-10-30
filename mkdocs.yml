@@ -48,6 +48,10 @@ theme:
     - search.highlight
     - toc.follow
 
+# Included into pages with --8<--, not pages of their own.
+exclude_docs: |
+  snippets/
+
 extra_css:
   - stylesheets/sintef.css
 
