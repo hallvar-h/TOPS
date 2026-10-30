@@ -107,3 +107,4 @@ nav:
   - Getting started:
       - Install: start/install.md
       - Quickstart: start/quickstart.md
+      - Included test systems: start/test-systems.md
