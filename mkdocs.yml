@@ -106,3 +106,4 @@ nav:
   - Home: index.md
   - Getting started:
       - Install: start/install.md
+      - Quickstart: start/quickstart.md

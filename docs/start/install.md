@@ -58,3 +58,5 @@ uv run mkdocs serve
 
 Then open <http://127.0.0.1:8000>. `uv run mkdocs build --strict` is what CI
 runs; it fails on broken links and on code examples that raise an error.
+
+Next: [run your first simulation](quickstart.md).
