@@ -48,6 +48,9 @@ theme:
     - search.highlight
     - toc.follow
 
+extra_css:
+  - stylesheets/sintef.css
+
 markdown_extensions:
   - abbr
   - admonition
