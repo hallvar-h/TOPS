@@ -1,0 +1,99 @@
+site_name: TOPS
+site_description: >-
+  Tiny Open Power System Simulator. Dynamic (RMS) power system simulation,
+  power flow and modal analysis in plain Python.
+site_author: TOPS contributors
+
+# The address is case-sensitive on GitHub Pages. It is also written in
+# pyproject.toml ([project.urls]) and README.md; change them together.
+site_url: https://hallvar-h.github.io/TOPS/
+
+repo_url: https://github.com/hallvar-h/TOPS
+repo_name: hallvar-h/TOPS
+edit_uri: edit/main/docs/
+
+copyright: TOPS is developed at SINTEF Energy Research.
+
+theme:
+  name: material
+  icon:
+    logo: material/transmission-tower
+    repo: fontawesome/brands/github
+  favicon: assets/favicon.svg
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.tracking
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+    - toc.follow
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: [docs/snippets]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        # Runs a block marked exec="on" and shows what it prints; every other
+        # python block is highlighted as usual.
+        - name: python
+          class: python
+          validator: !!python/name:markdown_exec.validator
+          format: !!python/name:markdown_exec.formatter
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/hallvar-h/TOPS
+      name: TOPS on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/tops/
+      name: TOPS on PyPI
+
+nav:
+  - Home: index.md
