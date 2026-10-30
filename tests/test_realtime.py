@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 import tops.dynamic as dps
+from k2a_variants import TRAFO, initialized, trafo_model
 from tops.realtime import RealTimeSimulator
 from tops.simulator import Simulator
 
@@ -39,9 +40,9 @@ def k2a_ps():
     return ps
 
 
-def simulator(clock, frame_costs=None, t_end=T_END, **kwargs):
+def simulator(clock, frame_costs=None, t_end=T_END, ps=None, **kwargs):
     """A RealTimeSimulator on a fake clock, whose frames take frame_costs[frame] seconds (0 if not given)."""
-    sim = RealTimeSimulator(k2a_ps(), dt=DT, rate=RATE, t_end=t_end, clock=clock, sleep=clock.sleep, **kwargs)
+    sim = RealTimeSimulator(ps or k2a_ps(), dt=DT, rate=RATE, t_end=t_end, clock=clock, sleep=clock.sleep, **kwargs)
     steps = []
     costs = frame_costs or {}
 
@@ -266,3 +267,125 @@ def test_an_error_in_the_thread_is_kept_and_ends_the_simulation():
     assert not sim.is_alive()
     assert isinstance(sim.error, RuntimeError) and str(sim.error) == 'boom'
     assert len(sim.steps) == 6
+
+
+# Events submitted while it runs
+def record_when_applied(sim, ps, what):
+    """Records, after every step, what(ps), as a list with one entry per step."""
+    seen = []
+    sim.interface_functions['seen'] = lambda sim: seen.append(what(ps))
+    return seen
+
+
+def line_out(ps):
+    return not ps.lines['Line'].connected[list(ps.lines['Line'].par['name']).index('L7-8-1')]
+
+
+def test_a_submitted_event_is_applied_just_before_the_next_frame():
+    clock = FakeClock()
+    sim = simulator(clock)
+    seen = record_when_applied(sim, sim.ps, line_out)
+    sim.interface_functions['submit'] = lambda sim: (
+        sim.submit('lines', 'Line', 'L7-8-1', 'disconnect') if len(sim.steps) == 6 else None)  # in frame 1 (steps 5-8)
+    sim.main_loop()
+
+    assert seen[:8] == [False]*8 and seen[8:] == [True]*32  # in force from the first step of frame 2, never mid-frame
+
+
+def test_events_are_applied_in_the_order_they_were_submitted_with_their_arguments():
+    clock = FakeClock()
+    sim = simulator(clock)
+
+    def submit(sim):
+        if len(sim.steps) == 2:
+            sim.submit('lines', 'Line', 'L7-8-1', 'disconnect')
+            sim.submit('loads', 'Load', 'L1', 'set_power', P=1000.5)
+            sim.submit('loads', 'Load', 'L1', 'set_power', P=1100.0, Q=90.0)
+            sim.submit('lines', 'Line', 'L7-8-1', 'connect')
+
+    sim.interface_functions['submit'] = submit
+    sim.main_loop()
+
+    load = sim.ps.loads['Load']
+    i = list(load.par['name']).index('L1')
+    assert load.par['P'][i] == 1100.0 and load.par['Q'][i] == 90.0
+    assert not line_out(sim.ps)  # disconnected, then connected again
+    assert sim.rejected == []
+
+
+def test_a_line_trip_a_transformer_trip_and_a_load_change_are_applied_between_frames():
+    clock = FakeClock()
+    ps = initialized(trafo_model('Trafo'))
+    sim = simulator(clock, ps=ps)
+    seen = record_when_applied(sim, ps, lambda ps: (
+        line_out(ps), not ps.trafos['Trafo'].connected[-1], float(ps.loads['Load'].par['P'][0])))
+
+    def submit(sim):
+        if len(sim.steps) == 2:
+            sim.submit('lines', 'Line', 'L7-8-1', 'disconnect')
+            sim.submit('trafos', 'Trafo', TRAFO, 'disconnect')
+            sim.submit('loads', 'Load', 'L1', 'set_power', P=900.0)
+
+    sim.interface_functions['submit'] = submit
+    sim.main_loop()
+
+    assert seen[:4] == [(False, False, 967.0)]*4  # frame 0: nothing yet
+    assert seen[4:] == [(True, True, 900.0)]*(len(seen) - 4)  # from frame 1, all three at once
+
+
+def test_events_may_be_submitted_from_another_thread_while_the_simulation_is_paused():
+    clock = FakeClock()
+    sim = simulator(clock)
+    seen = record_when_applied(sim, sim.ps, line_out)
+    sim.interface_functions['pause'] = lambda sim: sim.pause() if len(sim.steps) == 8 else None
+    sim.start()
+    assert wait_until(lambda: sim.paused and sim.frame == 2)
+
+    submitter = threading.Thread(target=sim.submit, args=('lines', 'Line', 'L7-8-1', 'disconnect'))
+    submitter.start()
+    submitter.join(timeout=5)
+    assert seen == [False]*8  # nothing is applied while it is paused
+    sim.resume()
+    sim.join(timeout=10)
+
+    assert sim.error is None and seen[:8] == [False]*8 and seen[8:] == [True]*32
+
+
+def test_a_submitted_short_circuit_on_a_bus_takes_its_arguments():
+    clock = FakeClock()
+    sim = simulator(clock)
+    sim.interface_functions['submit'] = lambda sim: (
+        sim.submit('buses', '', 'B8', 'short_circuit', y=100) if len(sim.steps) == 1 else None)
+    sim.main_loop()
+    assert sim.ps.bus_events.y_fault[list(sim.ps.buses['name']).index('B8')] == 100
+
+
+@pytest.mark.parametrize('args, kwargs, error', [
+    (('lines', 'Line', 'NoSuchLine', 'disconnect'), {}, KeyError),
+    (('lines', 'Line', 'L7-8-1', 'explode'), {}, ValueError),
+    (('lines', 'NoSuchModel', 'L7-8-1', 'disconnect'), {}, KeyError),
+    (('nowhere', 'Line', 'L7-8-1', 'disconnect'), {}, KeyError),
+    (('loads', 'Load', 'L1', 'set_power'), {'volts': 1}, TypeError),
+])
+def test_an_event_that_cannot_exist_is_refused_in_the_thread_that_submits_it(args, kwargs, error):
+    clock = FakeClock()
+    sim = simulator(clock)
+    with pytest.raises(error):
+        sim.submit(*args, **kwargs)
+    sim.main_loop()
+    assert sim.frame == 10 and sim.rejected == [] and not line_out(sim.ps)
+
+
+def test_an_event_that_fails_when_applied_is_kept_in_rejected_and_the_simulation_goes_on():
+    clock = FakeClock()
+    sim = simulator(clock)
+    sim.interface_functions['submit'] = lambda sim: (
+        [sim.submit('loads', 'Load', 'L1', 'set_power', P=float('nan')),
+         sim.submit('lines', 'Line', 'L7-8-1', 'disconnect')] if len(sim.steps) == 2 else None)
+    sim.main_loop()
+
+    assert sim.error is None and sim.frame == 10
+    (event, error), = sim.rejected
+    assert event[:4] == ('loads', 'Load', 'L1', 'set_power') and list(event[4]) == ['P']  # nan is not equal to nan
+    assert isinstance(error, ValueError) and 'P must be a finite number' in str(error)
+    assert line_out(sim.ps)  # the event after it was applied all the same

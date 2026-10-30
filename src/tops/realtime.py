@@ -8,6 +8,8 @@ dropped, not replayed in a burst.
     sim = RealTimeSimulator(ps, dt=5e-3, rate=50)
     sim.main_loop()                    # or sim.start() to run it in a thread, sim.pause(), sim.stop() ...
 """
+import inspect
+import queue
 import threading
 import time
 
@@ -32,7 +34,8 @@ class RealTimeSimulator(Simulator):
 
         Attributes: frame (frames run), schedule_time (the time of the last frame on the schedule, in seconds from the
         start), lag (seconds the last frame was behind its schedule), lag_resets (times the schedule was started over),
-        error (the exception that ended a simulation run by start(), if one did).
+        error (the exception that ended a simulation run by start(), if one did), rejected (events from submit() that
+        failed when they were applied, as pairs of the event and the exception).
         """
         if rate <= 0:
             raise ValueError(f'rate must be positive, got {rate}.')
@@ -50,9 +53,11 @@ class RealTimeSimulator(Simulator):
         self._running = threading.Event()
         self._running.set()
         self._thread = None
+        self._submitted = queue.SimpleQueue()
         self._clock = clock
         self._sleep = self._stop_event.wait if sleep is None else sleep
         self.error = None
+        self.rejected = []
         self.frame = 0
         self.schedule_time = 0.0
         self.lag = 0.0
@@ -92,6 +97,28 @@ class RealTimeSimulator(Simulator):
 
     def stopped(self):
         return self._stop_event.is_set()
+
+    def submit(self, category, model, unit, action, **kwargs):
+        """Queue an event, to be applied as ps.apply_event(category, model, unit, action, **kwargs) just before the
+        next frame, in the order of submission. May be called from any thread.
+
+        An event that cannot exist (unknown unit, action, model or arguments) raises here, in the caller's thread. One
+        that fails only when it is applied, e.g. a power that is not a number, is kept in rejected, and the simulation
+        goes on.
+        """
+        events = self.ps.get_events(category, model)
+        events.check(unit, action)
+        inspect.signature(getattr(events, action)).bind(unit, **kwargs)
+        self._submitted.put((category, model, unit, action, kwargs))
+
+    def _apply_submitted(self):
+        while not self._submitted.empty():
+            event = self._submitted.get_nowait()
+            category, model, unit, action, kwargs = event
+            try:
+                self.ps.apply_event(category, model, unit, action, **kwargs)
+            except Exception as error:
+                self.rejected.append((event, error))
 
     def start(self):
         """Run main_loop in a thread. An exception that ends it is kept in error."""
@@ -133,6 +160,7 @@ class RealTimeSimulator(Simulator):
                 due = self._clock()
                 self.lag_resets += 1
             self.schedule_time = due - start
+            self._apply_submitted()
             for _ in range(self.steps_per_frame):
                 if self.stopped() or self.sol.t >= self.t_end:
                     break
