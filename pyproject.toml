@@ -25,7 +25,10 @@ dependencies = [
 dev = ["ipython"]
 
 [dependency-groups]
-dev = ["pytest"]
+dev = [
+    "pytest",
+    "ruff>=0.17.3",
+]
 docs = [
     "mkdocs-material>=9.5",
     "mkdocstrings[python]>=0.27",
@@ -45,3 +48,11 @@ build-backend = "uv_build"
 testpaths = ["tests"]
 markers = ["slow: long-running validation simulations (run with -m slow, or -m \"\" for everything)"]
 addopts = "-m 'not slow'"
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["examples/notebooks"]
+
+[tool.ruff.lint]
+# Ruff defaults (pyflakes + core pycodestyle errors); no line-length rule.
+select = ["E4", "E7", "E9", "F"]
