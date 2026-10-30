@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/hallvar-h/TOPS/compare/v0.4.0...v0.5.0) (2026-10-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* Explicit blocks, declared inputs/outputs and largest-P slack bus ([#23](https://github.com/hallvar-h/TOPS/issues/23))
+
+### Code Refactoring
+
+* Explicit blocks, declared inputs/outputs and largest-P slack bus ([#23](https://github.com/hallvar-h/TOPS/issues/23)) ([4b2bc63](https://github.com/hallvar-h/TOPS/commit/4b2bc63fd93721a2135bf7dbba6df8fcf1890638))
+
 ## [0.4.0](https://github.com/hallvar-h/TOPS/compare/v0.3.0...v0.4.0) (2026-10-19)
 
 
