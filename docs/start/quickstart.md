@@ -90,4 +90,13 @@ plt.show()
 The generators move in pairs: G1 and G2 in one area, G3 and G4 in the other,
 with the first area leading. The slow oscillation of one group relative to the
 other, at well below 1 Hz, is the inter-area mode that makes `k2a` a popular
-test case.
+test case. The
+[Modal analysis](../guide/modal-analysis.md) guide finds this mode directly
+from the linearised model.
+
+## Where next
+
+- [Included test systems](test-systems.md): other systems to start from.
+- [Model format](../guide/model-format.md): write or edit your own system.
+- [Running a simulation](../guide/simulation.md): solvers, results and inputs.
+- [Events](../guide/events.md): line trips, reconnections and faults.

@@ -146,3 +146,4 @@ nav:
       - Plotting: api/plotting.md
       - Dynamic models: api/dyn-models.md
       - Blocks: api/blocks.md
+  - About: about.md

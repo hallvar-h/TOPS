@@ -91,8 +91,9 @@ one category:
 ```
 
 The model type is looked up as a class in `tops.dyn_models.<category>`, for
-example `tops.dyn_models.avr.SEXS`. If you pass a user model library
-(`PowerSystemModel(model, user_mdl_lib=...)`), it is searched first.
+example `tops.dyn_models.avr.SEXS`. If you pass a
+[user model library](user-models.md), it is searched first. The
+[Dynamic models](dyn-models.md) page lists the available types.
 
 ## Units and conventions
 

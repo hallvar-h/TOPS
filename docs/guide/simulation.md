@@ -28,7 +28,7 @@ sim.main_loop()
 | `dt` | Time step in seconds (default 5 ms). |
 | `t_end` | End time in seconds. With the default, `inf`, the loop runs until stopped. |
 | `solver` | Solver class, `ModifiedEulerDAE` by default. See [Solvers](#solvers). |
-| `events` | An event table: see the Quickstart and the Events guide. |
+| `events` | An event table. See [Events](events.md). |
 
 At every step, `Simulator` applies the events that are due, advances the
 solver by `dt`, then calls each function in `sim.interface_functions` with

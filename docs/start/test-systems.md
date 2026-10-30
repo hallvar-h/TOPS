@@ -82,4 +82,5 @@ ps = dps.PowerSystemModel(model="k2a.json")
 
 The easiest way to build a new system is to copy the module closest to what
 you need, for example `sm_ib.py` for a single machine or `k2a.py` for a
-multi-machine system, and edit the tables.
+multi-machine system, and edit the tables. The [Model format](../guide/model-format.md) page explains
+the tables.
