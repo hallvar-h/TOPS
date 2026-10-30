@@ -92,6 +92,25 @@ markdown_extensions:
 
 plugins:
   - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            # The existing docstrings use the reST ":param x:" style.
+            docstring_style: sphinx
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            separate_signature: true
+            merge_init_into_class: true
+            # Most of TOPS has no docstrings yet; still list the signatures.
+            show_if_no_docstring: true
+            filters: ["!^_"]
+            heading_level: 2
 
 extra:
   social:
@@ -116,3 +135,14 @@ nav:
       - Dynamic models: guide/dyn-models.md
       - User-defined models: guide/user-models.md
       - Examples: guide/examples.md
+  - API reference:
+      - Overview: api/index.md
+      - PowerSystemModel: api/dynamic.md
+      - Simulator: api/simulator.md
+      - Events: api/events.md
+      - Model data: api/model-data.md
+      - Solvers: api/solvers.md
+      - Modal analysis: api/modal-analysis.md
+      - Plotting: api/plotting.md
+      - Dynamic models: api/dyn-models.md
+      - Blocks: api/blocks.md
