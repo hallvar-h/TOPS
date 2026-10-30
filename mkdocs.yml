@@ -114,3 +114,4 @@ nav:
       - Events: guide/events.md
       - Modal analysis: guide/modal-analysis.md
       - Dynamic models: guide/dyn-models.md
+      - User-defined models: guide/user-models.md
