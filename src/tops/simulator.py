@@ -71,7 +71,8 @@ class EventSchedule:
 
     Events are given as a table (list with header row, or DataFrame) with columns t, category, model, unit, action,
     e.g. [0.1, 'lines', 'Line', 'L1-2', 'disconnect'] or [0.1, 'buses', '', 'B1', 'short_circuit']. The model column
-    is ignored for category 'buses'.
+    is ignored for category 'buses'. An optional column kwargs holds a dict of arguments for the action, or None,
+    e.g. [0.1, 'buses', '', 'B1', 'short_circuit', {'y': 100}]; they are kept in the list kwargs, one per event.
 
     Used by the Simulator, or directly in a custom simulation loop:
 
@@ -87,13 +88,24 @@ class EventSchedule:
         table = read_table(events) if events is not None else None
         if table is None or len(table) == 0:
             self.events = []
+            self.kwargs = []
         else:
             missing = [field for field in self.fields if field not in table.dtype.names]
             if missing:
                 raise ValueError(f'Event table is missing fields: {missing}')
             order = np.argsort(table['t'], kind='stable')
             self.events = [tuple(table[field][i].item() for field in self.fields) for i in order]
+            kwargs = table['kwargs'] if 'kwargs' in table.dtype.names else [None]*len(table)
+            self.kwargs = [self._read_kwargs(kwargs[i]) for i in order]
         self.reset()
+
+    @staticmethod
+    def _read_kwargs(value):
+        if value is None or (isinstance(value, float) and np.isnan(value)):
+            return {}
+        if isinstance(value, dict):
+            return dict(value)
+        raise ValueError(f"The 'kwargs' of an event must be a dict or None, got {value!r}.")
 
     def reset(self):
         self._next = 0
@@ -113,8 +125,9 @@ class EventSchedule:
 
     def apply_due(self, ps, t):
         """Apply events with time <= t that have not been applied before."""
-        for _, category, mdl_key, unit, action in self.pop_due(t):
-            ps.apply_event(category, mdl_key, unit, action)
+        first = self._next
+        for (_, category, mdl_key, unit, action), kwargs in zip(self.pop_due(t), self.kwargs[first:self._next]):
+            ps.apply_event(category, mdl_key, unit, action, **kwargs)
 
 
 class Events:
