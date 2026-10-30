@@ -23,6 +23,25 @@ def float_power_columns(par):
     return par.astype(dtype)
 
 
+def write_power(mdl, load_idx, P, Q):
+    """Write the power of a load, in MW and Mvar (None keeps it), to the table of its model.
+
+    Nothing is changed if a value is refused, or if the bus of the load is not in the reduced system.
+    Returns False if the power is as it was.
+    """
+    if mdl.bus_idx_red['terminal'][load_idx] < 0:
+        raise ValueError(f'Bus of load {mdl.par["name"][load_idx]} is not in the reduced system.')
+    p = mdl.par['P'][load_idx] if P is None else read_power('P', P)
+    q = mdl.par['Q'][load_idx] if Q is None else read_power('Q', Q)
+    if p == mdl.par['P'][load_idx] and q == mdl.par['Q'][load_idx]:
+        return False
+
+    mdl.par = mdl.data = float_power_columns(mdl.par)
+    mdl.par['P'][load_idx] = p
+    mdl.par['Q'][load_idx] = q
+    return True
+
+
 class LoadEvents(ModelEvents):
     actions = ('set_power',)
 
@@ -71,18 +90,10 @@ class Load(DAEModel):
 
         Returns the change in the reduced admittance matrix, or None if the power is as it was.
         """
-        bus = self.bus_idx_red['terminal'][load_idx]
-        if bus < 0:
-            raise ValueError(f'Bus of load {self.par["name"][load_idx]} is not in the reduced system.')
-        p = self.par['P'][load_idx] if P is None else read_power('P', P)
-        q = self.par['Q'][load_idx] if Q is None else read_power('Q', Q)
-        if p == self.par['P'][load_idx] and q == self.par['Q'][load_idx]:
+        if not write_power(self, load_idx, P, Q):
             return None
-
-        self.par = self.data = float_power_columns(self.par)
-        self.par['P'][load_idx] = p
-        self.par['Q'][load_idx] = q
-        s_load = (p + 1j*q)/self.sys_par['s_n']
+        bus = self.bus_idx_red['terminal'][load_idx]
+        s_load = (self.par['P'][load_idx] + 1j*self.par['Q'][load_idx])/self.sys_par['s_n']
         y_load = np.conj(s_load)/abs(self.v_0[load_idx])**2
         change = y_load - self.y_load[load_idx]
         self.y_load[load_idx] = y_load
@@ -223,6 +234,8 @@ class DynamicLoadFiltered(DynamicLoad):
 
 
 class ConstPowerLoad(DAEModel):
+    events_class = LoadEvents
+
     def __init__(self, data, sys_par, **kwargs):
         super().__init__(data, sys_par, **kwargs)
         self.data = data
@@ -241,6 +254,11 @@ class ConstPowerLoad(DAEModel):
 
     def load_flow_pq(self):
         return self.bus_idx['terminal'], self.par['P'], self.par['Q']
+
+    def power_change(self, load_idx, P=None, Q=None):
+        """Set the power of a load in MW and Mvar (None keeps it). The power is read at every step, so there is no
+        change of the admittance matrix to return."""
+        write_power(self, load_idx, P, Q)
 
     def apparent_power_injections(self, x, v):
         s_inj = -(self.par['P'] + 1j*self.par['Q'])/self.sys_par['s_n']

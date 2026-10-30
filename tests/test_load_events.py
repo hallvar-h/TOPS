@@ -110,7 +110,7 @@ def test_a_power_that_is_not_a_finite_number_is_refused_naming_it_and_nothing_is
     other = 'Q' if column == 'P' else 'P'
     before = ps.y_bus_red.copy(), load.par[column][i], load.par[other][i], load.y_load[i]
 
-    with pytest.raises(ValueError, match=column):
+    with pytest.raises(ValueError, match=f'{column} must be a finite number'):
         ps.apply_event('loads', 'Load', LOAD, 'set_power', **{column: value, other: 1000.0})
 
     assert (ps.y_bus_red != before[0]).nnz == 0
@@ -182,3 +182,96 @@ def test_a_load_changed_live_settles_nearer_the_new_power_than_the_old_one(p_new
     p_settled = ps.loads['Load'].P(sim.sol.x, sim.sol.v)[i]
     assert abs(p_settled - p_new) < abs(p_settled - 967)
     assert abs(p_settled - p_new) < 0.1*abs(p_new - 967) + 0.05*p_new  # within the effect of the voltage offset
+
+
+# ConstPowerLoad draws its power whatever the voltage, so the event only has to change the table it reads at every step.
+def const_power_model(p=967, q=100):
+    model = k2a_model()
+    header, *rows = model['loads']
+    model['loads'] = {'ConstPowerLoad': [header, [LOAD, 'B7', p, q, 'Z'], rows[1]]}
+    return model
+
+
+def load_model(p=967, q=100):
+    model = k2a_model()
+    header, *rows = model['loads']
+    model['loads'] = [header, [LOAD, 'B7', p, q, 'Z'], rows[1]]
+    return model
+
+
+def load_index_of(ps):
+    """Index of LOAD in the only load model of ps."""
+    load, = ps.loads.values()
+    return np.where(load.par['name'] == LOAD)[0][0]
+
+
+def injection(ps, i):
+    """What the load draws from the network, in p.u. (negative: it is an injection of -S)."""
+    return ps.loads['ConstPowerLoad'].apparent_power_injections(ps.x0, ps.v_0)[1][i]
+
+
+def test_const_power_loads_have_a_set_power_event_that_changes_no_matrix():
+    ps = initialized(const_power_model())
+    assert ps.get_events('loads', 'ConstPowerLoad').actions == ('set_power',)
+    before = ps.y_bus_red.copy()
+
+    assert ps.loads['ConstPowerLoad'].events.set_power(LOAD, P=1000.5, Q=120.25) == []
+    assert (ps.y_bus_red != before).nnz == 0
+
+
+def test_a_const_power_load_draws_exactly_the_new_power():
+    ps = initialized(const_power_model())
+    load = ps.loads['ConstPowerLoad']
+    i = load_index_of(ps)
+
+    ps.apply_event('loads', 'ConstPowerLoad', LOAD, 'set_power', P=1000.5, Q=120.25)
+
+    assert load.par['P'][i] == 1000.5 and load.par['Q'][i] == 120.25 and load.par['P'][1 - i] == 1767
+    assert np.isclose(injection(ps, i), -(1000.5 + 120.25j)/ps.s_n, rtol=1e-14, atol=0)
+    ps.apply_event('loads', 'ConstPowerLoad', LOAD, 'set_power', Q=50.0)
+    assert np.isclose(injection(ps, i), -(1000.5 + 50j)/ps.s_n, rtol=1e-14, atol=0)
+
+
+def test_the_network_solution_follows_the_power_of_a_const_power_load():
+    ps = initialized(const_power_model())
+    i = load_index_of(ps)
+    bus = ps.loads['ConstPowerLoad'].bus_idx_red['terminal'][i]
+    voltage = abs(ps.solve_algebraic(0, ps.x0)[bus])
+
+    ps.apply_event('loads', 'ConstPowerLoad', LOAD, 'set_power', P=1200.0)
+    assert abs(ps.solve_algebraic(0, ps.x0)[bus]) < voltage - 1e-3
+
+
+def test_a_const_power_load_outside_the_reduced_system_raises_and_keeps_its_power():
+    ps = initialized(const_power_model())
+    load = ps.loads['ConstPowerLoad']
+    i = load_index_of(ps)
+    load.bus_idx_red['terminal'][i] = -99999
+    with pytest.raises(ValueError, match='not in the reduced system'):
+        load.events.set_power(LOAD, P=1000.5)
+    assert load.par['P'][i] == 967
+
+
+@pytest.mark.parametrize('column, value', [('P', float('nan')), ('Q', 'a lot')])
+def test_a_const_power_load_refuses_a_power_that_is_not_a_finite_number(column, value):
+    ps = initialized(const_power_model())
+    with pytest.raises(ValueError, match=f'{column} must be a finite number'):
+        ps.apply_event('loads', 'ConstPowerLoad', LOAD, 'set_power', **{column: value})
+
+
+# What a rebuilt model has that a load changed live has not, is the set-points of the machines. A new power flow and
+# initialisation after the event start where a model built with the new power starts.
+@pytest.mark.parametrize('kind', ['Load', 'ConstPowerLoad'])
+def test_a_new_initialisation_after_set_power_starts_where_a_rebuilt_model_starts(kind):
+    def model(p, q):
+        return const_power_model(p, q) if kind == 'ConstPowerLoad' else load_model(p, q)
+
+    ps = initialized(model(967, 100))
+    ps.apply_event('loads', kind, LOAD, 'set_power', P=1100.0, Q=130.0)
+    ps.power_flow()
+    ps.init_dyn_sim()
+
+    rebuilt = initialized(model(1100.0, 130.0))
+    assert np.allclose(ps.v_0, rebuilt.v_0, atol=1e-6)
+    assert np.allclose(ps.x0, rebuilt.x0, atol=1e-6)
+    assert max(abs(ps.ode_fun(0, ps.x0))) < 1e-6
