@@ -13,12 +13,14 @@ import queue
 import threading
 import time
 
+import numpy as np
+
 from tops.simulator import Simulator
 
 
 class RealTimeSimulator(Simulator):
-    def __init__(self, ps, dt=5e-3, rate=50.0, steps_per_frame=None, speed=1.0, max_lag=25, clock=time.monotonic,
-                 sleep=None, **kwargs):
+    def __init__(self, ps, dt=5e-3, rate=50.0, steps_per_frame=None, speed=1.0, max_lag=25, max_voltage=5.0,
+                 on_frame=None, clock=time.monotonic, sleep=None, **kwargs):
         """
         :param rate: Frames per second of the clock.
         :param steps_per_frame: Steps of dt in a frame. The default makes the simulation run in real time, i.e. the
@@ -27,6 +29,10 @@ class RealTimeSimulator(Simulator):
         :param speed: Frames come speed times as fast as rate says, so 2 is twice as fast as real time. See set_speed.
         :param max_lag: How far behind its schedule, in frame periods, the simulation may fall before the schedule
             starts over from now. None: never, the simulation always catches up.
+        :param max_voltage: A bus voltage above this, in p.u., or a state that is not finite, ends the simulation with an
+            ArithmeticError after the frame: the simulation has diverged. None: the voltages are not limited.
+        :param on_frame: Function called with the simulator after each frame, e.g. to read the state, which is the
+            place to pause() or stop(). An exception in it ends the simulation.
         :param clock: Function returning the time in seconds, and sleep: function waiting for that many seconds, which
             by default stop() interrupts. Other than the default, e.g. a clock that is moved by hand, they make the
             pacing testable.
@@ -43,12 +49,16 @@ class RealTimeSimulator(Simulator):
             raise ValueError(f'steps_per_frame must be at least 1, got {steps_per_frame}.')
         if max_lag is not None and max_lag <= 0:
             raise ValueError(f'max_lag must be positive, or None, got {max_lag}.')
+        if max_voltage is not None and max_voltage <= 0:
+            raise ValueError(f'max_voltage must be positive, or None, got {max_voltage}.')
         self._check_speed(speed)
         super().__init__(ps, dt=dt, **kwargs)
         self.rate = rate
         self.speed = speed
         self.steps_per_frame = max(1, round(1/(rate*dt))) if steps_per_frame is None else steps_per_frame
         self.max_lag = max_lag
+        self.max_voltage = max_voltage
+        self.on_frame = on_frame
         self._stop_event = threading.Event()
         self._running = threading.Event()
         self._running.set()
@@ -120,6 +130,13 @@ class RealTimeSimulator(Simulator):
             except Exception as error:
                 self.rejected.append((event, error))
 
+    def _check_divergence(self):
+        if not (np.isfinite(self.sol.y).all() and np.isfinite(self.sol.v).all()):
+            raise ArithmeticError('The state is not finite.')
+        highest = float(np.max(abs(self.sol.v)))
+        if self.max_voltage is not None and highest > self.max_voltage:
+            raise ArithmeticError(f'A bus voltage reached {highest:.1f} p.u.')
+
     def start(self):
         """Run main_loop in a thread. An exception that ends it is kept in error."""
         if self._thread is not None:
@@ -166,3 +183,6 @@ class RealTimeSimulator(Simulator):
                     break
                 self.make_simulation_step()
             self.frame += 1
+            self._check_divergence()
+            if self.on_frame is not None:
+                self.on_frame(self)
