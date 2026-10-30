@@ -133,3 +133,95 @@ def test_init_dyn_sim_keeps_a_line_tripped_by_an_event_tripped():
     ps.init_dyn_sim()
     assert np.allclose(y_bus_red(ps), after_event, atol=1e-10)
     assert not ps.lines['Line'].connected[line_index(ps)]
+
+
+# Transformers. In K2A every transformer is the only link of its generator, so one is added in parallel to be taken out.
+TRAFO = 'T1b'
+KINDS = ['Trafo', 'DynTrafo']
+
+
+def trafo_model(kind, connected=None):
+    model = k2a_model()
+    header, *rows = model.pop('transformers')
+    rows.append([TRAFO, 'B1', 'B5', 900, 20, 230, 0, 0.15])
+    if kind == 'DynTrafo':
+        header, rows = [*header, 'ratio_from', 'ratio_to'], [[*row, 1, 1] for row in rows]
+    table = [[*header, 'connected'], *[[*row, connected.get(row[0], True)] for row in rows]] if connected is not None \
+        else [header, *rows]
+    model['trafos'] = {kind: table}
+    return model
+
+
+def removed_trafo_model(kind):
+    model = trafo_model(kind)
+    header, *rows = model['trafos'][kind]
+    model['trafos'] = {kind: [header, *[row for row in rows if row[0] != TRAFO]]}
+    return model
+
+
+def trafo_index(ps, kind):
+    return np.where(ps.trafos[kind].par['name'] == TRAFO)[0][0]
+
+
+@pytest.mark.parametrize('kind', KINDS)
+def test_trafo_built_out_of_service_is_solved_without_it(kind):
+    built = initialized(trafo_model(kind, {TRAFO: False}))
+    removed = initialized(removed_trafo_model(kind))
+    trafo = built.trafos[kind]
+
+    assert not trafo.connected[trafo_index(built, kind)]
+    assert trafo.connected.sum() == len(trafo.par) - 1
+    assert np.allclose(built.v_0, removed.v_0)
+    assert np.allclose(y_bus_red(built), y_bus_red(removed), atol=1e-10)
+    assert np.allclose(built.solve_algebraic(0, built.x0), removed.solve_algebraic(0, removed.x0))
+    assert max(abs(built.ode_fun(0, built.x0))) < 1e-8
+
+
+@pytest.mark.parametrize('kind', KINDS)
+def test_trafo_out_of_service_keeps_its_admittance_for_a_later_connect(kind):
+    built = initialized(trafo_model(kind, {TRAFO: False}))
+    full = initialized(trafo_model(kind))
+    i = trafo_index(built, kind)
+
+    data, _ = built.trafos[kind].load_flow_adm()
+    full_data, _ = full.trafos[kind].load_flow_adm()
+    assert (data[:, i] == 0).all()
+    assert np.array_equal(np.delete(data, i, axis=1), np.delete(full_data, i, axis=1))
+    assert built.trafos[kind].admittance[i] != 0
+    assert built.trafos[kind].ratio_from_0[i] != 0 and built.trafos[kind].ratio_to_0[i] != 0
+
+
+@pytest.mark.parametrize('kind', KINDS)
+def test_current_of_a_trafo_built_out_of_service_is_zero(kind):
+    built = initialized(trafo_model(kind, {TRAFO: False}))
+    trafo = built.trafos[kind]
+    i = trafo_index(built, kind)
+    for current in (trafo.i_from(built.x0, built.v_0), trafo.i_to(built.x0, built.v_0)):
+        assert current[i] == 0
+        assert (abs(np.delete(current, i)) > 0).all()
+
+
+@pytest.mark.parametrize('kind', KINDS)
+def test_all_connected_trafo_column_changes_nothing(kind):
+    plain = initialized(trafo_model(kind))
+    flagged = initialized(trafo_model(kind, {}))
+    assert np.array_equal(y_bus_red(plain), y_bus_red(flagged))
+    assert np.array_equal(plain.v_0, flagged.v_0)
+    assert np.array_equal(plain.solve_algebraic(0, plain.x0), flagged.solve_algebraic(0, flagged.x0))
+
+
+def test_trafo_zero_and_one_flags_and_data_frames_are_accepted():
+    model = trafo_model('Trafo', {TRAFO: False})
+    header, *rows = model['trafos']['Trafo']
+    as_ints = [header, *[[*row[:-1], int(row[-1])] for row in rows]]
+    model['trafos'] = {'Trafo': pd.DataFrame(as_ints[1:], columns=as_ints[0])}
+    built = initialized(model)
+    assert not built.trafos['Trafo'].connected[trafo_index(built, 'Trafo')]
+    assert built.trafos['Trafo'].connected.sum() == len(built.trafos['Trafo'].par) - 1
+
+
+@pytest.mark.parametrize('kind', KINDS)
+@pytest.mark.parametrize('flag', [float('nan'), 'yes', 2])
+def test_invalid_trafo_flags_are_refused_naming_the_column(kind, flag):
+    with pytest.raises(ValueError, match='connected'):
+        dps.PowerSystemModel(model=trafo_model(kind, {TRAFO: flag}))

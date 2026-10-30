@@ -1,5 +1,5 @@
 import numpy as np
-from tops.dyn_models.utils import DAEModel
+from tops.dyn_models.utils import DAEModel, read_connected
 
 
 class Trafo(DAEModel):
@@ -8,7 +8,7 @@ class Trafo(DAEModel):
         self.data = data
         self.par = data
         self.n_units = len(data)
-        self.connected = np.ones(self.n_units, dtype=bool)
+        self.connected = read_connected(data)
 
         self.bus_idx = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
         self.bus_idx_red = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
@@ -75,7 +75,7 @@ class Trafo(DAEModel):
             self.ratio_to_0*np.conj(self.ratio_to_0)*self.admittance,
             -self.ratio_from_0*np.conj(self.ratio_to_0)*self.admittance,
             -np.conj(self.ratio_from_0)*self.ratio_to_0*self.admittance
-        ])
+        ])*self.connected  # admittance and ratios stay set for transformers out of service, so that connect can stamp them
 
         # self.init_extras()
         self.rows = rows
@@ -176,11 +176,11 @@ class DynTrafo(Trafo):
             self.ratio_to_0*np.conj(self.ratio_to_0)*self.admittance,
             -self.ratio_from_0*np.conj(self.ratio_to_0)*self.admittance,
             -np.conj(self.ratio_from_0)*self.ratio_to_0*self.admittance
-        ])
+        ])*self.connected
 
         self.rows = rows
         self.cols = cols
-    
+
         return data, (self.rows, self.cols)
 
     def init_from_load_flow(self, x_0, v_0, S):
@@ -198,7 +198,7 @@ class DynTrafo(Trafo):
             ratio_to                *   np.conj(ratio_to)   *   self.admittance,
             -ratio_from             *   np.conj(ratio_to)   *   self.admittance,
             -np.conj(ratio_from)    *   ratio_to            *   self.admittance
-        ])
+        ])*self.connected
 
         return data, (self.rows, self.cols)
     
@@ -210,7 +210,7 @@ class DynTrafo(Trafo):
         shunt_from = self.ratio_from(x, v)*np.conj(self.ratio_from(x, v))*self.admittance
         adm_from_to = self.ratio_from(x, v)*np.conj(self.ratio_to(x, v))*self.admittance
 
-        return v_from*shunt_from - v_to*adm_from_to
+        return (v_from*shunt_from - v_to*adm_from_to)*self.connected
 
     def i_to(self, x, v):
         v_full = v
@@ -220,4 +220,4 @@ class DynTrafo(Trafo):
         shunt_to = self.ratio_to(x, v) * np.conj(self.ratio_to(x, v)) * self.admittance
         adm_to_from = np.conj(self.ratio_from(x, v)) * self.ratio_to(x, v) * self.admittance
 
-        return v_to*shunt_to - v_from*adm_to_from
+        return (v_to*shunt_to - v_from*adm_to_from)*self.connected
