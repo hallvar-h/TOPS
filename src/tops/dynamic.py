@@ -22,6 +22,7 @@ class PowerSystemModel:
         self.perform_kron_reduction = False
         self.pf_max_it = 10
         self.pf_tol = 1e-8
+        self.dead_bus_rtol = 1e-12  # a bus is dead when its admittance is below this fraction of its initial value
 
         self.s_n = model['base_mva']
         self.f_n = model['f']
@@ -266,6 +267,7 @@ class PowerSystemModel:
             mdl.init_from_connections(self.x_0, self.v_0, output_values)
 
         self.bus_events = BusEvents(self.buses['name'], self.bus_idx_red)
+        self._row_admittance_0 = self._row_admittance(self.x0)
 
         self.initialization_ready = True
 
@@ -307,6 +309,29 @@ class PowerSystemModel:
 
         return dx
 
+    def _y_var(self, x):
+        """Admittances that change with the states, as a matrix."""
+        y_var = sp.csr_matrix((self.n_bus,) * 2, dtype=complex)
+        for mdl in self.mdl_instructions['dyn_var_adm']:
+            data, (row_idx, col_idx) = mdl.dyn_var_adm(x, None)
+            y_var += sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
+        return y_var
+
+    def _row_admittance(self, x):
+        """Sum of the magnitudes of the entries of each row of the admittance matrix at the states x."""
+        y = self.y_bus_red + self._y_var(x) + self.y_bus_red_mod
+        return np.asarray(abs(y).sum(axis=1)).ravel()
+
+    def _dead_bus_idx(self, x):
+        # Not zero but a tiny fraction of what the row was: stamps taken out one by one leave rounding behind
+        return np.flatnonzero(self._row_admittance(x) <= self.dead_bus_rtol*self._row_admittance_0)
+
+    def dead_buses(self, x=None):
+        """Names of the buses that have lost all their admittance since the initialisation, e.g. a bay node whose
+        switches are all open. The variable admittances are taken at the states x (default: the initial states)."""
+        x = self.x0 if x is None else x
+        return self.buses['name'][self.bus_idx_red[self._dead_bus_idx(x)]]
+
     def solve_algebraic(self, t, x, v_0=None):
         '''
         Solves algebraic equations given states
@@ -319,10 +344,7 @@ class PowerSystemModel:
             bus_idx_red, i_inj_mdl = mdl.current_injections(x, None)
             np.add.at(i_inj, bus_idx_red, i_inj_mdl)
 
-        y_var = sp.csr_matrix((self.n_bus,) * 2, dtype=complex)
-        for mdl in self.mdl_instructions['dyn_var_adm']:
-            data, (row_idx, col_idx) = mdl.dyn_var_adm(x, None)
-            y_var += sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
+        y_var = self._y_var(x)
         if self.algebraic_equations_are_linear:
             return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
 
