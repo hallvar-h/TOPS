@@ -225,3 +225,38 @@ def test_trafo_zero_and_one_flags_and_data_frames_are_accepted():
 def test_invalid_trafo_flags_are_refused_naming_the_column(kind, flag):
     with pytest.raises(ValueError, match='connected'):
         dps.PowerSystemModel(model=trafo_model(kind, {TRAFO: flag}))
+
+
+# Islands. In K2A, T1 is the only link of B1, and T3 the only link of the slack bus B3.
+def test_a_branch_out_of_service_that_cuts_a_bus_off_from_the_slack_is_refused():
+    ps = dps.PowerSystemModel(model=with_connected(k2a_model(), 'transformers', {'T1': False}))
+    with pytest.raises(ValueError, match=r"connected.*\bB1\b"):
+        ps.init_dyn_sim()
+    assert not ps.power_flow_ready
+
+
+def test_every_bus_cut_off_is_named():
+    ps = dps.PowerSystemModel(model=with_connected(k2a_model(), 'transformers', {'T3': False}))
+    with pytest.raises(ValueError) as error:
+        ps.power_flow()
+    assert all(f'B{i}' in str(error.value) for i in [1, 2, 4, 5, 6, 7, 8, 9, 10, 11])
+    assert 'B3' not in str(error.value).replace('slack bus B3', '')
+
+
+def test_a_dyn_trafo_out_of_service_that_cuts_a_bus_off_is_refused():
+    ps = dps.PowerSystemModel(model=trafo_model('DynTrafo', {'T1': False, TRAFO: False}))
+    with pytest.raises(ValueError, match=r"connected.*\bB1\b"):
+        ps.power_flow()
+
+
+def test_a_branch_out_of_service_that_leaves_the_grid_connected_is_accepted():
+    ps = initialized(with_connected(k2a_model(), 'lines', {LINE: False}))
+    assert ps.power_flow_ready
+
+
+def test_buses_without_any_branch_are_not_refused_when_everything_is_connected():
+    ps = dps.PowerSystemModel(model=k2a_model())
+    ps.setup()
+    ps.buses = np.append(ps.buses, np.array([('B12', 20)], dtype=ps.buses.dtype))
+    ps.n_bus += 1
+    ps._check_islands(0)
