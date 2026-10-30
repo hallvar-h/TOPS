@@ -20,6 +20,44 @@ The package can be installed using pip, as follows:
 
 `pip install tops`
 
+# Events
+Events change the system during a simulation. Apply one at once with `ps.apply_event(category, model, unit, action, **kwargs)`, or give a table of them to the `Simulator`:
+
+```python
+events = [
+    ['t', 'category', 'model', 'unit', 'action', 'kwargs'],
+    [1.0, 'lines', 'Line', 'L7-8-1', 'disconnect', None],
+    [1.2, 'lines', 'Line', 'L7-8-1', 'connect', None],
+    [2.0, 'loads', 'Load', 'L1', 'set_power', {'P': 900.0}],
+]
+sim = Simulator(ps, dt=5e-3, t_end=5, events=events)
+```
+
+The `kwargs` column, the arguments of the action, is optional. The events are:
+- Lines and transformers (`Line`, `Trafo`, `DynTrafo`): `connect` and `disconnect`.
+- Loads (`Load`, `ConstPowerLoad`): `set_power(P=None, Q=None)`, in MW and Mvar.
+- Buses: `short_circuit` and `clear_short_circuit`.
+
+A line or transformer table may have a boolean `connected` column, to start a branch out of service; it can be connected later. A bus that has lost all its admittance, such as a bay node whose switches are all open, is solved as 0 V and gives a `DeadBusWarning` (silence it with `warnings.filterwarnings`, or set `ps.pin_dead_buses = False`). See `examples/events/`.
+
+# Real-time simulation
+`RealTimeSimulator` runs a simulation on the clock, without any user interface, in frames of a few steps:
+
+```python
+from tops.realtime import RealTimeSimulator
+
+sim = RealTimeSimulator(ps, dt=5e-3, rate=50)  # 50 frames per second, of 4 steps: real time
+sim.start()                                    # runs in a thread
+sim.submit('lines', 'Line', 'L7-8-1', 'disconnect')  # an event, applied just before the next frame
+sim.pause()
+sim.resume()
+sim.set_speed(2)                               # twice as fast as real time
+sim.stop()
+sim.join()
+```
+
+The frames are on a schedule that does not drift. A simulation that falls behind catches up, but only up to `max_lag` frame periods: after a longer stall the time lost is dropped instead of being replayed in a burst. A state that is not finite, or a bus voltage above `max_voltage`, ends it with an `ArithmeticError`, kept in `sim.error` when it runs in a thread. `on_frame` is called with the simulator after each frame.
+
 # Contributing and releases
 Pull request titles must follow the [Conventional Commits](https://www.conventionalcommits.org/) format. Use `fix: ...` for bug fixes, `feat: ...` for features, and a `!` such as `feat!: ...` for breaking changes. Pull requests should be squash-merged using the pull request title as the commit message.
 
