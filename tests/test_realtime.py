@@ -389,3 +389,85 @@ def test_an_event_that_fails_when_applied_is_kept_in_rejected_and_the_simulation
     assert event[:4] == ('loads', 'Load', 'L1', 'set_power') and list(event[4]) == ['P']  # nan is not equal to nan
     assert isinstance(error, ValueError) and 'P must be a finite number' in str(error)
     assert line_out(sim.ps)  # the event after it was applied all the same
+
+
+# on_frame and the divergence guard
+def test_on_frame_is_called_after_each_frame_with_its_place_on_the_schedule():
+    clock = FakeClock()
+    frames = []
+    sim = simulator(clock, on_frame=lambda sim: frames.append((sim.frame, len(sim.steps), sim.schedule_time, sim.lag)))
+    sim.main_loop()
+
+    assert [frame[:2] for frame in frames] == [(k, 4*k) for k in range(1, 11)]
+    assert [frame[2] for frame in frames] == [pytest.approx(k*PERIOD) for k in range(1, 11)]
+    assert all(frame[3] == 0 for frame in frames)
+
+
+def test_on_frame_can_stop_the_simulation():
+    clock = FakeClock()
+    sim = simulator(clock, on_frame=lambda sim: sim.stop() if sim.frame == 3 else None)
+    sim.main_loop()
+    assert sim.frame == 3 and len(sim.steps) == 12
+
+
+def test_an_error_in_on_frame_ends_the_simulation_and_is_kept_when_it_runs_in_a_thread():
+    def on_frame(sim):
+        if sim.frame == 2:
+            raise RuntimeError('boom')
+
+    with pytest.raises(RuntimeError, match='boom'):
+        simulator(FakeClock(), on_frame=on_frame).main_loop()
+
+    sim = simulator(FakeClock(), on_frame=on_frame)
+    sim.start()
+    sim.join(timeout=10)
+    assert isinstance(sim.error, RuntimeError) and sim.frame == 2
+
+
+def test_a_state_that_is_not_finite_ends_the_simulation_before_on_frame_sees_it():
+    clock = FakeClock()
+    frames = []
+    sim = simulator(clock, on_frame=lambda sim: frames.append(sim.frame))
+    sim.interface_functions['diverge'] = lambda sim: (
+        sim.sol.y.__setitem__(0, np.nan) if len(sim.steps) == 6 else None)  # in frame 1
+
+    with pytest.raises(ArithmeticError, match='not finite'):
+        sim.main_loop()
+    assert frames == [1]  # frame 1 was the last that was fine, the diverged frame 2 never reached on_frame
+
+
+def test_a_bus_voltage_above_max_voltage_ends_the_simulation():
+    def overvoltage(sim):
+        if len(sim.steps) == 8:  # the last step of frame 2
+            sim.sol.v[0] = 10
+
+    sim = simulator(FakeClock())
+    sim.interface_functions['overvoltage'] = overvoltage
+    with pytest.raises(ArithmeticError, match='voltage'):
+        sim.main_loop()
+    assert sim.frame == 2
+
+    unlimited = simulator(FakeClock(), max_voltage=None)  # the check is for the caller to want
+    unlimited.interface_functions['overvoltage'] = overvoltage
+    unlimited.main_loop()
+    assert unlimited.frame == 10
+
+
+def test_the_guard_ends_a_simulation_run_by_a_thread_and_keeps_the_error():
+    sim = simulator(FakeClock())
+    sim.interface_functions['overvoltage'] = lambda sim: sim.sol.v.__setitem__(0, 10) if len(sim.steps) == 8 else None
+    sim.start()
+    sim.join(timeout=10)
+    assert isinstance(sim.error, ArithmeticError) and 'voltage' in str(sim.error)
+
+
+def test_a_healthy_simulation_passes_the_guard_at_every_frame():
+    sim = simulator(FakeClock())
+    sim.main_loop()
+    assert sim.frame == 10 and np.abs(sim.sol.v).max() < sim.max_voltage == 5.0
+
+
+@pytest.mark.parametrize('max_voltage', [0, -1])
+def test_a_max_voltage_that_is_not_positive_is_refused(max_voltage):
+    with pytest.raises(ValueError, match='max_voltage'):
+        RealTimeSimulator(k2a_ps(), max_voltage=max_voltage)
