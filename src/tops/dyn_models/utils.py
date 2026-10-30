@@ -7,6 +7,18 @@ import tops.utility_functions as dps_uf
 from scipy.optimize import least_squares
 
 
+def read_connected(par):
+    """In-service flags of the branches of a model table; all connected if it has no 'connected' column."""
+    if 'connected' not in par.dtype.names:
+        return np.ones(len(par), dtype=bool)
+    column = par['connected']
+    if column.dtype.kind == 'b':
+        return column.copy()
+    if column.dtype.kind in 'iuf' and np.isin(column, (0, 1)).all():
+        return column.astype(bool)
+    raise ValueError(f"Column 'connected' must hold booleans (or 0 and 1), got {column.tolist()}.")
+
+
 class _Endpoint(NamedTuple):
     """One end of a connection: a model, where it lives, and which of its units are involved."""
     container: str
