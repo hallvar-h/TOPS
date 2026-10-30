@@ -111,3 +111,4 @@ nav:
   - Guide:
       - Model format: guide/model-format.md
       - Running a simulation: guide/simulation.md
+      - Events: guide/events.md
