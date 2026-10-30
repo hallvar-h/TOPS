@@ -4,36 +4,16 @@ import pandas as pd
 import pytest
 
 import tops.dynamic as dps
+from k2a_variants import (KINDS, TRAFO, initialized, k2a_model, removed_trafo_model, trafo_index, trafo_model,
+                          with_connected, y_bus_red)
 
 LINE = 'L7-8-1'
-
-
-def k2a_model():
-    import tops.ps_models.k2a as model_data
-    return model_data.load()
-
-
-def with_connected(model, category, connected):
-    """Add a 'connected' column to a table; `connected` maps unit names to flags, the others are connected."""
-    header, *rows = model[category]
-    model[category] = [[*header, 'connected'], *[[*row, connected.get(row[0], True)] for row in rows]]
-    return model
 
 
 def without_unit(model, category, name):
     header, *rows = model[category]
     model[category] = [header, *[row for row in rows if row[0] != name]]
     return model
-
-
-def initialized(model):
-    ps = dps.PowerSystemModel(model=model)
-    ps.init_dyn_sim()
-    return ps
-
-
-def y_bus_red(ps):
-    return ps.y_bus_red.toarray()
 
 
 def line_index(ps, name=LINE):
@@ -135,34 +115,7 @@ def test_init_dyn_sim_keeps_a_line_tripped_by_an_event_tripped():
     assert not ps.lines['Line'].connected[line_index(ps)]
 
 
-# Transformers. In K2A every transformer is the only link of its generator, so one is added in parallel to be taken out.
-TRAFO = 'T1b'
-KINDS = ['Trafo', 'DynTrafo']
-
-
-def trafo_model(kind, connected=None):
-    model = k2a_model()
-    header, *rows = model.pop('transformers')
-    rows.append([TRAFO, 'B1', 'B5', 900, 20, 230, 0, 0.15])
-    if kind == 'DynTrafo':
-        header, rows = [*header, 'ratio_from', 'ratio_to'], [[*row, 1, 1] for row in rows]
-    table = [[*header, 'connected'], *[[*row, connected.get(row[0], True)] for row in rows]] if connected is not None \
-        else [header, *rows]
-    model['trafos'] = {kind: table}
-    return model
-
-
-def removed_trafo_model(kind):
-    model = trafo_model(kind)
-    header, *rows = model['trafos'][kind]
-    model['trafos'] = {kind: [header, *[row for row in rows if row[0] != TRAFO]]}
-    return model
-
-
-def trafo_index(ps, kind):
-    return np.where(ps.trafos[kind].par['name'] == TRAFO)[0][0]
-
-
+# Transformers
 @pytest.mark.parametrize('kind', KINDS)
 def test_trafo_built_out_of_service_is_solved_without_it(kind):
     built = initialized(trafo_model(kind, {TRAFO: False}))
