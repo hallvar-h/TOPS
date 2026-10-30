@@ -3,10 +3,11 @@ import numpy as np
 import tops.utility_functions as dps_uf
 import tops.dyn_models as mdl_lib
 from tops.model_data import load_model_data, find_model_class, read_table
-from tops.events import AdmittanceChange, BusEvents
+from tops.events import AdmittanceChange, BusEvents, DeadBusWarning
 import tops.power_flow as pf
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
+from scipy.sparse import csgraph
 from scipy.optimize import fsolve
 
 import warnings
@@ -21,6 +22,8 @@ class PowerSystemModel:
         self.perform_kron_reduction = False
         self.pf_max_it = 10
         self.pf_tol = 1e-8
+        self.pin_dead_buses = True  # solve dead buses (see dead_buses) as 0 V, with a DeadBusWarning
+        self.dead_bus_rtol = 1e-12  # a bus is dead when its admittance is below this fraction of its initial value
 
         self.s_n = model['base_mva']
         self.f_n = model['f']
@@ -160,6 +163,8 @@ class PowerSystemModel:
         else:
             sl_idx = dps_uf.lookup_strings(self.slack_bus, self.buses['name'])
 
+        self._check_islands(sl_idx)
+
         result = pf.solve_power_flow(self.y_bus_lf, pq_mdls, pv_mdls, self.s_n, sl_idx, self.pf_tol, self.pf_max_it)
 
         self.v_0 = result.v
@@ -171,6 +176,24 @@ class PowerSystemModel:
 
         if result.converged:
             self.power_flow_ready = True
+
+    def _check_islands(self, slack_idx):
+        """Raise if branches that are out of service ('connected' column) cut buses off from the slack bus."""
+        def reachable(only_connected):
+            rows, cols = [], []
+            for mdl in self.dyn_mdls:
+                if hasattr(mdl, 'connected') and 'from_bus' in mdl.bus_idx.dtype.names:
+                    keep = mdl.connected if only_connected else slice(None)
+                    rows.extend(mdl.bus_idx['from_bus'][keep])
+                    cols.extend(mdl.bus_idx['to_bus'][keep])
+            graph = sp.coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(self.n_bus,) * 2)
+            _, labels = csgraph.connected_components(graph, directed=False)
+            return labels == labels[slack_idx]
+
+        cut_off = reachable(only_connected=False) & ~reachable(only_connected=True)
+        if cut_off.any():
+            raise ValueError(f"Branches with connected=False cut the buses {list(self.buses['name'][cut_off])} off "
+                             f"from the slack bus {self.buses['name'][slack_idx]}, so the load flow cannot be solved.")
 
     def kron_reduction(self, y_bus, keep_buses):
         remove_buses = list(set(range(self.n_bus)) - set(keep_buses))
@@ -248,6 +271,9 @@ class PowerSystemModel:
             mdl.init_from_connections(self.x_0, self.v_0, output_values)
 
         self.bus_events = BusEvents(self.buses['name'], self.bus_idx_red)
+        self._row_admittance_0 = self._row_admittance(self.x0)
+        self._dead_idx = np.zeros(0, dtype=int)
+        self._dead_dirty = True
 
         self.initialization_ready = True
 
@@ -266,8 +292,10 @@ class PowerSystemModel:
         """Apply an event immediately, e.g. apply_event('lines', 'Line', 'L1-2', 'disconnect')."""
         for effect in self.get_events(category, mdl_key).apply(unit, action, **kwargs):
             self.apply_effect(effect)
+        self._dead_dirty = True  # also for events without effect, such as those of a DynTrafo
 
     def apply_effect(self, effect):
+        self._dead_dirty = True
         if isinstance(effect, AdmittanceChange):
             self.y_bus_red = self.y_bus_red + sp.csr_matrix(
                 (effect.data, (effect.rows, effect.cols)), shape=(self.n_bus_red,) * 2)
@@ -282,6 +310,49 @@ class PowerSystemModel:
 
         return dx
 
+    def _y_var(self, x):
+        """Admittances that change with the states, as a matrix."""
+        y_var = sp.csr_matrix((self.n_bus,) * 2, dtype=complex)
+        for mdl in self.mdl_instructions['dyn_var_adm']:
+            data, (row_idx, col_idx) = mdl.dyn_var_adm(x, None)
+            y_var += sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
+        return y_var
+
+    def _row_admittance(self, x):
+        """Sum of the magnitudes of the entries of each row of the admittance matrix at the states x."""
+        y = self.y_bus_red + self._y_var(x) + self.y_bus_red_mod
+        return np.asarray(abs(y).sum(axis=1)).ravel()
+
+    def _dead_bus_idx(self, x):
+        # Not zero but a tiny fraction of what the row was: stamps taken out one by one leave rounding behind
+        return np.flatnonzero(self._row_admittance(x) <= self.dead_bus_rtol*self._row_admittance_0)
+
+    def dead_buses(self, x=None):
+        """Names of the buses that have lost all their admittance since the initialisation, e.g. a bay node whose
+        switches are all open. The variable admittances are taken at the states x (default: the initial states)."""
+        x = self.x0 if x is None else x
+        return self.buses['name'][self.bus_idx_red[self._dead_bus_idx(x)]]
+
+    def _dead_buses_now(self, x):
+        """Indices of the dead buses. They are looked for again only after an event, the only thing that can change
+        them, and a DeadBusWarning is given when they are not the same as before."""
+        if self._dead_dirty:
+            dead = self._dead_bus_idx(x)
+            if not np.array_equal(dead, self._dead_idx):
+                self._dead_idx = dead
+                self._live = np.ones(self.n_bus_red)
+                self._live[dead] = 0
+                if len(dead):
+                    names = list(self.buses['name'][self.bus_idx_red[dead]])
+                    warnings.warn(DeadBusWarning(f'Buses {names} have no admittance and are pinned to 0 V.'))
+            self._dead_dirty = False
+        return self._dead_idx
+
+    def _pin_dead_buses(self, y_bus):
+        """The admittance matrix without the rows and columns of the dead buses, which get a one on the diagonal."""
+        live = sp.diags(self._live)
+        return live @ y_bus @ live + sp.diags(1 - self._live)
+
     def solve_algebraic(self, t, x, v_0=None):
         '''
         Solves algebraic equations given states
@@ -294,22 +365,28 @@ class PowerSystemModel:
             bus_idx_red, i_inj_mdl = mdl.current_injections(x, None)
             np.add.at(i_inj, bus_idx_red, i_inj_mdl)
 
-        y_var = sp.csr_matrix((self.n_bus,) * 2, dtype=complex)
-        for mdl in self.mdl_instructions['dyn_var_adm']:
-            data, (row_idx, col_idx) = mdl.dyn_var_adm(x, None)
-            y_var += sp.csr_matrix((data.flatten(), (row_idx.flatten(), col_idx.flatten())), shape=(self.n_bus,) * 2)
+        y_var = self._y_var(x)
         if self.algebraic_equations_are_linear:
-            return sp_linalg.spsolve(self.y_bus_red + y_var + self.y_bus_red_mod, i_inj)
+            y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
+            if self.pin_dead_buses and len(self._dead_buses_now(x)):
+                y_bus, i_inj = self._pin_dead_buses(y_bus), i_inj*self._live
+            return sp_linalg.spsolve(y_bus, i_inj)
 
         y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
         s_inj = np.zeros(self.n_bus_red, dtype=complex)
         for mdl in self.mdl_instructions['apparent_power_injections']:
             bus_idx_red, s_inj_mdl = mdl.apparent_power_injections(x, None)
             np.add.at(s_inj, bus_idx_red, s_inj_mdl)
-    
-        v_abs_idx = slice(self.n_bus)
-        v_ang_idx = slice(self.n_bus, 2*self.n_bus)
-        
+
+        # Dead buses are left out: nothing determines their voltage, and a load on them draws nothing
+        live = np.arange(self.n_bus_red)
+        if self.pin_dead_buses and len(self._dead_buses_now(x)):
+            live = np.flatnonzero(self._live)
+            y_bus, i_inj, s_inj = y_bus[live][:, live], i_inj[live], s_inj[live]
+
+        v_abs_idx = slice(len(live))
+        v_ang_idx = slice(len(live), 2*len(live))
+
         def f(x):
             v = x[v_abs_idx]*np.exp(1j*x[v_ang_idx])
             f_complex = y_bus.dot(v)*np.conj(v) - i_inj*np.conj(v) - np.conj(s_inj)
@@ -317,7 +394,7 @@ class PowerSystemModel:
         
         # v_0 = None
         v_0 = v_0 if v_0 is not None else np.ones_like(self.v0)
-        x_alg = np.concatenate([abs(v_0), np.angle(v_0)])
+        x_alg = np.concatenate([abs(v_0[live]), np.angle(v_0[live])])
 
         converged = True
         with warnings.catch_warnings():
@@ -333,7 +410,8 @@ class PowerSystemModel:
             # Warn outside the catch_warnings block, where warnings are turned into errors
             warnings.warn('Solution of algebraic equations did not converge.', RuntimeWarning)
 
-        v = x_alg[v_abs_idx]*np.exp(1j*x_alg[v_ang_idx])
+        v = np.zeros(self.n_bus_red, dtype=complex)
+        v[live] = x_alg[v_abs_idx]*np.exp(1j*x_alg[v_ang_idx])
         return v
 
 
