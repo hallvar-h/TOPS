@@ -1,4 +1,7 @@
 """RealTimeSimulator: the simulator paced on a clock. The tests drive it with a fake clock, so they are exact."""
+import threading
+import time
+
 import numpy as np
 import pytest
 
@@ -135,3 +138,131 @@ def test_the_steps_are_the_same_as_the_simulators():
     reference.main_loop()
     assert len(steps) == len(sim.steps) == 40
     assert np.array_equal(sim.sol.x, reference.sol.x)
+
+
+# Speed, pause and stop
+def wait_until(condition, timeout=5.0):
+    end = time.monotonic() + timeout
+    while not condition() and time.monotonic() < end:
+        time.sleep(0.005)
+    return condition()
+
+
+def test_the_frames_come_faster_at_a_higher_speed():
+    clock = FakeClock()
+    sim = simulator(clock, speed=2)
+    start = clock.now
+    sim.main_loop()
+
+    assert clock.sleeps == [pytest.approx(PERIOD/2)]*10
+    assert clock.now - start == pytest.approx(5*PERIOD)
+    assert len(sim.steps) == 40  # the same simulation, in half the time
+
+
+def test_set_speed_changes_the_period_of_the_frames_that_follow():
+    clock = FakeClock()
+    sim = simulator(clock)
+
+    def slow_down(sim):
+        if len(sim.steps) == 20:  # the end of the fifth frame
+            sim.set_speed(0.5)
+
+    sim.interface_functions['slow_down'] = slow_down
+    sim.main_loop()
+
+    assert clock.sleeps == [pytest.approx(PERIOD)]*5 + [pytest.approx(2*PERIOD)]*5
+    assert sim.speed == 0.5
+
+
+@pytest.mark.parametrize('speed', [0, -1, float('nan')])
+def test_a_speed_that_is_not_positive_is_refused(speed):
+    with pytest.raises(ValueError, match='speed'):
+        RealTimeSimulator(k2a_ps(), speed=speed)
+    sim = RealTimeSimulator(k2a_ps())
+    with pytest.raises(ValueError, match='speed'):
+        sim.set_speed(speed)
+    assert sim.speed == 1
+
+
+def test_a_thread_runs_the_simulation_to_its_end():
+    clock = FakeClock()
+    sim = simulator(clock)
+    sim.start()
+    sim.join(timeout=10)
+    assert not sim.is_alive() and sim.error is None
+    assert sim.frame == 10 and len(sim.steps) == 40
+
+
+def test_a_simulation_is_started_once():
+    sim = RealTimeSimulator(k2a_ps(), rate=1, t_end=0.01)
+    sim.start()
+    with pytest.raises(RuntimeError, match='started'):
+        sim.start()
+    sim.stop()
+    sim.join(timeout=10)
+
+
+def test_stop_ends_a_simulation_that_is_waiting_for_its_next_frame():
+    sim = RealTimeSimulator(k2a_ps(), dt=DT, rate=0.1)  # a frame every 10 s, no end
+    sim.start()
+    time.sleep(0.05)
+    started = time.monotonic()
+    sim.stop()
+    sim.join(timeout=5)
+    assert not sim.is_alive()
+    assert time.monotonic() - started < 2  # not the 10 s of the sleep
+    assert sim.stopped()
+
+
+def test_a_simulation_stopped_before_it_starts_runs_no_frame():
+    clock = FakeClock()
+    sim = simulator(clock)
+    sim.stop()
+    sim.main_loop()
+    assert sim.frame == 0 and sim.steps == []
+
+
+def test_pause_holds_the_simulation_at_a_frame_boundary_and_resume_goes_on_without_lag():
+    clock = FakeClock()
+    sim = simulator(clock)
+    sim.interface_functions['pause'] = lambda sim: sim.pause() if len(sim.steps) == 8 else None  # end of frame 2
+
+    sim.start()
+    assert wait_until(lambda: sim.paused and sim.frame == 2)
+    time.sleep(0.05)
+    assert sim.frame == 2 and len(sim.steps) == 8  # it is waiting, not running
+
+    clock.advance(5.0)  # the pause lasts 5 s of the clock
+    sim.resume()
+    sim.join(timeout=10)
+
+    assert sim.error is None and sim.frame == 10 and sim.lag_resets == 0
+    assert clock.sleeps == [pytest.approx(PERIOD)]*10  # the pause was not made up for
+    assert sim.schedule_time == pytest.approx(10*PERIOD)  # and is not on the schedule
+
+
+def test_stop_ends_a_paused_simulation():
+    clock = FakeClock()
+    sim = simulator(clock)
+    sim.interface_functions['pause'] = lambda sim: sim.pause() if len(sim.steps) == 8 else None
+    sim.start()
+    assert wait_until(lambda: sim.paused and sim.frame == 2)
+    sim.stop()
+    sim.join(timeout=5)
+    assert not sim.is_alive() and sim.frame == 2
+
+
+def test_an_error_in_the_thread_is_kept_and_ends_the_simulation():
+    clock = FakeClock()
+    sim = simulator(clock)
+
+    def fail(sim):
+        if len(sim.steps) == 6:
+            raise RuntimeError('boom')
+
+    sim.interface_functions['fail'] = fail
+    sim.start()
+    sim.join(timeout=10)
+    assert not sim.is_alive()
+    assert isinstance(sim.error, RuntimeError) and str(sim.error) == 'boom'
+    assert len(sim.steps) == 6
