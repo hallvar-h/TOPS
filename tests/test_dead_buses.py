@@ -189,3 +189,84 @@ def test_a_simulation_goes_on_past_the_loss_of_a_bay_and_the_grid_does_not_notic
 
     assert np.isfinite(speeds[1]).all()
     assert np.allclose(speeds[0], speeds[1], atol=1e-9)
+
+
+# With a ConstPowerLoad the network equations are not linear, and are solved for the voltages of the live buses
+def const_power_bay_model(load_on_bay=None, **kwargs):
+    model = bay_model(**kwargs)
+    header, *rows = model['loads']
+    if load_on_bay is not None:
+        rows.append(['L3', 'B12', load_on_bay, 0, 'Z'])
+    model['loads'] = {'ConstPowerLoad': [header, *rows]}
+    return model
+
+
+def test_a_dead_bus_is_pinned_also_when_the_equations_are_not_linear():
+    ps = initialized(const_power_bay_model())
+    assert not ps.algebraic_equations_are_linear
+    before = solve(ps)
+    trip(ps, 'LS')
+    after = solve(ps)
+
+    assert after[bus(ps, 'B12')] == 0
+    others = np.arange(len(after)) != bus(ps, 'B12')
+    assert np.isfinite(after).all()
+    assert np.allclose(after[others], before[others], atol=1e-8)
+
+
+def test_without_pinning_a_dead_bus_keeps_the_value_the_solver_started_from():
+    # Not even an error: nothing determines the voltage of the bus, so fsolve leaves its flat start (1 p.u.) as it is
+    ps = initialized(const_power_bay_model())
+    ps.pin_dead_buses = False
+    trip(ps, 'LS')
+    assert solve(ps)[bus(ps, 'B12')] == 1
+
+
+def test_a_load_on_a_dead_bus_draws_nothing():
+    with_load = initialized(const_power_bay_model(load_on_bay=10))
+    without = initialized(const_power_bay_model())
+    x = without.x0  # the same machine states for both, since their load flows differ by the 10 MW
+
+    def solve_at_x(ps):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            return ps.solve_algebraic(0, x)
+
+    before = solve_at_x(with_load)
+    trip(with_load, 'LS')
+    trip(without, 'LS')
+    after, expected = solve_at_x(with_load), solve_at_x(without)
+
+    assert after[bus(with_load, 'B12')] == 0
+    others = np.arange(len(after)) != bus(with_load, 'B12')
+    assert np.allclose(after[others], expected[others], atol=1e-8)
+    assert not np.allclose(after[others], before[others], atol=1e-6)  # the 10 MW was taken by the grid before
+
+
+def test_without_dead_buses_the_nonlinear_solution_is_as_it_was():
+    pinned, free = initialized(const_power_bay_model()), initialized(const_power_bay_model())
+    free.pin_dead_buses = False
+    trip(pinned, 'L7-8-1')
+    trip(free, 'L7-8-1')
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        assert np.array_equal(pinned.solve_algebraic(0, pinned.x0), free.solve_algebraic(0, free.x0))
+
+
+def test_a_simulation_with_const_power_loads_goes_on_past_the_loss_of_a_bay():
+    events = [EVENT_COLUMNS, [0.1, 'lines', 'Line', 'LS', 'disconnect']]
+    plain = initialized(const_power_bay_model())  # the same model, whose bay is never opened
+    bay = initialized(const_power_bay_model())
+    speeds = []
+    for ps, table in ((plain, None), (bay, events)):
+        sim = Simulator(ps, dt=5e-3, t_end=0.3, events=table)
+        speed = []
+        sim.interface_functions['speed'] = lambda sim, ps=ps, speed=speed: speed.append(
+            ps.gen['GEN'].speed(sim.sol.x, sim.sol.v).copy())
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            sim.main_loop()
+        speeds.append(np.array(speed))
+
+    assert np.isfinite(speeds[1]).all()
+    assert np.allclose(speeds[0], speeds[1], atol=1e-7)

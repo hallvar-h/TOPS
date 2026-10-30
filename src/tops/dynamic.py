@@ -381,10 +381,16 @@ class PowerSystemModel:
         for mdl in self.mdl_instructions['apparent_power_injections']:
             bus_idx_red, s_inj_mdl = mdl.apparent_power_injections(x, None)
             np.add.at(s_inj, bus_idx_red, s_inj_mdl)
-    
-        v_abs_idx = slice(self.n_bus)
-        v_ang_idx = slice(self.n_bus, 2*self.n_bus)
-        
+
+        # Dead buses are left out: nothing determines their voltage, and a load on them draws nothing
+        live = np.arange(self.n_bus_red)
+        if self.pin_dead_buses and len(self._dead_buses_now(x)):
+            live = np.flatnonzero(self._live)
+            y_bus, i_inj, s_inj = y_bus[live][:, live], i_inj[live], s_inj[live]
+
+        v_abs_idx = slice(len(live))
+        v_ang_idx = slice(len(live), 2*len(live))
+
         def f(x):
             v = x[v_abs_idx]*np.exp(1j*x[v_ang_idx])
             f_complex = y_bus.dot(v)*np.conj(v) - i_inj*np.conj(v) - np.conj(s_inj)
@@ -392,7 +398,7 @@ class PowerSystemModel:
         
         # v_0 = None
         v_0 = v_0 if v_0 is not None else np.ones_like(self.v0)
-        x_alg = np.concatenate([abs(v_0), np.angle(v_0)])
+        x_alg = np.concatenate([abs(v_0[live]), np.angle(v_0[live])])
 
         converged = True
         with warnings.catch_warnings():
@@ -408,7 +414,8 @@ class PowerSystemModel:
             # Warn outside the catch_warnings block, where warnings are turned into errors
             warnings.warn('Solution of algebraic equations did not converge.', RuntimeWarning)
 
-        v = x_alg[v_abs_idx]*np.exp(1j*x_alg[v_ang_idx])
+        v = np.zeros(self.n_bus_red, dtype=complex)
+        v[live] = x_alg[v_abs_idx]*np.exp(1j*x_alg[v_ang_idx])
         return v
 
 
