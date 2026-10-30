@@ -28,6 +28,20 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+  docs:
+    name: Publish documentation
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    needs: release-please
+    # A called workflow gets at most the permissions granted here.
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml
+    with:
+      ref: ${{ needs.release-please.outputs.release_sha }}
+      deploy: true
+
   build:
     name: Build distribution
     if: ${{ needs.release-please.outputs.release_created == 'true' }}

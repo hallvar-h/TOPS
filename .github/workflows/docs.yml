@@ -1,0 +1,90 @@
+name: Docs
+
+# Pull requests and pushes only build the site, so a broken page or a failing
+# example is caught before merge. Publishing happens on release: release.yml
+# calls this workflow with deploy: true. (A release made by release-please
+# with GITHUB_TOKEN does not trigger "on: release" in other workflows.)
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Publish the built site to GitHub Pages
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to build (defaults to the triggering commit)
+        type: string
+        default: ""
+      deploy:
+        description: Publish the built site to GitHub Pages
+        type: boolean
+        default: false
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+# github.workflow is the caller's name when called from release.yml, which
+# keeps a release deploy from cancelling the plain build of the same push.
+concurrency:
+  group: docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NO_MKDOCS_2_WARNING: "1"
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: ${{ inputs.ref }}
+        persist-credentials: false
+    - name: Set up uv and Python
+      uses: astral-sh/setup-uv@v6
+      with:
+        python-version: "3.12"
+    - name: Install dependencies
+      run: uv sync --locked --group docs
+    # --strict fails on broken links and unresolved API references. The
+    # executed code blocks also fail the build if an example raises.
+    - name: Build
+      run: uv run mkdocs build --strict
+    - name: Upload the Pages artifact
+      if: inputs.deploy
+      uses: actions/upload-pages-artifact@v5
+      with:
+        path: site
+    - name: Upload a reviewable copy
+      if: github.event_name == 'pull_request'
+      uses: actions/upload-artifact@v7
+      with:
+        name: site-preview
+        path: site
+        if-no-files-found: error
+
+  deploy:
+    name: Deploy to GitHub Pages
+    # Requires Settings > Pages > Source: "GitHub Actions" in the repository.
+    if: inputs.deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy
+      id: deployment
+      uses: actions/deploy-pages@v5
