@@ -10,7 +10,10 @@ from tops.dyn_models.utils import auto_init
 class GOV:
     def input_list(self):
         return ['input', 'P_n_gen', 'bias']
-    
+
+    def output_list(self):
+        return ['output']
+
     def connections(self):
         return [
             {

@@ -1,5 +1,5 @@
 import numpy as np
-import inspect
+import contextlib
 import functools
 import warnings
 from typing import NamedTuple
@@ -68,67 +68,93 @@ def _resolve_connection(dyn_mdls, container_key, mdl_key, mdl, conn):
 
 
 def get_submodules(mdl):
-    attributes = inspect.getmembers(mdl)
-    attributes = [a for a in attributes if not (a[0].startswith('__') and a[0].endswith('__'))]
+    """Return ``mdl`` followed by all its blocks (recursively), in the order they were created."""
     output = [mdl]
-    for attr, typ in attributes:
-        if issubclass(type(typ), DAEModel):
-            submodule = getattr(mdl, attr)
-            output.extend(get_submodules(submodule))
+    for block in mdl.blocks.values():
+        output.extend(get_submodules(block))
     return output
 
 
+class AlgebraicLoopError(RuntimeError):
+    """Raised when an output depends on itself without passing through a state."""
+
+
 def output(f):
+    """Decorator for output methods of models.
+
+    While outputs are stored (within ``store_outputs``), each output is computed once and the stored
+    value is returned on later calls, so that an output used by several blocks is only computed once
+    per evaluation.
+
+    An output that depends on itself without passing through a state (an algebraic loop) raises
+    AlgebraicLoopError. Loops through a state are fine, since outputs of states do not depend on
+    inputs.
+    """
     @functools.wraps(f)
     def wrap(self, *args):
+        # Keyed by f (not by name), so that an overriding output can call super().output
+        if self._store_output and f in self._stored_outputs:
+            return self._stored_outputs[f]
+        if f in self._outputs_in_progress:
+            raise AlgebraicLoopError(
+                f'{type(self).__name__}.{f.__name__} ({", ".join(self.par["name"][:3])}) depends on '
+                f'itself without passing through a state (algebraic loop).')
+        self._outputs_in_progress.add(f)
+        try:
+            value = f(self, *args)
+        finally:
+            self._outputs_in_progress.discard(f)
         if self._store_output:
-            if not self._output_ready[f.__name__]:
-                # print('Output not ready, calculating output')
-                self._output_values[f.__name__] = f(self, *args)
-                self._output_ready[f.__name__] = True
-            return self._output_values[f.__name__]
-        else:
-            return f(self, *args)
+            value = self._stored_outputs[f] = np.copy(value)  # Copy, since value may be a view of x
+        return value
     return wrap
 
 
-class DynMdl:
-    def get_states(self, x):
-        return x[self.idx].view(dtype=self.dtypes)
-
-    def set_input(self, input_name, value, idx=None):
-        if idx is not None:
-            self.input[input_name][idx] = value
-        else:
-            self.input[input_name] = value
+@contextlib.contextmanager
+def store_outputs(mdls):
+    """Within the context, each output of the models is computed once and then stored (see output).
+    Should be entered for each evaluation, since stored outputs do not depend on (x, v)."""
+    for mdl in mdls:
+        mdl._stored_outputs.clear()
+        mdl._store_output = True
+    try:
+        yield
+    finally:
+        for mdl in mdls:
+            mdl._store_output = False
+            mdl._stored_outputs.clear()
 
 
 class DAEModel:
-    """Base class for dynamic models"""
+    """Base class for dynamic models.
+
+    Parameters are given in one of three ways: as a structured array (par), as keyword arguments
+    with one array per parameter (e.g. Gain(K=k)), or as the number of units (n_units) for models
+    without parameters.
+    """
     events_class = None  # Subclass of tops.events.ModelEvents, defining the events of the model
 
     def __init__(self, par=None, sys_par=None, first_state_idx=0, n_units=None, **kwargs):
-        # type(self)._ids = count(0)
-        # self.id = next(type(self)._ids)
         if hasattr(self, 'int_par_list'):
             raise TypeError(
                 f'{type(self).__name__} defines int_par_list(), but int_par has been removed. '
                 f'Add the parameters to input_list() instead, and set them in _input_values.'
             )
 
-        if n_units is not None:
-            name = self.__class__.__name__
-            # print(name, n_units, np.array((name,)*n_units, dtype=[('name', '<U32')]))
-            # print([name] * n_units)
-            self.par = dps_uf.structured_array_from_list(names=['name'], entries=[(name,)]*n_units)
+        given = [arg for arg, used in [('par', par is not None), ('n_units', n_units is not None),
+                                       ('parameters as keyword arguments', bool(kwargs))] if used]
+        if len(given) != 1:
+            raise TypeError(
+                f'{type(self).__name__}: give exactly one of par, n_units or parameters as keyword '
+                f'arguments' + (f' (got {" and ".join(given)})' if given else '') + '.')
 
+        if n_units is not None:
+            self.par = dps_uf.structured_array_from_list(names=['name'], entries=[(type(self).__name__,)]*n_units)
         else:
             self.par = par if par is not None else self.parse_input_data(**kwargs)
-        self.sys_par = sys_par
+        self.sys_par = sys_par  # Used by subclasses (e.g. s_n, f_n)
 
         self.n_units = len(self.par)
-        # self.output_value = np.zeros(self.n_units)
-        # self._input_value = np.zeros(self.n_units)
         self.n_states = len(self.state_list())
         self.idx = slice(first_state_idx, first_state_idx + self.n_states*self.n_units)  # This will be shifted from outside
 
@@ -137,24 +163,23 @@ class DAEModel:
             np.tile(self.state_list(), self.n_units)]
         ).T
 
+        # States are ordered by unit, then by state: [unit_0 states, unit_1 states, ...]
         self.dtypes = [(state, float) for state in self.state_list()]
         self.state_idx = np.zeros((self.n_units,), dtype=[(state, int) for state in self.state_list()])
         self.state_idx_global = np.zeros((self.n_units,), dtype=[(state, int) for state in self.state_list()])
-        # self.state_idx_global = np.zeros((self.n_units,), dtype=[(state, int) for state in self.state_list()])
         for i, state in enumerate(self.state_list()):
-            idx = np.where(self.state_desc[:, 1] == state)[0]
-            self.state_idx[state] = idx
-            self.state_idx_global[state] = idx + first_state_idx
-            # mdl.state_idx_global[state] = idx
+            self.state_idx[state] = np.arange(self.n_units)*self.n_states + i
+            self.state_idx_global[state] = self.state_idx[state] + first_state_idx
 
         self.add_blocks()
         self.update_block_names()
 
-        self._output_ready = np.zeros(1, dtype=[(var, bool) for var in self.output_list()])
-        self._output_values = np.zeros(self.n_units, dtype=[(var, float) for var in self.output_list()])
+        self._stored_outputs = {}  # See output and store_outputs
+        self._outputs_in_progress = set()
         self._input_values = np.zeros(self.n_units, dtype=[(var, float) for var in self.input_list()])
         self._store_output = False
-        [self.disconnect_input(inp) for inp in self.input_list()]
+        for input_name in self.input_list():
+            self.disconnect_input(input_name)
 
         self.events = self.events_class(self) if self.events_class is not None else None
 
@@ -177,82 +202,88 @@ class DAEModel:
         Returns list of inputs for dynamic model.
         Should be overwritten (if model has one or more inputs)
         """
-        return ['input']
+        return []
 
     def output_list(self):
         """
         Returns list of outputs for dynamic model.
         Should be overwritten (if model has one or more outputs)
         """
-        return ['output']
+        return []
 
     def reset_outputs(self):
-        self._output_ready[:] = False
-        # for key in self._output_ready.keys():
-        #     self._output_ready[key] = False
+        self._stored_outputs.clear()
 
     def set_input(self, input_name, value, idx=None):
+        """Set the value of an input. Units where the input is connected to another model's output
+        are not affected, since their value is given by the connection."""
         if idx is not None:
             self._input_values[input_name][idx] = value
         else:
             self._input_values[input_name] = value
 
     def disconnect_input(self, input_name):
-        def input(self, x, v):
-            return self._input_values[input_name]
-        setattr(type(self), input_name, input)
+        """Make the input read its value from _input_values (set with set_input), replacing any
+        connection. Set on the instance, so that other instances and the class are not affected."""
+        setattr(self, input_name, functools.partial(self._read_input, input_name))
+
+    def _read_input(self, input_name, x, v):
+        return self._input_values[input_name]
+
+    def __setattr__(self, name, value):
+        # Blocks (sub-models) are registered when assigned to an attribute, e.g. self.gain = Gain(...)
+        blocks = self.__dict__.get('_blocks')
+        if isinstance(value, DAEModel):
+            if blocks is None:
+                blocks = self.__dict__['_blocks'] = {}
+            for other_name, block in blocks.items():
+                if block is value and other_name != name:
+                    raise ValueError(
+                        f'{type(self).__name__}: block is already assigned to self.{other_name}, '
+                        f'cannot also assign it to self.{name}.')
+            blocks[name] = value
+        elif blocks is not None:
+            blocks.pop(name, None)
+        object.__setattr__(self, name, value)
+
+    @property
+    def blocks(self):
+        """Blocks (sub-models) of the model, by attribute name, in the order they were created."""
+        return self.__dict__.get('_blocks', {})
 
     def add_blocks(self):
-        """Sub-modules can be specified by overwriting this function"""
+        """Create blocks (sub-models) by assigning them to attributes, e.g. self.gain = Gain(...).
+        Should be overwritten (if model has blocks)."""
         pass
 
     def update_block_names(self):
-        """Update names of modules and sub-modules"""
-        # names = [mdl.par['name'] for mdl in get_submodules(mdl_0)[1:]]
-        # np.array(names)[:, 1]
-
-        new_names = []
-        for mdl in get_submodules(self)[1:]:
-            # print(mdl.par['name'])
-            concat_str = np.char.add
-            new_names.append(concat_str(self.par['name'], concat_str('/', mdl.par['name'])))
-
-        unique, counts = np.unique(np.array(new_names), return_counts=True, axis=0)
-
-        for x in unique:
-            number = 0
-            for i in range(0, len(new_names)):
-                if np.array_equal(new_names[i], x):
-                    number += 1
-
-                    if number >= 2:
-                        # print(number, new_names[i])
-                        new_names[i] = concat_str(new_names[i], f'-{number}')
-
-        for mdl, names in zip(get_submodules(self)[1:], new_names):
-
-            if mdl.n_states > 0:
-                mdl.state_desc = np.vstack([
-                    np.repeat(names, mdl.n_states),
-                    np.tile(mdl.state_list(), mdl.n_units)]
+        """Name the blocks (recursively) after their attribute, e.g. 'AVR1/gain' or 'VSC1/pll/filter'."""
+        for attr, block in self.blocks.items():
+            names = np.char.add(self.par['name'].astype(str), f'/{attr}')
+            other_par = dps_uf.remove_recarray_field(block.par, 'name')
+            block.par = dps_uf.combine_recarrays(np.array(names, dtype=[('name', names.dtype)]), other_par)
+            if block.n_states > 0:
+                block.state_desc = np.vstack([
+                    np.repeat(block.par['name'], block.n_states),
+                    np.tile(block.state_list(), block.n_units)]
                 ).T
-            names = np.array(names, dtype=[('name', names.dtype)])
-            old_par = dps_uf.remove_recarray_field(mdl.par, 'name')
-            mdl.par = dps_uf.combine_recarrays(names, old_par)
+            block.update_block_names()
 
     def parse_input_data(self, **kwargs):
-        """Read parameters from kwargs"""
-        # p = dm.par
-        # kwargs = dict(K_a=p['K'], T=p['T_a'])
-        names = []
-        data = []
-        for arg, val in kwargs.items():
-            names.append(arg)
-            data.append(val)
+        """Read parameters from kwargs, with one array (with one value per unit) per parameter."""
+        names = list(kwargs.keys())
+        data = [np.asarray(val) for val in kwargs.values()]
 
-        if not 'name' in names:
+        lengths = {name: len(col) if col.ndim == 1 else None for name, col in zip(names, data)}
+        if None in lengths.values() or len(set(lengths.values())) != 1:
+            raise ValueError(
+                f'{type(self).__name__}: parameters must be 1D arrays of equal length (one value per '
+                f'unit), got lengths ' + ', '.join(f'{k}={v if v is not None else "scalar/nD"}'
+                                                   for k, v in lengths.items()) + '.')
+
+        if 'name' not in names:
             names.append('name')
-            data.append(np.array([self.__class__.__name__]*len(list(kwargs.values())[0])))
+            data.append(np.array([type(self).__name__]*len(data[0])))
 
         entries = [entry for entry in zip(*data)]
         col_dtypes = [np.array(col).dtype for col in data]
@@ -264,11 +295,7 @@ class DAEModel:
         return x[self.idx].view(dtype=self.dtypes)
 
     def output(self, x, v):
-        pass
-
-    # def state_derivatives(self, dx, x, v):
-    #     pass
-
+        raise NotImplementedError(f'{type(self).__name__} has no output.')
 
 
 def summation(*funcs):
@@ -281,13 +308,6 @@ def summation(*funcs):
         return sum([func(*args) for func in callables] + constants)
     
     return summation
-
-
-# class DAEModel(ODEModel):
-#     def disconnect_input(self, input_name):
-#         def input(self, x, v):
-#             return self._input_values[input_name]
-#         setattr(type(self), input_name, input)
 
 
 def auto_init(mdl, x0, v0, output_0, free_inputs=(), tol=1e-6):
@@ -321,18 +341,12 @@ def auto_init(mdl, x0, v0, output_0, free_inputs=(), tol=1e-6):
         for input_name, val in zip(free_inputs, z[n_states_unit:]):
             mdl._input_values[input_name][i] = val
 
-        for submodule in submodules:
-            submodule.reset_outputs()
-            submodule._store_output = True
-
         dx_all = np.zeros_like(x0)
-        with np.errstate(all='ignore'):  # Other units may be evaluated at meaningless points
+        # Other units may be evaluated at meaningless points, hence errstate
+        with store_outputs(submodules), np.errstate(all='ignore'):
             for submodule in state_submodules:
                 submodule.state_derivatives(dx_all, x_all, v0)
             output_err = mdl.output(x_all, v0)[i] - output_0[i]
-
-        for submodule in submodules:
-            submodule._store_output = False
 
         return np.append(dx_all[unit_state_idx[i]], output_err)
 

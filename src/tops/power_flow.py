@@ -16,8 +16,14 @@ class PowerFlowResult:
 
 
 def default_slack_bus_idx(pv_mdls):
-    """Index of the bus of the first PV unit, used as slack bus if none is specified."""
-    return pv_mdls[0].load_flow_pv()[0][0]
+    """Index of the bus of the PV unit with the largest P setpoint, used as slack bus if none is specified.
+
+    Ties are resolved in favour of the first unit found.
+    """
+    bus_idx, p_setp = zip(*(mdl.load_flow_pv()[:2] for mdl in pv_mdls))
+    bus_idx = np.concatenate(bus_idx)
+    p_setp = np.concatenate(p_setp)
+    return bus_idx[np.argmax(p_setp)]
 
 
 def solve_power_flow(y_bus, pq_mdls, pv_mdls, s_n, sl_idx, tol, max_it):
@@ -41,11 +47,17 @@ def solve_power_flow(y_bus, pq_mdls, pv_mdls, s_n, sl_idx, tol, max_it):
 
     p_pv = np.zeros(n_bus)
     v_pv = np.ones(n_bus)
+    # The slack unit is the unit at the slack bus with the largest P setpoint (first one found on ties)
     slack_unit = None
+    p_slack_unit = -np.inf
     for mdl in pv_mdls:
         bus_idx, p, v = mdl.load_flow_pv()
-        if sl_idx in bus_idx:
-            slack_unit = (mdl, np.argmax(bus_idx == sl_idx))
+        at_slack = np.flatnonzero(bus_idx == sl_idx)
+        if len(at_slack) > 0:
+            unit_idx = at_slack[np.argmax(p[at_slack])]
+            if p[unit_idx] > p_slack_unit:
+                slack_unit = (mdl, unit_idx)
+                p_slack_unit = p[unit_idx]
         bus_type[bus_idx] = 'PV'
         np.add.at(p_pv, bus_idx, p / s_n)
         v_pv[bus_idx] = v
@@ -67,9 +79,9 @@ def solve_power_flow(y_bus, pq_mdls, pv_mdls, s_n, sl_idx, tol, max_it):
         bus_idx, p_setp, v = mdl.load_flow_pv()
         q = q_per_pv_unit[bus_idx]
         p = -p_setp / s_n
-        if sl_idx in bus_idx:
+        if slack_unit is not None and slack_unit[0] is mdl:
             # The slack unit takes the power balance at the slack bus
-            unit_idx = np.argmax(bus_idx == sl_idx)
+            unit_idx = slack_unit[1]
             p[unit_idx] = s_sol[sl_idx].real - p_setp[unit_idx] / s_n + p_pv[sl_idx] + p_pq[sl_idx]
 
         unit_injections[mdl] = (p + 1j * q) * s_n

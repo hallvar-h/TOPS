@@ -220,9 +220,9 @@ class PowerSystemModel:
         self.mdl_connections = mdl_lib.utils.determine_connections(self.dyn_mdls_dict)
         for mdl, connections in self.mdl_connections.items():
             for input_key, conn in connections.items():
-                init_vals = mdl._input_values[input_key].copy()
-                def new_input_fun(x, v, conn=conn, mdl=mdl, init_vals=init_vals):
-                    input = init_vals
+                def new_input_fun(x, v, conn=conn, mdl=mdl, input_key=input_key):
+                    # Unconnected units take their value from _input_values (i.e. follow set_input)
+                    input = mdl._input_values[input_key].copy()
                     for c in conn:
                         source_fun = getattr(self.dyn_mdls_dict[c['container']][c['mdl']], c['output'])
                         input[c['dest_idx']] = source_fun(x, v)[c['source_idx']]
@@ -234,7 +234,10 @@ class PowerSystemModel:
         for mdl, connections in self.mdl_connections_by_source.items():
             if not hasattr(mdl, 'init_from_connections'):
                 continue
-            output_values = np.zeros(mdl.n_units, [(field, float) for field in mdl.output_list()])
+            # Connected outputs are included even if not in output_list (which could be shadowed by
+            # DAEModel's default, e.g. for class SEXS_mod(DAEModel, AVR))
+            fields = dict.fromkeys([*mdl.output_list(), *connections])
+            output_values = np.zeros(mdl.n_units, [(field, float) for field in fields])
             for output_key, conn in connections.items():
                 init_val = np.zeros(mdl.n_units)
                 for c in conn:
@@ -272,17 +275,10 @@ class PowerSystemModel:
             raise TypeError(f'Unknown event effect: {type(effect).__name__}')
 
     def state_derivatives(self, t, x, v_red):
-
-        for mdl in self.dyn_mdls:
-            mdl.reset_outputs()
-            mdl._store_output = True
-
         dx = np.zeros(self.n_states)
-        for mdl in self.mdl_instructions['state_derivatives']:
-            mdl.state_derivatives(dx, x, v_red)
-
-        for mdl in self.dyn_mdls:
-            mdl._store_output = False
+        with mdl_lib.utils.store_outputs(self.dyn_mdls):
+            for mdl in self.mdl_instructions['state_derivatives']:
+                mdl.state_derivatives(dx, x, v_red)
 
         return dx
 

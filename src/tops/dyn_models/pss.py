@@ -3,6 +3,12 @@ from tops.dyn_models.blocks import Gain, Limiter, Washout, LeadLag
 
 
 class PSS:
+    def input_list(self):
+        return ['input']
+
+    def output_list(self):
+        return ['output']
+
     def connections(self):
         return [
             {
@@ -26,7 +32,7 @@ class PSS:
         ]
 
 
-class STAB1(DAEModel, PSS):
+class STAB1(PSS, DAEModel):
     def add_blocks(self):
         p = self.par
         self.gain = Gain(K=p['K'])  # , input=self.input)
