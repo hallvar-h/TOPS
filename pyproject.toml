@@ -26,10 +26,16 @@ dev = ["ipython"]
 
 [dependency-groups]
 dev = ["pytest"]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.27",
+    "markdown-exec>=1.9",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/hallvar-h/TOPS"
 "Bug Tracker" = "https://github.com/hallvar-h/TOPS/issues"
+"Documentation" = "https://hallvar-h.github.io/TOPS/"
 
 [build-system]
 requires = ["uv_build"]
