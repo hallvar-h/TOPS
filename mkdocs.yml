@@ -2,7 +2,7 @@ site_name: TOPS
 site_description: >-
   Tiny Open Power System Simulator. Dynamic (RMS) power system simulation,
   power flow and modal analysis in plain Python.
-site_author: TOPS contributors
+site_author: Hallvar Haugdal
 
 # The address is case-sensitive on GitHub Pages. It is also written in
 # pyproject.toml ([project.urls]) and README.md; change them together.
@@ -12,7 +12,9 @@ repo_url: https://github.com/hallvar-h/TOPS
 repo_name: hallvar-h/TOPS
 edit_uri: edit/main/docs/
 
-copyright: TOPS is developed at SINTEF Energy Research.
+copyright: >-
+  TOPS is written by Hallvar Haugdal. It was developed at NTNU as part of his
+  PhD and is maintained and developed further at SINTEF Energy Research.
 
 theme:
   name: material

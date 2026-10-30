@@ -1,8 +1,11 @@
 # About
 
-TOPS (**T**iny **O**pen **P**ower System **S**imulator) is developed at
-SINTEF Energy Research as a research and teaching tool. It was previously
-called **DynPSSimPy**.
+TOPS (**T**iny **O**pen **P**ower System **S**imulator) is a research and
+teaching tool written by **Hallvar Haugdal**, its main author. He developed it
+at [NTNU](https://www.ntnu.edu/) (Norwegian University of Science and
+Technology) as part of his PhD. It is now maintained and developed further
+at [SINTEF Energy Research](https://www.sintef.no/en/sintef-energy/).
+TOPS was previously called **DynPSSimPy**.
 
 The aim is a simple, lightweight simulator that is easy to install, run and
 modify. Performance is not the main priority. The core uses only numpy and
