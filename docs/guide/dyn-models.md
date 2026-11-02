@@ -33,6 +33,7 @@ catalogue = {
     ("loads", "DynamicLoad"): ("Load with conductance and susceptance as inputs (`g_setp`, `b_setp`).", "`examples/dyn_models/dyn_loads.py`"),
     ("loads", "DynamicLoadFiltered"): ("`DynamicLoad` with low-pass filtered inputs.", "`examples/sde_solver/sde_solver_1.py`"),
     ("lines", "Line"): ("Pi-model line (the default for `lines`). Supports `connect`/`disconnect` events.", "all bundled systems"),
+    ("switches", "Switch"): ("Switch between two buses, a very high series admittance (the default for `switches`). Supports `open`/`close` events.", "`tests/test_dyn_mdls/test_init/test_switch_init.py`"),
     ("trafos", "Trafo"): ("Two-winding transformer (the default for `transformers`).", "`k2a`"),
     ("trafos", "DynTrafo"): ("Transformer with ratio inputs, e.g. for tap changers.", "`examples/dyn_models/tap_changer_trafo.py`"),
     ("shunts", "Shunt"): ("Fixed shunt (the default for `shunts`).", "`k2a`"),
@@ -75,6 +76,7 @@ unit and can be recorded with `ResultKeeper`. Useful ones:
 |---|---|
 | `GEN` | `speed`, `angle`, `p_e`, `q_e`, `v_t_abs`, `e_q_t`, `e_d_t`, `i` |
 | `Line` | `p_from`, `q_from`, `p_to`, `q_to`, `i_from`, `i_to` |
+| `Switch` | `p_from`, `q_from`, `p_to`, `q_to`, `i_from`, `i_to` |
 | `Load` | `p`, `q` |
 
 Inputs that aren't connected to another model, such as the `bias` of an

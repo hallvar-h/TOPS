@@ -1,6 +1,7 @@
 from . import gen
 from . import loads
 from . import lines
+from . import switches
 from . import trafos
 from . import shunts
 from . import avr

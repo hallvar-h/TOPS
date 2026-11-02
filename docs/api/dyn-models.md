@@ -14,6 +14,8 @@ Model classes, one module per category key of the model dictionary.
 
 ::: tops.dyn_models.lines
 
+::: tops.dyn_models.switches
+
 ::: tops.dyn_models.trafos
 
 ::: tops.dyn_models.shunts
