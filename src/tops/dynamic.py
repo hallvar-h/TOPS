@@ -7,6 +7,7 @@ from tops.events import AdmittanceChange, BusEvents
 import tops.power_flow as pf
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
+from scipy.sparse import csgraph
 from scipy.optimize import fsolve
 
 import warnings
@@ -160,6 +161,8 @@ class PowerSystemModel:
         else:
             sl_idx = dps_uf.lookup_strings(self.slack_bus, self.buses['name'])
 
+        self._check_islands(sl_idx)
+
         result = pf.solve_power_flow(self.y_bus_lf, pq_mdls, pv_mdls, self.s_n, sl_idx, self.pf_tol, self.pf_max_it)
 
         self.v_0 = result.v
@@ -171,6 +174,24 @@ class PowerSystemModel:
 
         if result.converged:
             self.power_flow_ready = True
+
+    def _check_islands(self, slack_idx):
+        """Raise if branches that are out of service ('connected' column) cut buses off from the slack bus."""
+        def reachable(only_connected):
+            rows, cols = [], []
+            for mdl in self.dyn_mdls:
+                if hasattr(mdl, 'connected') and 'from_bus' in mdl.bus_idx.dtype.names:
+                    keep = mdl.connected if only_connected else slice(None)
+                    rows.extend(mdl.bus_idx['from_bus'][keep])
+                    cols.extend(mdl.bus_idx['to_bus'][keep])
+            graph = sp.coo_matrix((np.ones(len(rows)), (rows, cols)), shape=(self.n_bus,) * 2)
+            _, labels = csgraph.connected_components(graph, directed=False)
+            return labels == labels[slack_idx]
+
+        cut_off = reachable(only_connected=False) & ~reachable(only_connected=True)
+        if cut_off.any():
+            raise ValueError(f"Branches with connected=False cut the buses {list(self.buses['name'][cut_off])} off "
+                             f"from the slack bus {self.buses['name'][slack_idx]}, so the load flow cannot be solved.")
 
     def kron_reduction(self, y_bus, keep_buses):
         remove_buses = list(set(range(self.n_bus)) - set(keep_buses))

@@ -1,14 +1,37 @@
 import numpy as np
-from tops.dyn_models.utils import DAEModel
+from tops.dyn_models.utils import DAEModel, read_connected
+from tops.events import ModelEvents, AdmittanceChange
+
+
+class TrafoEvents(ModelEvents):
+    actions = ('connect', 'disconnect')
+
+    def connect(self, trafo_name):
+        idx = self._unit_idx(trafo_name)
+        if self.mdl.connected[idx]:
+            return []
+        change = self.mdl.admittance_change(idx, sign=1)
+        self.mdl.connected[idx] = True
+        return [] if change is None else [change]
+
+    def disconnect(self, trafo_name):
+        idx = self._unit_idx(trafo_name)
+        if not self.mdl.connected[idx]:
+            return []
+        change = self.mdl.admittance_change(idx, sign=-1)
+        self.mdl.connected[idx] = False
+        return [] if change is None else [change]
 
 
 class Trafo(DAEModel):
+    events_class = TrafoEvents
+
     def __init__(self, data, sys_par, **kwargs):
         super().__init__(data, sys_par, **kwargs)
         self.data = data
         self.par = data
         self.n_units = len(data)
-        self.connected = np.ones(self.n_units, dtype=bool)
+        self.connected = read_connected(data)
 
         self.bus_idx = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
         self.bus_idx_red = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
@@ -16,6 +39,26 @@ class Trafo(DAEModel):
 
     def bus_ref_spec(self):
         return {'from_bus': self.par['from_bus'], 'to_bus': self.par['to_bus']}
+
+    def admittance_change(self, trafo_idx, sign):
+        """Change in the reduced admittance matrix when connecting (sign=1) or disconnecting (sign=-1) a transformer."""
+        idx_from = self.bus_idx_red['from_bus'][trafo_idx]
+        idx_to = self.bus_idx_red['to_bus'][trafo_idx]
+        if idx_from < 0 or idx_to < 0:
+            raise ValueError(f'Buses of transformer {self.par["name"][trafo_idx]} are not in the reduced system.')
+
+        admittance = self.admittance[trafo_idx]
+        ratio_from = self.ratio_from_0[trafo_idx]
+        ratio_to = self.ratio_to_0[trafo_idx]
+        data = sign*np.array([
+            ratio_from*np.conj(ratio_from)*admittance,
+            ratio_to*np.conj(ratio_to)*admittance,
+            -ratio_from*np.conj(ratio_to)*admittance,
+            -np.conj(ratio_from)*ratio_to*admittance
+        ])
+        rows = np.array([idx_from, idx_to, idx_from, idx_to])
+        cols = np.array([idx_from, idx_to, idx_to, idx_from])
+        return AdmittanceChange(data, rows, cols)
 
     def init_extras(self):
         self.idx_from = self.bus_idx_red['from_bus']
@@ -75,7 +118,7 @@ class Trafo(DAEModel):
             self.ratio_to_0*np.conj(self.ratio_to_0)*self.admittance,
             -self.ratio_from_0*np.conj(self.ratio_to_0)*self.admittance,
             -np.conj(self.ratio_from_0)*self.ratio_to_0*self.admittance
-        ])
+        ])*self.connected  # admittance and ratios stay set for transformers out of service, so that connect can stamp them
 
         # self.init_extras()
         self.rows = rows
@@ -176,19 +219,23 @@ class DynTrafo(Trafo):
             self.ratio_to_0*np.conj(self.ratio_to_0)*self.admittance,
             -self.ratio_from_0*np.conj(self.ratio_to_0)*self.admittance,
             -np.conj(self.ratio_from_0)*self.ratio_to_0*self.admittance
-        ])
+        ])*self.connected
 
         self.rows = rows
         self.cols = cols
-    
+
         return data, (self.rows, self.cols)
+
+    def admittance_change(self, trafo_idx, sign):
+        # The stamp is rebuilt at every step from the ratios, in dyn_var_adm, which leaves out transformers out of service
+        return None
 
     def init_from_load_flow(self, x_0, v_0, S):
         self._input_values['ratio_from'] = self.ratio_from_0
         self._input_values['ratio_to'] = self.ratio_to_0
 
     def dyn_const_adm(self):
-        return np.ones(0), (np.ones(0),)*2
+        return np.zeros(0, dtype=complex), (np.zeros(0, dtype=int),)*2
 
     def dyn_var_adm(self, x, v):
         ratio_from = self.ratio_from(x, v)
@@ -198,7 +245,7 @@ class DynTrafo(Trafo):
             ratio_to                *   np.conj(ratio_to)   *   self.admittance,
             -ratio_from             *   np.conj(ratio_to)   *   self.admittance,
             -np.conj(ratio_from)    *   ratio_to            *   self.admittance
-        ])
+        ])*self.connected
 
         return data, (self.rows, self.cols)
     
@@ -210,7 +257,7 @@ class DynTrafo(Trafo):
         shunt_from = self.ratio_from(x, v)*np.conj(self.ratio_from(x, v))*self.admittance
         adm_from_to = self.ratio_from(x, v)*np.conj(self.ratio_to(x, v))*self.admittance
 
-        return v_from*shunt_from - v_to*adm_from_to
+        return (v_from*shunt_from - v_to*adm_from_to)*self.connected
 
     def i_to(self, x, v):
         v_full = v
@@ -220,4 +267,4 @@ class DynTrafo(Trafo):
         shunt_to = self.ratio_to(x, v) * np.conj(self.ratio_to(x, v)) * self.admittance
         adm_to_from = np.conj(self.ratio_from(x, v)) * self.ratio_to(x, v) * self.admittance
 
-        return v_to*shunt_to - v_from*adm_to_from
+        return (v_to*shunt_to - v_from*adm_to_from)*self.connected

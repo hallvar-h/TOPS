@@ -1,5 +1,5 @@
 import numpy as np
-from tops.dyn_models.utils import DAEModel
+from tops.dyn_models.utils import DAEModel, read_connected
 from tops.events import ModelEvents, AdmittanceChange
 
 
@@ -29,7 +29,7 @@ class Line(DAEModel):
         self.data = data
         self.par = data
         self.n_units = len(data)
-        self.connected = np.ones(self.n_units, dtype=bool)
+        self.connected = read_connected(data)
 
         self.bus_idx = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
         self.bus_idx_red = np.array(np.zeros(self.n_units), dtype=[(key, int) for key in self.bus_ref_spec().keys()])
@@ -116,7 +116,7 @@ class Line(DAEModel):
             self.admittance + self.shunt/2,
             -self.admittance,
             -self.admittance
-        ])
+        ])*self.connected  # admittance and shunt stay set for lines out of service, so that connect can stamp them
 
         self.init_extras()
 

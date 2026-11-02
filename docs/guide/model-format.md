@@ -115,6 +115,11 @@ example `tops.dyn_models.avr.SEXS`. If you pass a
     | `Ohm` | Ω per km | S per km |
 
     The values are multiplied by `length` (1 if the column is missing).
+- **Out-of-service branches.** `lines` and `transformers` tables accept an
+  optional boolean `connected` column (0 and 1 also work). A branch with
+  `connected` set to `False` starts out of service and can be connected by
+  an [event](events.md). The load flow raises a `ValueError` if the
+  branches out of service cut buses off from the slack bus.
 - **Loads** with the standard `Load` model become constant impedances in the
   dynamic simulation, computed from `P`, `Q` and the power-flow voltage. Use
   `ConstPowerLoad` for constant power.

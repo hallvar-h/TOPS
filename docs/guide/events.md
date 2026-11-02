@@ -38,9 +38,15 @@ late.
 |---|---|---|---|
 | `buses` | | `short_circuit`, `clear_short_circuit` | Connects or removes a fault admittance (1e6 pu) from the bus to ground. |
 | `lines` | `Line` | `disconnect`, `connect` | Removes the line from the network or puts it back. |
+| `trafos` | `Trafo`, `DynTrafo` | `disconnect`, `connect` | Removes the transformer from the network or puts it back. |
 
 Applying an event twice in a row, such as disconnecting a line that is
 already open, has no effect.
+
+A line or transformer can also start out of service, with the optional
+`connected` column of its model table, see
+[Model format](model-format.md#units-and-conventions). It can be put in
+service later with a `connect` event.
 
 ## Example: a line trip
 
