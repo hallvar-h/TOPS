@@ -10,7 +10,7 @@ added.
 |---|---|
 | [`tops.dynamic`](dynamic.md) | `PowerSystemModel` |
 | [`tops.simulator`](simulator.md) | `Simulator`, `EventSchedule`, `ResultKeeper`, `InterfacerDirect` |
-| [`tops.events`](events.md) | `ModelEvents`, `BusEvents`, `AdmittanceChange` |
+| [`tops.events`](events.md) | `ModelEvents`, `BusEvents`, `AdmittanceChange`, `DeadBusWarning` |
 | [`tops.model_data`, `tops.power_flow`](model-data.md) | Loading model data, power flow |
 | [`tops.solvers`, `tops.solvers_sde`](solvers.md) | Time-step solvers |
 | [`tops.modal_analysis`](modal-analysis.md) | `PowerSystemModelLinearization` |

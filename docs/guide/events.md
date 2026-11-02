@@ -28,6 +28,18 @@ events = [
 | `unit` | Name of the bus or unit. |
 | `action` | What happens, see the table below. |
 
+An optional sixth column, `kwargs`, holds a dict of arguments for the action,
+or `None`:
+
+```python
+events = [
+    ["t",  "category", "model", "unit", "action",    "kwargs"],
+    [2.0,  "loads",    "Load",  "L1",   "set_power", {"P": 900.0}],
+    [3.0,  "buses",    "",      "B7",   "short_circuit", {"y": 50}],
+    [4.0,  "lines",    "Line",  "L7-8-1", "disconnect", None],
+]
+```
+
 An event is applied at the first time step where the simulation time is at
 least `t`. With a time step `dt`, the event can therefore come up to `dt`
 late.
@@ -37,6 +49,7 @@ late.
 | Category | Model | Actions | Effect |
 |---|---|---|---|
 | `buses` | | `short_circuit`, `clear_short_circuit` | Connects or removes a fault admittance (1e6 pu) from the bus to ground. |
+| `loads` | `Load`, `ConstPowerLoad` | `set_power` | Sets the active and reactive power, `set_power(P=None, Q=None)` in MW and Mvar. An argument left out keeps its value. |
 | `lines` | `Line` | `disconnect`, `connect` | Removes the line from the network or puts it back. |
 | `trafos` | `Trafo`, `DynTrafo` | `disconnect`, `connect` | Removes the transformer from the network or puts it back. |
 
@@ -47,6 +60,15 @@ A line or transformer can also start out of service, with the optional
 `connected` column of its model table, see
 [Model format](model-format.md#units-and-conventions). It can be put in
 service later with a `connect` event.
+
+## Buses without admittance
+
+A bus that has lost all its admittance, such as a bay node whose switches
+are all open, has no voltage to solve for. The solver pins it to 0 V and
+gives a `DeadBusWarning`; a load on it draws nothing. Silence the warning
+with `warnings.filterwarnings("ignore", category=DeadBusWarning)`, or turn
+the pinning off with `ps.pin_dead_buses = False`.
+`ps.dead_buses()` lists the dead buses.
 
 ## Example: a line trip
 
