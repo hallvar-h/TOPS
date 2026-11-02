@@ -27,6 +27,7 @@ Both run in the browser on Binder, no installation needed:
 | [`dyn_sim/line_outage_var.py`](https://github.com/hallvar-h/TOPS/blob/main/examples/dyn_sim/line_outage_var.py) | Line disconnection and reconnection through a `Simulator` event table (`ieee39`). |
 | [`interfaces/results_events.py`](https://github.com/hallvar-h/TOPS/blob/main/examples/interfaces/results_events.py) | Events plus `ResultKeeper`, and results as a DataFrame (`ieee39`). |
 | [`interfaces/sim.py`](https://github.com/hallvar-h/TOPS/blob/main/examples/interfaces/sim.py) | The minimal `Simulator` run. |
+| [`events/trip_trafo_load.py`](https://github.com/hallvar-h/TOPS/blob/main/examples/events/trip_trafo_load.py) | A line trip, a transformer trip and a load change with `ps.apply_event` (`k2a`). |
 | [`dyn_sim/short_circuit.py`](https://github.com/hallvar-h/TOPS/blob/main/examples/dyn_sim/short_circuit.py) | Short circuit at a generator bus, own solver loop. |
 | [`dyn_sim/line_outage.py`](https://github.com/hallvar-h/TOPS/blob/main/examples/dyn_sim/line_outage.py) | Disconnecting a line, own solver loop. |
 | [`dyn_sim/line_outage_cont.py`](https://github.com/hallvar-h/TOPS/blob/main/examples/dyn_sim/line_outage_cont.py) | Contingency screening: trips each line of `ieee39` in turn. |
