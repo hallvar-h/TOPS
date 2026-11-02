@@ -13,7 +13,7 @@ PS_MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ps_mod
 CATEGORY_ALIASES = {'transformers': 'trafos', 'generators': 'gen'}
 
 # Model used for categories given as a plain table instead of {model_name: table}
-DEFAULT_MODELS = {'lines': 'Line', 'trafos': 'Trafo', 'loads': 'Load', 'shunts': 'Shunt'}
+DEFAULT_MODELS = {'lines': 'Line', 'switches': 'Switch', 'trafos': 'Trafo', 'loads': 'Load', 'shunts': 'Shunt'}
 
 
 def read_json(path):

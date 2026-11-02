@@ -178,7 +178,8 @@ class PowerSystemModel:
             self.power_flow_ready = True
 
     def _check_islands(self, slack_idx):
-        """Raise if branches that are out of service ('connected' column) cut buses off from the slack bus."""
+        """Raise if branches that are out of service ('connected' column, or open switches) cut buses off from the slack
+        bus."""
         def reachable(only_connected):
             rows, cols = [], []
             for mdl in self.dyn_mdls:
@@ -192,8 +193,8 @@ class PowerSystemModel:
 
         cut_off = reachable(only_connected=False) & ~reachable(only_connected=True)
         if cut_off.any():
-            raise ValueError(f"Branches with connected=False cut the buses {list(self.buses['name'][cut_off])} off "
-                             f"from the slack bus {self.buses['name'][slack_idx]}, so the load flow cannot be solved.")
+            raise ValueError(f"Branches with connected=False (or open switches) cut the buses "
+                             f"{list(self.buses['name'][cut_off])} off from the slack bus {self.buses['name'][slack_idx]}, so the load flow cannot be solved.")
 
     def kron_reduction(self, y_bus, keep_buses):
         remove_buses = list(set(range(self.n_bus)) - set(keep_buses))

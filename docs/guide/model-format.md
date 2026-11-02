@@ -60,7 +60,7 @@ model = {
 | `f` | Nominal frequency in Hz. |
 | `slack_bus` | Name of the slack bus for the power flow. Optional: if left out, the bus of the first generator is used. |
 | `buses` | Table with `name` and `V_n` (nominal voltage, kV). Required. |
-| `lines`, `transformers`, `loads`, `shunts` | One table each. Each table uses one standard model (`Line`, `Trafo`, `Load`, `Shunt`). |
+| `lines`, `switches`, `transformers`, `loads`, `shunts` | One table each. Each table uses one standard model (`Line`, `Switch`, `Trafo`, `Load`, `Shunt`). |
 | `generators`, `avr`, `gov`, `pss`, ... | `{model_type: table}` dictionaries, because there are several model types to choose from. |
 
 `transformers` and `generators` are aliases. After loading, the categories
@@ -69,7 +69,7 @@ are called `trafos` and `gen`, which is why you access the generators as
 
 ## Two ways to write a category
 
-**A single table** works for `lines`, `transformers`, `loads` and `shunts`,
+**A single table** works for `lines`, `switches`, `transformers`, `loads` and `shunts`,
 and uses the standard model:
 
 ```python
@@ -120,6 +120,21 @@ example `tops.dyn_models.avr.SEXS`. If you pass a
   `connected` set to `False` starts out of service and can be connected by
   an [event](events.md). The load flow raises a `ValueError` if the
   branches out of service cut buses off from the slack bus.
+- **Switches** connect two buses with the columns `name`, `from_bus` and
+  `to_bus`. The optional column `closed` (1 or 0, default 1) gives the
+  initial state. A closed switch is a series admittance of 1e5 pu on the
+  system base, so the voltage across it is small (around 1e-6 pu) but not
+  exactly zero. The optional column `y` sets a different admittance. Much
+  higher values make the power flow fail to converge. Like out-of-service
+  branches, open switches must not cut buses off from the slack bus.
+
+    ```python
+    "switches": [
+        ["name", "from_bus", "to_bus", "closed"],
+        ["S7",   "B7",       "B7S",    1],
+    ],
+    ```
+
 - **Loads** with the standard `Load` model become constant impedances in the
   dynamic simulation, computed from `P`, `Q` and the power-flow voltage. Use
   `ConstPowerLoad` for constant power.

@@ -52,9 +52,14 @@ late.
 | `loads` | `Load`, `ConstPowerLoad` | `set_power` | Sets the active and reactive power, `set_power(P=None, Q=None)` in MW and Mvar. An argument left out keeps its value. |
 | `lines` | `Line` | `disconnect`, `connect` | Removes the line from the network or puts it back. |
 | `trafos` | `Trafo`, `DynTrafo` | `disconnect`, `connect` | Removes the transformer from the network or puts it back. |
+| `switches` | `Switch` | `open`, `close` | Opens or closes the switch. |
 
 Applying an event twice in a row, such as disconnecting a line that is
 already open, has no effect.
+
+Opening a switch at one end of a line is not the same as disconnecting
+the line: the line stays energised from its other end and keeps its
+charging (`B`).
 
 A line or transformer can also start out of service, with the optional
 `connected` column of its model table, see
