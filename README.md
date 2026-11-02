@@ -20,6 +20,9 @@ The package can be installed using pip, as follows:
 
 `pip install tops`
 
+# Documentation
+The documentation, with a quickstart, user guide and API reference, is at **https://hallvar-h.github.io/TOPS/**.
+
 # Contributing and releases
 Pull request titles must follow the [Conventional Commits](https://www.conventionalcommits.org/) format. Use `fix: ...` for bug fixes, `feat: ...` for features, and a `!` such as `feat!: ...` for breaking changes. Pull requests should be squash-merged using the pull request title as the commit message.
 
@@ -33,6 +36,13 @@ uv sync
 uv run pytest            # fast tests
 uv run pytest -m slow    # full-length validation against PowerFactory
 uv run pytest -m ""      # everything (as in CI)
+```
+
+To build and preview the documentation locally:
+
+```
+uv sync --group docs
+uv run mkdocs serve
 ```
 
 # Citing

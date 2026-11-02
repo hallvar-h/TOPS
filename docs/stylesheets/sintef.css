@@ -1,0 +1,62 @@
+/* TOPS documentation theme, loosely following the SINTEF colour profile.
+ *
+ *   #003c65  SINTEF dark blue   white on it 11.45:1
+ *   #0072b9  mid blue           white on it  5.11:1
+ *   #5cb3e6  light blue         on slate (#1e2129) 6.93:1
+ *
+ * The dark blue carries the header and, in light mode, the links. The light
+ * blue is too pale for text on white (2.32:1), so it is used for links only
+ * in dark mode. The mid blue is the accent for interactive elements in light
+ * mode. Values are approximations of the SINTEF profile; check them against
+ * the official brand guide before treating them as exact.
+ */
+
+:root {
+  --sintef-blue: #003c65;
+  --sintef-blue-dark: #002a47;
+  --sintef-blue-light: #1a5784;
+  --sintef-blue-mid: #0072b9;
+  --sintef-blue-pale: #5cb3e6;
+}
+
+/* Header, navigation tabs and other large primary surfaces. */
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color: var(--sintef-blue);
+  --md-primary-fg-color--light: var(--sintef-blue-light);
+  --md-primary-fg-color--dark: var(--sintef-blue-dark);
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: rgba(255, 255, 255, 0.7);
+}
+
+/* Interactive accents: hovered links, the active nav item, focused fields. */
+[data-md-color-accent="custom"] {
+  --md-accent-fg-color: var(--sintef-blue-mid);
+  --md-accent-fg-color--transparent: rgba(0, 114, 185, 0.1);
+}
+
+/* Link text has to clear 4.5:1 against the page in both schemes. */
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: var(--sintef-blue);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-typeset-a-color: var(--sintef-blue-pale);
+  --md-accent-fg-color: var(--sintef-blue-pale);
+}
+
+/* A thin accent rule under the header. */
+.md-header {
+  border-bottom: 3px solid var(--sintef-blue-mid);
+}
+
+/* Figures produced by executed code blocks: keep them inside the column and
+ * give them a white card in dark mode, since matplotlib draws on white. */
+.tops-figure svg {
+  max-width: 100%;
+  height: auto;
+}
+
+[data-md-color-scheme="slate"] .tops-figure svg {
+  background: #ffffff;
+  border-radius: 0.2rem;
+}
