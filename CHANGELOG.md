@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/hallvar-h/TOPS/compare/v0.5.0...v0.6.0) (2026-11-02)
+
+
+### Features
+
+* add Switch model with open/close events ([4b38bd2](https://github.com/hallvar-h/TOPS/commit/4b38bd2c8b4215bf785d3b84c74e5ec547ab9a33))
+* add Switch model with open/close events ([f368c8b](https://github.com/hallvar-h/TOPS/commit/f368c8bede50a3171304bbd0742261980f1d135b))
+
 ## [0.5.0](https://github.com/hallvar-h/TOPS/compare/v0.4.0...v0.5.0) (2026-11-02)
 
 
