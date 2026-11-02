@@ -133,6 +133,7 @@ nav:
       - Model format: guide/model-format.md
       - Running a simulation: guide/simulation.md
       - Events: guide/events.md
+      - Real-time simulation: guide/realtime.md
       - Modal analysis: guide/modal-analysis.md
       - Dynamic models: guide/dyn-models.md
       - User-defined models: guide/user-models.md
@@ -142,6 +143,7 @@ nav:
       - PowerSystemModel: api/dynamic.md
       - Simulator: api/simulator.md
       - Events: api/events.md
+      - Real time: api/realtime.md
       - Model data: api/model-data.md
       - Solvers: api/solvers.md
       - Modal analysis: api/modal-analysis.md
