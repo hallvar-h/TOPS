@@ -116,8 +116,10 @@ electromechanical dynamics.
 ## Writing your own loop
 
 For full control, step the solver yourself. The solver takes the state
-derivatives, the algebraic solver, the start time, the initial states and
-the initial voltages. `EventSchedule` gives you the same event tables as the
+derivatives, the algebraic solver, the start time, the initial states and,
+optionally, the end time `t_end`. Pass the initial voltages as `v0=...`: the
+algebraic solver uses them as the starting guess, and falls back to a flat
+start (1 pu) if they are left out. `EventSchedule` gives you the same event tables as the
 `Simulator`.
 
 ```python exec="on" source="above" result="text"
@@ -137,7 +139,7 @@ events = EventSchedule([
 events.check(ps)   # fail early if a unit or action does not exist
 
 sol = dps_sol.ModifiedEulerDAE(
-    ps.state_derivatives, ps.solve_algebraic, 0, ps.x0.copy(), ps.v0.copy(), max_step=1e-2
+    ps.state_derivatives, ps.solve_algebraic, 0, ps.x0.copy(), v0=ps.v0.copy(), max_step=1e-2
 )
 
 t, speed = [], []

@@ -25,15 +25,19 @@ class Euler:
 
 
 class EulerDAE(Euler):
-    def __init__(self, f, g_inv, t0, x0, v0, *args, **kwargs):
+    def __init__(self, f, g_inv, t0, x0, *args, v0=None, **kwargs):
         '''
         Similar to Euler solver-class, but ensures that algebraic equations (stored in self.v) are always updated at the end of each time step.
         :param f: Function that takes time, states and algebraic variables (t, x and v) as arguments and returns state
         derivatives.
-        :param g_inv: Function that takes time and states as arguments and solves algebraic equations (i.e. returns
-        bus voltages of buses in reduced system).
-        :param args:
-        :param kwargs:
+        :param g_inv: Function that takes time, states and an initial guess of the algebraic variables (t, x and v)
+        as arguments and solves algebraic equations (i.e. returns bus voltages of buses in reduced system).
+        :param t0: Initial time.
+        :param x0: Initial states.
+        :param args: Passed on to Euler (e.g. t_end).
+        :param v0: Initial guess of the algebraic variables, passed to g_inv in the first solve. If None, g_inv
+        chooses its own starting point (PowerSystemModel.solve_algebraic uses a flat start).
+        :param kwargs: Passed on to Euler (e.g. dt, max_step).
         '''
         super().__init__(f, t0, x0, *args, **kwargs)
         self.g_inv = g_inv

@@ -16,7 +16,7 @@ def run_ode(solver_cls, dt):
 
 def run_dae(solver_cls, dt):
     # dx/dt = -v with algebraic equation v = x, which is equivalent to dx/dt = -x
-    sol = solver_cls(lambda t, x, v: -v, lambda t, x, v: x.copy(), 0, np.array([1.0]), np.array([1.0]), T_END, dt=dt)
+    sol = solver_cls(lambda t, x, v: -v, lambda t, x, v: x.copy(), 0, np.array([1.0]), T_END, v0=np.array([1.0]), dt=dt)
     while sol.t < T_END - 1e-12:
         sol.step()
     return sol
@@ -58,3 +58,11 @@ def test_solver_stops_at_t_end():
     t_final = sol.t
     sol.step()
     assert sol.t == t_final
+
+
+@pytest.mark.parametrize('solver_cls', [dps_sol.EulerDAE, dps_sol.ModifiedEulerDAE])
+def test_dae_solver_v0_is_optional(solver_cls):
+    # t_end given positionally after x0, without v0, as in the examples
+    sol = solver_cls(lambda t, x, v: -v, lambda t, x, v: x.copy(), 0, np.array([1.0]), T_END, dt=0.1)
+    assert sol.t_end == T_END
+    np.testing.assert_allclose(sol.v, sol.x)

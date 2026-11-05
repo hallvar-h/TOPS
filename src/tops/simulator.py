@@ -31,7 +31,7 @@ class Simulator:
         else:
             self.ode_fun = self.ps.ode_fun
 
-        self.sol = solver(self.ps.state_derivatives, self.ps.solve_algebraic, 0, self.ps.x0, self.ps.v0, max_step=self.dt, first_step=self.dt)
+        self.sol = solver(self.ps.state_derivatives, self.ps.solve_algebraic, 0, self.ps.x0, v0=self.ps.v0, max_step=self.dt, first_step=self.dt)
 
         self.new_data_cv = threading.Condition()
         self.new_data_ready = False

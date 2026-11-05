@@ -34,7 +34,7 @@ if __name__ == '__main__':
     x_0 = ps.x_0.copy()
 
     # Solver
-    sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x_0, ps.v0, t_end, max_step=5e-3)
+    sol = dps_sol.ModifiedEulerDAE(ps.state_derivatives, ps.solve_algebraic, 0, x_0, t_end, v0=ps.v0, max_step=5e-3)
 
     # Initialize simulation
     t = 0
