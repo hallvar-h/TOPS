@@ -121,6 +121,26 @@ plt.show()
 After the trip, `L7-8-1` carries nothing and `L7-8-2` takes over its share
 of the power transfer.
 
+## Results calculated after the run
+
+`res.calculate(f)` evaluates any function `f(x, v)` at every stored step, so
+you don't have to choose all outputs before the run. `ResultKeeper` keeps a
+copy of the event table and replays it, so each step is evaluated with the
+lines and loads connected as they were at that moment. Here the current
+through the tripped line drops to zero at 1 s:
+
+```python exec="on" source="above" session="events" result="text"
+i_line = res.calculate(ps.lines.Line.i_from)
+t = np.array(res.t)
+idx = names.index("L7-8-1")
+print("Current at 0.5 s:", abs(i_line[t <= 0.5, idx][-1]).round(3))
+print("Current at 2.0 s:", abs(i_line[t <= 2.0, idx][-1]).round(3))
+```
+
+Only events from the `Simulator` event table are replayed. Inputs changed
+with `set_input`, and events applied with `ps.apply_event` from an interface
+function, are not.
+
 ## Checking events before the run
 
 `Simulator` checks the whole event table when it is created. A misspelt
