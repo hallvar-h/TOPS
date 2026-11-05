@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.1](https://github.com/hallvar-h/TOPS/compare/v0.6.0...v0.6.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* choose the generator with the largest output as slack bus and sl… ([ca276a3](https://github.com/hallvar-h/TOPS/commit/ca276a3b423b6da428b90ba5f1654032604a0a03))
+* choose the generator with the largest output as slack bus and slack unit ([195241a](https://github.com/hallvar-h/TOPS/commit/195241ab522ca7054027028a80d4ab410e357653))
+* make v0 optional and keyword-only in EulerDAE ([3a73bda](https://github.com/hallvar-h/TOPS/commit/3a73bdaca4f5ecdf2e088cd5f16ce892caa3243b))
+* make v0 optional and keyword-only in EulerDAE ([a1ff4f0](https://github.com/hallvar-h/TOPS/commit/a1ff4f07da17a44148325e98136e61a17b2f5f3d))
+
 ## [0.6.0](https://github.com/hallvar-h/TOPS/compare/v0.5.0...v0.6.0) (2026-11-02)
 
 
