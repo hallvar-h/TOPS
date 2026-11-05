@@ -20,10 +20,10 @@ def default_slack_bus_idx(pv_mdls):
 
     Ties are resolved in favour of the first unit found.
     """
-    bus_idx, p_setp = zip(*(mdl.load_flow_pv()[:2] for mdl in pv_mdls))
+    bus_idx, p_load = zip(*(mdl.load_flow_pv()[:2] for mdl in pv_mdls))
     bus_idx = np.concatenate(bus_idx)
-    p_setp = np.concatenate(p_setp)
-    return bus_idx[np.argmax(p_setp)]
+    p_gen = -np.concatenate(p_load)  # load_flow_pv() uses load convention
+    return bus_idx[np.argmax(p_gen)]
 
 
 def solve_power_flow(y_bus, pq_mdls, pv_mdls, s_n, sl_idx, tol, max_it):
@@ -31,7 +31,8 @@ def solve_power_flow(y_bus, pq_mdls, pv_mdls, s_n, sl_idx, tol, max_it):
 
     :param y_bus: Bus admittance matrix for the power flow.
     :param pq_mdls: Models with load_flow_pq(), returning (bus_idx, P, Q) in MW/MVAr.
-    :param pv_mdls: Models with load_flow_pv(), returning (bus_idx, P setpoint, V setpoint).
+    :param pv_mdls: Models with load_flow_pv(), returning (bus_idx, P setpoint, V setpoint). P is in MW with load
+        convention, i.e. a generator producing 100 MW returns -100.
     :param s_n: System base power (MVA).
     :param sl_idx: Index of the slack bus.
     """
@@ -49,15 +50,16 @@ def solve_power_flow(y_bus, pq_mdls, pv_mdls, s_n, sl_idx, tol, max_it):
     v_pv = np.ones(n_bus)
     # The slack unit is the unit at the slack bus with the largest P setpoint (first one found on ties)
     slack_unit = None
-    p_slack_unit = -np.inf
+    p_gen_slack_unit = -np.inf
     for mdl in pv_mdls:
         bus_idx, p, v = mdl.load_flow_pv()
         at_slack = np.flatnonzero(bus_idx == sl_idx)
         if len(at_slack) > 0:
-            unit_idx = at_slack[np.argmax(p[at_slack])]
-            if p[unit_idx] > p_slack_unit:
+            p_gen = -p  # load_flow_pv() uses load convention
+            unit_idx = at_slack[np.argmax(p_gen[at_slack])]
+            if p_gen[unit_idx] > p_gen_slack_unit:
                 slack_unit = (mdl, unit_idx)
-                p_slack_unit = p[unit_idx]
+                p_gen_slack_unit = p_gen[unit_idx]
         bus_type[bus_idx] = 'PV'
         np.add.at(p_pv, bus_idx, p / s_n)
         v_pv[bus_idx] = v
