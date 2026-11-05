@@ -58,7 +58,7 @@ model = {
 |---|---|
 | `base_mva` | System base power in MVA. Per-unit values without their own base use it. |
 | `f` | Nominal frequency in Hz. |
-| `slack_bus` | Name of the slack bus for the power flow. Optional: if left out, the bus of the first generator is used. |
+| `slack_bus` | Name of the slack bus for the power flow. Optional: if left out, the bus of the generator with the largest active power `P` is used. |
 | `buses` | Table with `name` and `V_n` (nominal voltage, kV). Required. |
 | `lines`, `switches`, `transformers`, `loads`, `shunts` | One table each. Each table uses one standard model (`Line`, `Switch`, `Trafo`, `Load`, `Shunt`). |
 | `generators`, `avr`, `gov`, `pss`, ... | `{model_type: table}` dictionaries, because there are several model types to choose from. |
