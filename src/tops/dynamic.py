@@ -303,6 +303,30 @@ class PowerSystemModel:
         else:
             raise TypeError(f'Unknown event effect: {type(effect).__name__}')
 
+    def _event_objects(self):
+        """The objects events can change: the events objects and the models they belong to."""
+        objects = [self.bus_events]
+        for mdls in self.dyn_mdls_dict.values():
+            for mdl in mdls.values():
+                if mdl.events is not None:
+                    objects += [mdl.events, mdl]
+        return objects
+
+    def _save_event_state(self):
+        """A copy of what events change (arrays of the models with events, and the admittance matrix), to be restored
+        with _restore_event_state."""
+        arrays = [{name: value.copy() for name, value in vars(obj).items() if isinstance(value, np.ndarray)}
+                  for obj in self._event_objects()]
+        return self.y_bus_red, arrays  # y_bus_red is replaced, not changed, by apply_effect
+
+    def _restore_event_state(self, state):
+        y_bus_red, arrays = state
+        for obj, saved in zip(self._event_objects(), arrays):
+            for name, value in saved.items():
+                getattr(obj, name)[...] = value  # In place, since arrays can be shared (e.g. par and data)
+        self.y_bus_red = y_bus_red
+        self._dead_dirty = True
+
     def state_derivatives(self, t, x, v_red):
         dx = np.zeros(self.n_states)
         with mdl_lib.utils.store_outputs(self.dyn_mdls):
