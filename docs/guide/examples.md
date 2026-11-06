@@ -37,6 +37,8 @@ Both run in the browser on Binder, no installation needed:
 | Script | Shows |
 |---|---|
 | [`modal_analysis/plot_eigs.py`](https://github.com/hallvar-h/TOPS/blob/main/examples/modal_analysis/plot_eigs.py) | Eigenvalue plot and mode shapes of `k2a`. |
+| [`modal_analysis/linear_vs_nonlinear.py`](https://github.com/hallvar-h/TOPS/blob/main/examples/modal_analysis/linear_vs_nonlinear.py) | State-space model (A, B, C, D) from a governor input to generator outputs, with its step response against the nonlinear simulation (`k2a`). |
+| [`modal_analysis/pss_residues.py`](https://github.com/hallvar-h/TOPS/blob/main/examples/modal_analysis/pss_residues.py) | Residues from the AVR inputs to the generator speeds for placing PSSs, checked against the closed loop (`k2a`). |
 
 ### Dynamic models
 
