@@ -76,8 +76,7 @@ class Load(DAEModel):
     def init_from_load_flow(self, x_0, v_0, S):
         self.v_0 = v_0[self.bus_idx['terminal']]
         s_load = (self.par['P'] + 1j * self.par['Q']) / self.sys_par['s_n']
-        z_load = np.conj(abs(self.v_0) ** 2 / s_load)
-        self.y_load = 1/z_load
+        self.y_load = np.conj(s_load)/abs(self.v_0)**2  # y = 0 for a load of zero power
 
         V_n = self.sys_par['bus_v_n'][self.bus_idx['terminal']]
         self.I_n = self.sys_par['s_n']/(np.sqrt(3)*V_n)
@@ -151,8 +150,7 @@ class DynamicLoad(DAEModel):
     def init_from_load_flow(self, x_0, v_0, S):
         self.v_0 = v_0[self.bus_idx['terminal']]
         s_load = (self.par['P'] + 1j * self.par['Q']) / self.sys_par['s_n']
-        z_load = np.conj(abs(self.v_0) ** 2 / s_load)
-        y_load = 1/z_load
+        y_load = np.conj(s_load)/abs(self.v_0)**2  # y = 0 for a load of zero power
         self._input_values['g_setp'] = y_load.real
         self._input_values['b_setp'] = y_load.imag
 
@@ -221,8 +219,7 @@ class DynamicLoadFiltered(DynamicLoad):
     def init_from_load_flow(self, x_0, v_0, S):
         self.v_0 = v_0[self.bus_idx['terminal']]
         s_load = (self.par['P'] + 1j * self.par['Q']) / self.sys_par['s_n']
-        z_load = np.conj(abs(self.v_0) ** 2 / s_load)
-        y_load = 1/z_load
+        y_load = np.conj(s_load)/abs(self.v_0)**2  # y = 0 for a load of zero power
         self._input_values['g_setp'] = y_load.real
         self._input_values['b_setp'] = y_load.imag
 
