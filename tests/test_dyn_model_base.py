@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 import tops.dynamic as dps
-from tops.dyn_models.avr import SEXS
+from tops.dyn_models.avr import AVR, SEXS
 from tops.dyn_models.blocks import Gain, Integrator, TimeConstant
 from tops.dyn_models.utils import AlgebraicLoopError, DAEModel, get_submodules, output, store_outputs
 
@@ -82,7 +82,6 @@ def test_set_input_affects_unconnected_units_of_connected_input():
 class CountingGain(Gain):
     calls = 0
 
-    @output
     def output(self, x, v):
         self.calls += 1
         return 2*super().output(x, v)  # Overriding output calling super().output is not a loop
@@ -134,6 +133,67 @@ def test_stored_output_is_not_a_view_of_states():
     assert x.tolist() == [1.0, 2.0]
 
 
+class AssignedOutput(DAEModel):
+    """Output assigned in add_blocks, as in the AVR, GOV and PSS models."""
+    calls = 0
+
+    def output_list(self):
+        return ['output', 'doubled']
+
+    def add_blocks(self):
+        self.gain = Gain(K=np.ones(self.n_units))
+        self.output = lambda x, v: self.count() * self.gain.output(x, v)
+
+    def count(self):
+        self.calls += 1
+        return 1
+
+    def doubled(self, x, v):
+        return 2*self.output(x, v)
+
+
+def test_assigned_outputs_are_stored_and_checked_for_loops():
+    mdl = AssignedOutput(n_units=1)
+    mdl.gain.input = lambda x, v: np.ones(1)
+    with store_outputs([mdl]):
+        assert mdl.doubled(None, None) == 2.0
+        assert mdl.output(None, None) == 1.0
+    assert mdl.calls == 1
+
+    mdl.gain.input = lambda x, v: mdl.doubled(x, v)
+    with pytest.raises(AlgebraicLoopError, match='AssignedOutput.doubled'):
+        mdl.doubled(None, None)
+
+
+class MixinAfterDAEModel(DAEModel, AVR):
+    def output(self, x, v):
+        return np.zeros(self.n_units)
+
+
+def test_output_list_of_mixin_is_not_hidden_by_dae_model():
+    mdl = MixinAfterDAEModel(n_units=1)
+    assert mdl.output_list() == []  # DAEModel's default comes first in the MRO
+    assert mdl.all_outputs() == ['output']
+    assert mdl.output is not mdl.__class__.output  # Wrapped on the instance
+
+
+def test_listed_output_must_exist():
+    class Missing(DAEModel):
+        def output_list(self):
+            return ['speed']
+
+    with pytest.raises(AttributeError, match="'speed' is in output_list"):
+        Missing(n_units=1)
+
+
+def test_output_decorator_is_deprecated():
+    def f(self, x, v):
+        return x
+
+    with pytest.warns(DeprecationWarning, match='output_list'):
+        assert output(f) is f
+
+
 @pytest.mark.parametrize('kwargs, match', [
     ({}, 'exactly one of'),
     ({'par': np.zeros(2, dtype=[('name', 'U4')]), 'n_units': 2}, 'got par and n_units'),
@@ -177,8 +237,8 @@ def test_blocks_have_one_input_and_output():
 
 
 class SEXSWithoutOutputList(SEXS):
-    def output_list(self):
-        return []  # As for a user model class SEXS_mod(DAEModel, AVR), where DAEModel's default wins
+    def all_outputs(self):
+        return []  # As for a user model whose connected output is not in any output_list
 
 
 def test_connected_outputs_are_initialized_without_output_list():
