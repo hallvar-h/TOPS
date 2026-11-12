@@ -26,7 +26,6 @@ class PLL1(DAEModel):
         self.filter.input = angle_measurement
         self.output = lambda x, v: self.filter.output(x, v)
 
-    # @output
     def freq_est(self, x, v):
         X = self.filter.local_view(x)
         dX = 1/self.filter.par['T']*(self.filter.input(x, v) - X['x'])

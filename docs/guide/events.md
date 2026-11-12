@@ -40,6 +40,33 @@ events = [
 ]
 ```
 
+### Events as functions
+
+Instead of `category`, `model` and `action`, an event can be given by its
+event function on the power system model, such as
+`ps.lines.Line.events.disconnect` or `ps.bus_events.short_circuit`. The
+table then has the columns `t`, `event`, `unit` and optionally `kwargs`:
+
+```python
+events = [
+    ["t",  "event",                           "unit",   "kwargs"],
+    [1.0,  ps.bus_events.short_circuit,       "B7",     None],
+    [1.1,  ps.bus_events.clear_short_circuit, "B7",     None],
+    [1.1,  ps.lines.Line.events.disconnect,   "L7-8-1", None],
+    [2.0,  ps.loads.Load.events.set_power,    "L1",     {"P": 900.0}],
+]
+```
+
+Your editor can complete these names, and a misspelt model or action fails
+as soon as the line runs. A table of strings, on the other hand, can be
+written before the system exists and saved to a file. The event functions
+belong to `ps`: an event function of another `PowerSystemModel` raises an
+error. They stay valid when `ps.init_dyn_sim()` is called again.
+
+Pass event functions to the simulator, `ps.apply_event` or `submit`; don't
+call them yourself. Calling `ps.lines.Line.events.disconnect("L7-8-1")`
+directly marks the line as disconnected, but leaves the network unchanged.
+
 An event is applied at the first time step where the simulation time is at
 least `t`. With a time step `dt`, the event can therefore come up to `dt`
 late.
@@ -174,6 +201,11 @@ keyword arguments, such as a different fault admittance:
 ps.apply_event("lines", "Line", "L7-8-1", "disconnect")
 ps.apply_event("buses", None, "B7", "short_circuit", y=50)  # weaker fault
 ps.apply_event("buses", None, "B7", "clear_short_circuit")
+
+# The same, with event functions
+ps.apply_event(ps.lines.Line.events.disconnect, "L7-8-1")
+ps.apply_event(ps.bus_events.short_circuit, "B7", y=50)
+ps.apply_event(ps.bus_events.clear_short_circuit, "B7")
 ```
 
 ## Events in your own loop

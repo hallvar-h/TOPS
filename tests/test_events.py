@@ -128,6 +128,85 @@ def test_invalid_event_raises_when_simulator_is_created():
         Simulator(ps, events=[EVENT_COLUMNS, [0.1, 'lines', 'Line', 'NoSuchLine', 'disconnect']])
 
 
+def initialized_k2a():
+    ps = dps.PowerSystemModel(model=k2a_model())
+    ps.init_dyn_sim()
+    return ps
+
+
+def test_event_functions_in_simulator_match_event_names():
+    rows = [
+        (0.1, 'buses', '', 'B8', 'short_circuit', None),
+        (0.15, 'buses', '', 'B8', 'clear_short_circuit', None),
+        (0.15, 'lines', 'Line', 'L7-8-1', 'disconnect', None),
+        (0.2, 'loads', 'Load', 'L1', 'set_power', {'P': 900.0}),
+    ]
+    ps_names = initialized_k2a()
+    by_name = simulate(ps_names, events=[EVENT_COLUMNS + ['kwargs'], *map(list, rows)])
+
+    for as_frame in [False, True]:
+        ps = initialized_k2a()
+        functions = {'short_circuit': ps.bus_events.short_circuit,
+                     'clear_short_circuit': ps.bus_events.clear_short_circuit,
+                     'disconnect': ps.lines.Line.events.disconnect,
+                     'set_power': ps.loads.Load.events.set_power}
+        table = [['t', 'event', 'unit', 'kwargs']] + [[t, functions[action], unit, kwargs]
+                                                      for t, _, _, unit, action, kwargs in rows]
+        events = pd.DataFrame(table[1:], columns=table[0]) if as_frame else table
+        assert np.array_equal(simulate(ps, events=events), by_name)
+
+
+def test_bus_event_functions_stay_valid_when_initialized_again():
+    ps = initialized_k2a()
+    short_circuit = ps.bus_events.short_circuit
+    ps.apply_event(short_circuit, 'B8')
+    ps.init_dyn_sim()
+    assert not ps.bus_events.y_fault.any()  # Faults are cleared
+    ps.apply_event(short_circuit, 'B8', y=50)
+    assert ps.bus_events.y_fault[list(ps.buses['name']).index('B8')] == 50
+
+
+def test_event_function_is_applied_like_event_name():
+    ps = initialized_k2a()
+    ps.apply_event(ps.lines.Line.events.disconnect, 'L7-8-1')
+    assert line_is_out(ps, 'L7-8-1')
+    ps.apply_event(ps.loads.Load.events.set_power, 'L1', P=900.0)
+    ps.apply_event(ps.bus_events.short_circuit, 'B8', y=50)
+    assert ps.bus_events.y_fault[list(ps.buses['name']).index('B8')] == 50
+
+
+def line_is_out(ps, name):
+    return not ps.lines['Line'].connected[list(ps.lines['Line'].par['name']).index(name)]
+
+
+def test_schedule_keeps_event_functions():
+    ps = initialized_k2a()
+    schedule = EventSchedule([['t', 'event', 'unit'], [0.2, ps.lines.Line.events.connect, 'L1'],
+                              [0.1, ps.lines.Line.events.disconnect, 'L1']])
+    assert schedule.pop_due(1) == [(0.1, ps.lines.Line.events.disconnect, 'L1'),
+                                   (0.2, ps.lines.Line.events.connect, 'L1')]
+
+
+@pytest.mark.parametrize('event, error, match', [
+    (lambda ps: ps.lines.Line.events.disconnect, KeyError, 'NoSuchLine'),
+    (lambda ps: ps.lines.Line.events.unit_names, ValueError, 'no event "unit_names"'),
+    (lambda ps: ps.gen.GEN.speed, TypeError, 'not an event function'),
+    (lambda ps: initialized_k2a().lines.Line.events.disconnect, ValueError, 'another PowerSystemModel'),
+])
+def test_invalid_event_function_raises_when_simulator_is_created(event, error, match):
+    ps = initialized_k2a()
+    unit = 'NoSuchLine' if error is KeyError else 'L7-8-1'
+    with pytest.raises(error, match=match):
+        Simulator(ps, events=[['t', 'event', 'unit'], [0.1, event(ps), unit]])
+
+
+def test_event_with_wrong_number_of_parts_raises():
+    ps = initialized_k2a()
+    with pytest.raises(TypeError, match='is given as'):
+        ps.apply_event('lines', 'L7-8-1', 'disconnect')
+    assert not line_is_out(ps, 'L7-8-1')
+
+
 def test_events_in_model_data_raise():
     model = k2a_model()
     model['events'] = [EVENT_COLUMNS, [0.1, 'lines', 'Line', 'L7-8-1', 'disconnect']]

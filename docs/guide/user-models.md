@@ -28,6 +28,15 @@ The model itself has three parts. `input_list` names the inputs.
 `tops.dyn_models.blocks`. `init_from_connections` sets the `bias` input so
 that the model starts in steady state.
 
+The outputs are named by `output_list`, here inherited from the `AVR` mixin
+(`["output"]`). Lists from the class and all its base classes are combined,
+so the order of `DAEModel` and the mixin does not matter. An output can be a
+method or a function assigned in `add_blocks`, as `self.output` below. While
+the system is evaluated, each listed output is computed once and then reused,
+and an output that depends on itself without passing through a state (an
+algebraic loop) raises `AlgebraicLoopError`. The `@output` decorator used for
+this before is deprecated and has no effect.
+
 ```python exec="on" source="above" session="user" result="text"
 from types import SimpleNamespace
 

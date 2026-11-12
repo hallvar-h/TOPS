@@ -14,7 +14,7 @@ class Simulator:
         """
         :param ps: Initialized PowerSystemModel.
         :param events: Events to apply during the simulation, as a table (list with header row, or DataFrame)
-            with columns t, category, model, unit, action. See EventSchedule.
+            with columns t, category, model, unit, action, or t, event, unit. See EventSchedule.
         """
 
         self._stopped = False
@@ -75,6 +75,10 @@ class EventSchedule:
     is ignored for category 'buses'. An optional column kwargs holds a dict of arguments for the action, or None,
     e.g. [0.1, 'buses', '', 'B1', 'short_circuit', {'y': 100}]; they are kept in the list kwargs, one per event.
 
+    Alternatively, the table has columns t, event, unit (and optionally kwargs), where event is an event function of
+    the power system model, e.g. [0.1, ps.lines.Line.events.disconnect, 'L1-2'] or
+    [0.1, ps.bus_events.short_circuit, 'B1']. Such events are kept as (t, event, unit).
+
     Used by the Simulator, or directly in a custom simulation loop:
 
         schedule = EventSchedule(events)
@@ -84,6 +88,7 @@ class EventSchedule:
             ...
     """
     fields = ('t', 'category', 'model', 'unit', 'action')
+    function_fields = ('t', 'event', 'unit')
 
     def __init__(self, events=None):
         table = read_table(events) if events is not None else None
@@ -91,14 +96,21 @@ class EventSchedule:
             self.events = []
             self.kwargs = []
         else:
-            missing = [field for field in self.fields if field not in table.dtype.names]
+            fields = self.function_fields if 'event' in table.dtype.names else self.fields
+            missing = [field for field in fields if field not in table.dtype.names]
             if missing:
-                raise ValueError(f'Event table is missing fields: {missing}')
+                raise ValueError(f'Event table is missing fields: {missing}. The columns are '
+                                 f'{list(self.fields)} or {list(self.function_fields)}, and optionally kwargs.')
             order = np.argsort(table['t'], kind='stable')
-            self.events = [tuple(table[field][i].item() for field in self.fields) for i in order]
+            self.events = [tuple(self._read_value(table[field][i]) for field in fields) for i in order]
             kwargs = table['kwargs'] if 'kwargs' in table.dtype.names else [None]*len(table)
             self.kwargs = [self._read_kwargs(kwargs[i]) for i in order]
         self.reset()
+
+    @staticmethod
+    def _read_value(value):
+        # Numbers and strings come as numpy scalars, event functions as themselves (object column)
+        return value.item() if isinstance(value, np.generic) else value
 
     @staticmethod
     def _read_kwargs(value):
@@ -113,8 +125,8 @@ class EventSchedule:
 
     def check(self, ps):
         """Check that all events exist in the (initialized) power system model."""
-        for _, category, mdl_key, unit, action in self.events:
-            ps.get_events(category, mdl_key).check(unit, action)
+        for _, *event in self.events:
+            ps.check_event(*event)
 
     def pop_due(self, t):
         """Return events with time <= t that have not been returned before."""
@@ -127,8 +139,8 @@ class EventSchedule:
     def apply_due(self, ps, t):
         """Apply events with time <= t that have not been applied before."""
         first = self._next
-        for (_, category, mdl_key, unit, action), kwargs in zip(self.pop_due(t), self.kwargs[first:self._next]):
-            ps.apply_event(category, mdl_key, unit, action, **kwargs)
+        for (_, *event), kwargs in zip(self.pop_due(t), self.kwargs[first:self._next]):
+            ps.apply_event(*event, **kwargs)
 
 
 class Events:
@@ -209,7 +221,10 @@ class ResultKeeper:
         self.spec = dict(**kwargs)
 
         # The events, and what they change in the model as it is now, so that calculate can replay them
-        self.events = copy.deepcopy(sim.events)
+        # Not a deep copy, which would copy the models behind event functions (e.g. ps.lines.Line.events.disconnect)
+        self.events = copy.copy(sim.events)
+        self.events.events = list(sim.events.events)
+        self.events.kwargs = [dict(kwargs) for kwargs in sim.events.kwargs]
         self._event_state = sim.ps._save_event_state()
         self._n_events = []  # Number of events applied at each step
 
@@ -239,8 +254,8 @@ class ResultKeeper:
             ps._restore_event_state(self._event_state)
             for x, v, n_events in zip(self.x, self.v, self._n_events):
                 for i in range(applied, n_events):
-                    _, category, mdl_key, unit, action = self.events.events[i]
-                    ps.apply_event(category, mdl_key, unit, action, **self.events.kwargs[i])
+                    _, *event = self.events.events[i]
+                    ps.apply_event(*event, **self.events.kwargs[i])
                 applied = n_events
                 result.append(fun(x, v))
         finally:

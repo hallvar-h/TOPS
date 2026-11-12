@@ -93,40 +93,49 @@ class AlgebraicLoopError(RuntimeError):
 
 
 def output(f):
-    """Decorator for output methods of models.
+    """Deprecated: list the output in the model's ``output_list()`` instead.
 
-    While outputs are stored (within ``store_outputs``), each output is computed once and the stored
-    value is returned on later calls, so that an output used by several blocks is only computed once
-    per evaluation.
-
-    An output that depends on itself without passing through a state (an algebraic loop) raises
-    AlgebraicLoopError. Loops through a state are fine, since outputs of states do not depend on
-    inputs.
+    Outputs in ``output_list()`` are stored and checked for algebraic loops by ``DAEModel`` (see
+    ``DAEModel.output_list``). The decorator returns ``f`` unchanged.
     """
+    warnings.warn(
+        f'The @output decorator (on {f.__qualname__}) is deprecated and has no effect. List the '
+        f'output in output_list() instead.', DeprecationWarning, stacklevel=2)
+    return f
+
+
+def _wrap_output(mdl, name):
+    """Replace the output ``name`` of ``mdl`` (on the instance) with a function that stores its
+    value within ``store_outputs`` and raises AlgebraicLoopError if it depends on itself."""
+    f = getattr(mdl, name, None)
+    if not callable(f):
+        raise AttributeError(
+            f'{type(mdl).__name__}: {name!r} is in output_list(), but is not a function of the model.')
+
     @functools.wraps(f)
-    def wrap(self, *args):
-        # Keyed by f (not by name), so that an overriding output can call super().output
-        if self._store_output and f in self._stored_outputs:
-            return self._stored_outputs[f]
-        if f in self._outputs_in_progress:
+    def stored_output(x, v):
+        if mdl._store_output and name in mdl._stored_outputs:
+            return mdl._stored_outputs[name]
+        if name in mdl._outputs_in_progress:
             raise AlgebraicLoopError(
-                f'{type(self).__name__}.{f.__name__} ({", ".join(self.par["name"][:3])}) depends on '
-                f'itself without passing through a state (algebraic loop).')
-        self._outputs_in_progress.add(f)
+                f'{type(mdl).__name__}.{name} ({", ".join(mdl.par["name"][:3])}) depends on itself '
+                f'without passing through a state (algebraic loop).')
+        mdl._outputs_in_progress.add(name)
         try:
-            value = f(self, *args)
+            value = f(x, v)
         finally:
-            self._outputs_in_progress.discard(f)
-        if self._store_output:
-            value = self._stored_outputs[f] = np.copy(value)  # Copy, since value may be a view of x
+            mdl._outputs_in_progress.discard(name)
+        if mdl._store_output:
+            value = mdl._stored_outputs[name] = np.copy(value)  # Copy, since value may be a view of x
         return value
-    return wrap
+
+    setattr(mdl, name, stored_output)
 
 
 @contextlib.contextmanager
 def store_outputs(mdls):
-    """Within the context, each output of the models is computed once and then stored (see output).
-    Should be entered for each evaluation, since stored outputs do not depend on (x, v)."""
+    """Within the context, each output (in output_list) of the models is computed once and then
+    stored. Should be entered for each evaluation, since stored outputs do not depend on (x, v)."""
     for mdl in mdls:
         mdl._stored_outputs.clear()
         mdl._store_output = True
@@ -193,6 +202,9 @@ class DAEModel:
         self._store_output = False
         for input_name in self.input_list():
             self.disconnect_input(input_name)
+        # After add_blocks, since outputs are often assigned there (e.g. self.output = lambda x, v: ...)
+        for output_name in self.all_outputs():
+            _wrap_output(self, output_name)
 
         self.events = self.events_class(self) if self.events_class is not None else None
 
@@ -219,10 +231,27 @@ class DAEModel:
 
     def output_list(self):
         """
-        Returns list of outputs for dynamic model.
-        Should be overwritten (if model has one or more outputs)
+        Returns list of outputs for dynamic model, i.e. names of functions f(x, v) of the model that
+        other models connect to.
+        Should be overwritten (if model has one or more outputs).
+
+        Within ``store_outputs``, each listed output is computed once per evaluation and the stored
+        value is returned on later calls. A listed output that depends on itself without passing
+        through a state (an algebraic loop) raises AlgebraicLoopError. Outputs may be methods or
+        functions assigned in ``add_blocks`` (e.g. ``self.output = lambda x, v: ...``), but should
+        not be reassigned after the model is created.
         """
         return []
+
+    def all_outputs(self):
+        """Outputs listed by ``output_list()`` of the model's class and all its base classes. A
+        mixin's list is thereby not hidden by another, e.g. for ``class MyAVR(DAEModel, AVR)``,
+        where ``DAEModel.output_list()`` comes before ``AVR.output_list()``."""
+        names = {}
+        for cls in type(self).__mro__:
+            if 'output_list' in vars(cls):
+                names.update(dict.fromkeys(cls.output_list(self)))
+        return list(names)
 
     def reset_outputs(self):
         self._stored_outputs.clear()

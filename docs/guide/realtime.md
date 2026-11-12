@@ -41,9 +41,11 @@ a pause is not made up for.
 
 ## Sending events
 
-`submit(category, model, unit, action, **kwargs)` queues an event from any
-thread. The events are applied in the order of submission, just before the
-next frame, with the same arguments as `ps.apply_event`, see
+`submit(category, model, unit, action, **kwargs)`, or
+`submit(event_function, unit, **kwargs)` such as
+`sim.submit(ps.lines.Line.events.disconnect, "L7-8-1")`, queues an event from
+any thread. The events are applied in the order of submission, just before
+the next frame, with the same arguments as `ps.apply_event`, see
 [Events](events.md). An event that cannot exist, such as an unknown unit or
 action, raises in the caller's thread. One that fails only when it is
 applied, such as a power that is not a number, is kept in `sim.rejected` and

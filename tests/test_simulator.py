@@ -82,3 +82,25 @@ def test_result_keeper_calculate_replays_events():
     assert np.array_equal(ps.lines['Line'].connected, connected_after)
     assert np.array_equal(ps.loads['Load'].y_load, y_load_after)
     assert ps.y_bus_red is y_bus_red_after
+
+
+def test_result_keeper_calculate_replays_event_functions():
+    import tops.ps_models.k2a as model_data
+    ps = dps.PowerSystemModel(model=model_data.load())
+    ps.init_dyn_sim()
+
+    events = [
+        ['t', 'event', 'unit', 'kwargs'],
+        [0.05, ps.bus_events.short_circuit, 'B8', None],
+        [0.1, ps.bus_events.clear_short_circuit, 'B8', None],
+        [0.1, ps.lines.Line.events.disconnect, 'L7-8-1', None],
+        [0.2, ps.loads.Load.events.set_power, ps.loads['Load'].par['name'][0], {'P': 1000}],
+    ]
+    sim = Simulator(ps, dt=5e-3, t_end=0.3, events=events)
+    res_keeper = ResultKeeper(sim, p_line=ps.lines['Line'].p_from, i_load=ps.loads['Load'].i)
+    sim.interface_functions['ResultKeeper'] = res_keeper.update
+    sim.main_loop()
+
+    for name in ['p_line', 'i_load']:
+        fun = ps.lines['Line'].p_from if name == 'p_line' else ps.loads['Load'].i
+        assert np.allclose(res_keeper.calculate(fun), np.array(res_keeper.store[name]))

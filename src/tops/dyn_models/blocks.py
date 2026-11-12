@@ -1,4 +1,4 @@
-from tops.dyn_models.utils import DAEModel, output
+from tops.dyn_models.utils import DAEModel
 import numpy as np
 
 
@@ -17,7 +17,6 @@ class PIRegulator(Block):
         self.integrator = Integrator(n_units=self.n_units)
         self.integrator.input = lambda x, v: self.input(x, v)
 
-    @output
     def output(self, x, v):
         # X = self.local_view(x)
         return self.par['K_p']*self.input(x, v) + self.par['K_i']*self.integrator.output(x, v)
@@ -31,7 +30,6 @@ class Integrator(Block):
     def state_list(self):
         return ['x_i']
 
-    @output
     def output(self, x, v):
         X = self.local_view(x)
         return X['x_i']
@@ -52,7 +50,6 @@ class Integrator2(Integrator):
     """
     Same as Integrator, but with time constant.
     """
-    @output
     def output(self, x, v):
         X = self.local_view(x)
         return X['x_i']/self.par['T']
@@ -65,7 +62,6 @@ class Integrator2(Integrator):
 
 
 class Gain(Block):
-    @output
     def output(self, x, v):
         # X = self.local_view(x)
         return self.par['K']*self.input(x, v)
@@ -75,7 +71,6 @@ class Gain(Block):
 
 
 class Limiter(Block):
-    @output
     def output(self, x, v):
         # X = self.local_view(x)
         return np.minimum(np.maximum(self.input(x, v), self.par['Min']), self.par['Max'])
@@ -85,7 +80,6 @@ class Washout(Block):
     def state_list(self):
         return ['x']
 
-    @output
     def output(self, x, v):
         X = self.local_view(x)
         return (self.input(x, v) - X['x'])/self.par['T_w']
@@ -114,7 +108,6 @@ class TimeConstant(Block):
     def state_list(self):
         return ['x']
 
-    @output
     def output(self, x, v):
         X = self.local_view(x)
         out = X['x']
@@ -182,7 +175,6 @@ class TimeConstantLims(Block):
     def state_list(self):
         return ['x']
 
-    @output
     def output(self, x, v):
         X = self.local_view(x)
         return np.minimum(np.maximum(X['x'], self.par['V_min']), self.par['V_max'])
@@ -247,7 +239,6 @@ class LeadLag(Block):
     def state_list(self):
         return ['x']
 
-    @output
     def output(self, x, v):
         X = self.local_view(x)
         return 1/self.par['T_2']*(self.par['T_1']*self.input(x, v) - X['x'])
@@ -270,7 +261,6 @@ class PIRegulator2(Block):
     def state_list(self):
         return ['x']
 
-    @output
     def output(self, x, v):
         X = self.local_view(x)
         return (self.par['T_1']/self.par['T_2']*self.input(x, v) + X['x'])
@@ -286,7 +276,6 @@ class PIRegulator2(Block):
     
 
 class PIRegulator2Lims(PIRegulator2):
-    @output
     def output(self, x, v):
         output_before_limiter = super().output(x, v)
         return np.minimum(np.maximum(output_before_limiter, self.par['x_min']), self.par['x_max'])
@@ -329,7 +318,6 @@ class WashoutGain(Block):
     def state_list(self):
         return ['x']
 
-    @output
     def output(self, x, v):
         X = self.local_view(x)
         return 1/self.par['T_w']*(self.par['K']*self.input(x, v) - X['x'])
@@ -347,7 +335,6 @@ class Saturation(Block):
     '''
     Not verified!!
     '''
-    @output
     def output(self, x, v):
         U = self.input(x, v)
         
@@ -393,7 +380,6 @@ class Backlash(Block):
 
         dX['x'][:] = d/0.01
 
-    @output
     def output(self, x, v):
         X = self.local_view(x)
         return X['x']
