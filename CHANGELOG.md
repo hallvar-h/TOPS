@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.7.0](https://github.com/hallvar-h/TOPS/compare/v0.6.1...v0.7.0) (2026-11-12)
+
+
+### Features
+
+* add ResultKeeper.calculate to evaluate outputs after the simulation ([09abe7f](https://github.com/hallvar-h/TOPS/commit/09abe7f05fac98a42f43e2dcb0c233f3373e78fe))
+* allow events to be given as event functions ([0b29592](https://github.com/hallvar-h/TOPS/commit/0b2959219361209fe003a864926c2604cb9adee0))
+* give events as event functions, and declare outputs in output_list ([ad86d2c](https://github.com/hallvar-h/TOPS/commit/ad86d2c10a39c24c8bcc04c3a4a3ae20fd6e9bf9))
+* result keeper calculate ([9abed2f](https://github.com/hallvar-h/TOPS/commit/9abed2f01db909d228a408bf0da25359bd6acd45))
+
+
+### Bug Fixes
+
+* initialize loads of zero power to zero admittance ([333ff8f](https://github.com/hallvar-h/TOPS/commit/333ff8fabeebdd0774693741ad05d9d68805e570))
+* initialize loads of zero power to zero admittance ([3e3d17c](https://github.com/hallvar-h/TOPS/commit/3e3d17c0945e706a27afac2f904c7894af07b3f5))
+* replay event functions in ResultKeeper.calculate ([f7bde9b](https://github.com/hallvar-h/TOPS/commit/f7bde9b428e51640009397045df1f737b146f497))
+* respect HYGOV g_min/g_max parameters ([7b02a46](https://github.com/hallvar-h/TOPS/commit/7b02a4640cdb6fd0f7e48f80c5ca0ed70ab9b4fd))
+* respect HYGOV g_min/g_max parameters ([f02020a](https://github.com/hallvar-h/TOPS/commit/f02020a8a428097162a2d8d30ac8207d9ba04780))
+
+
+### Documentation
+
+* add example of ResultKeeper.calculate with events replayed ([461431f](https://github.com/hallvar-h/TOPS/commit/461431fd6c387f29fb72e93679a3057155d552a1))
+
 ## [0.6.1](https://github.com/hallvar-h/TOPS/compare/v0.6.0...v0.6.1) (2026-11-05)
 
 
