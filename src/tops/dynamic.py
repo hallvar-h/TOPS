@@ -3,7 +3,7 @@ import numpy as np
 import tops.utility_functions as dps_uf
 import tops.dyn_models as mdl_lib
 from tops.model_data import load_model_data, find_model_class, read_table
-from tops.events import AdmittanceChange, BusEvents, DeadBusWarning
+from tops.events import AdmittanceChange, BusEvents, DeadBusWarning, ModelEvents
 import tops.power_flow as pf
 import scipy.sparse as sp
 from scipy.sparse import linalg as sp_linalg
@@ -270,7 +270,11 @@ class PowerSystemModel:
 
             mdl.init_from_connections(self.x_0, self.v_0, output_values)
 
-        self.bus_events = BusEvents(self.buses['name'], self.bus_idx_red)
+        # Kept when initialized again, so that event functions such as self.bus_events.short_circuit stay valid
+        if self.bus_events is None:
+            self.bus_events = BusEvents(self.buses['name'], self.bus_idx_red)
+        else:
+            self.bus_events.reset(self.buses['name'], self.bus_idx_red)
         self._row_admittance_0 = self._row_admittance(self.x0)
         self._dead_idx = np.zeros(0, dtype=int)
         self._dead_dirty = True
@@ -288,9 +292,44 @@ class PowerSystemModel:
             raise ValueError(f'Model {category}:{mdl_key} has no events.')
         return mdl.events
 
-    def apply_event(self, category, mdl_key, unit, action, **kwargs):
-        """Apply an event immediately, e.g. apply_event('lines', 'Line', 'L1-2', 'disconnect')."""
-        for effect in self.get_events(category, mdl_key).apply(unit, action, **kwargs):
+    def resolve_event(self, *event):
+        """Return the events object, unit and action of an event.
+
+        The event is given either as (event function, unit), e.g. (ps.lines.Line.events.disconnect, 'L1-2') or
+        (ps.bus_events.short_circuit, 'B1'), or as (category, model, unit, action), e.g.
+        ('lines', 'Line', 'L1-2', 'disconnect').
+        """
+        if len(event) == 2 and callable(event[0]):
+            fun, unit = event
+            events = getattr(fun, '__self__', None)
+            if not isinstance(events, ModelEvents):
+                raise TypeError(f'{fun!r} is not an event function, such as ps.lines.Line.events.disconnect.')
+            own_events = [self.bus_events] + [mdl.events for mdls in self.dyn_mdls_dict.values()
+                                              for mdl in mdls.values()]
+            if not any(events is own for own in own_events):
+                raise ValueError(f'{fun.__qualname__} is an event of another PowerSystemModel.')
+            return events, unit, fun.__name__
+        if len(event) == 4:
+            category, mdl_key, unit, action = event
+            return self.get_events(category, mdl_key), unit, action
+        raise TypeError(f'An event is given as (event function, unit) or (category, model, unit, action), '
+                        f'got {event!r}.')
+
+    def check_event(self, *event):
+        """Check that an event (see resolve_event) exists, without applying it."""
+        events, unit, action = self.resolve_event(*event)
+        events.check(unit, action)
+
+    def apply_event(self, *event, **kwargs):
+        """Apply an event immediately, given as (event function, unit) or (category, model, unit, action), followed
+        by the keyword arguments of the action. For example:
+
+            ps.apply_event(ps.lines.Line.events.disconnect, 'L1-2')
+            ps.apply_event('lines', 'Line', 'L1-2', 'disconnect')
+            ps.apply_event(ps.loads.Load.events.set_power, 'L1', P=900.0)
+        """
+        events, unit, action = self.resolve_event(*event)
+        for effect in events.apply(unit, action, **kwargs):
             self.apply_effect(effect)
         self._dead_dirty = True  # also for events without effect, such as those of a DynTrafo
 

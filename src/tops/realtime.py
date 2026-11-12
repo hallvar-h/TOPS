@@ -108,25 +108,26 @@ class RealTimeSimulator(Simulator):
     def stopped(self):
         return self._stop_event.is_set()
 
-    def submit(self, category, model, unit, action, **kwargs):
-        """Queue an event, to be applied as ps.apply_event(category, model, unit, action, **kwargs) just before the
-        next frame, in the order of submission. May be called from any thread.
+    def submit(self, *event, **kwargs):
+        """Queue an event, to be applied as ps.apply_event(*event, **kwargs) just before the next frame, in the order
+        of submission. May be called from any thread. The event is given as (event function, unit), e.g.
+        submit(ps.lines.Line.events.disconnect, 'L1-2'), or as (category, model, unit, action).
 
         An event that cannot exist (unknown unit, action, model or arguments) raises here, in the caller's thread. One
         that fails only when it is applied, e.g. a power that is not a number, is kept in rejected, and the simulation
         goes on.
         """
-        events = self.ps.get_events(category, model)
+        events, unit, action = self.ps.resolve_event(*event)
         events.check(unit, action)
         inspect.signature(getattr(events, action)).bind(unit, **kwargs)
-        self._submitted.put((category, model, unit, action, kwargs))
+        self._submitted.put((*event, kwargs))
 
     def _apply_submitted(self):
         while not self._submitted.empty():
             event = self._submitted.get_nowait()
-            category, model, unit, action, kwargs = event
+            *target, kwargs = event
             try:
-                self.ps.apply_event(category, model, unit, action, **kwargs)
+                self.ps.apply_event(*target, **kwargs)
             except Exception as error:
                 self.rejected.append((event, error))
 

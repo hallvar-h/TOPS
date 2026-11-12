@@ -62,6 +62,10 @@ class BusEvents(ModelEvents):
 
     def __init__(self, bus_names, bus_idx_red):
         super().__init__(mdl=None)
+        self.reset(bus_names, bus_idx_red)
+
+    def reset(self, bus_names, bus_idx_red):
+        """Clear all faults, e.g. when the power system model is initialized again."""
         self.bus_names = bus_names
         self.bus_idx_red = bus_idx_red
         self.y_fault = np.zeros(len(bus_names), dtype=complex)

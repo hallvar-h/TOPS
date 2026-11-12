@@ -351,6 +351,22 @@ def test_events_may_be_submitted_from_another_thread_while_the_simulation_is_pau
     assert sim.error is None and seen[:8] == [False]*8 and seen[8:] == [True]*32
 
 
+def test_an_event_function_can_be_submitted():
+    clock = FakeClock()
+    sim = simulator(clock)
+    seen = record_when_applied(sim, sim.ps, line_out)
+    sim.interface_functions['submit'] = lambda sim: (
+        sim.submit(sim.ps.lines.Line.events.disconnect, 'L7-8-1') if len(sim.steps) == 6 else None)
+    sim.main_loop()
+    assert seen[:8] == [False]*8 and seen[8:] == [True]*32
+
+
+def test_an_event_function_with_unknown_arguments_is_refused():
+    sim = simulator(FakeClock())
+    with pytest.raises(TypeError):
+        sim.submit(sim.ps.loads.Load.events.set_power, 'L1', volts=1)
+
+
 def test_a_submitted_short_circuit_on_a_bus_takes_its_arguments():
     clock = FakeClock()
     sim = simulator(clock)
