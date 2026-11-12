@@ -221,7 +221,10 @@ class ResultKeeper:
         self.spec = dict(**kwargs)
 
         # The events, and what they change in the model as it is now, so that calculate can replay them
-        self.events = copy.deepcopy(sim.events)
+        # Not a deep copy, which would copy the models behind event functions (e.g. ps.lines.Line.events.disconnect)
+        self.events = copy.copy(sim.events)
+        self.events.events = list(sim.events.events)
+        self.events.kwargs = [dict(kwargs) for kwargs in sim.events.kwargs]
         self._event_state = sim.ps._save_event_state()
         self._n_events = []  # Number of events applied at each step
 
@@ -251,8 +254,8 @@ class ResultKeeper:
             ps._restore_event_state(self._event_state)
             for x, v, n_events in zip(self.x, self.v, self._n_events):
                 for i in range(applied, n_events):
-                    _, category, mdl_key, unit, action = self.events.events[i]
-                    ps.apply_event(category, mdl_key, unit, action, **self.events.kwargs[i])
+                    _, *event = self.events.events[i]
+                    ps.apply_event(*event, **self.events.kwargs[i])
                 applied = n_events
                 result.append(fun(x, v))
         finally:
