@@ -1,5 +1,6 @@
 import tops.solvers as dps_sol
 import threading
+import copy
 import numpy as np
 from collections import defaultdict
 import pandas as pd
@@ -189,20 +190,63 @@ class InterfacerDirect:
 
 
 class ResultKeeper:
+    """Stores the states and algebraic variables at every step, and the outputs given as keyword arguments.
+
+    Add it as an interface function of the Simulator:
+
+        res = ResultKeeper(sim, speed=ps.gen.GEN.speed)
+        sim.interface_functions['results'] = res.update
+
+    :param sim: The Simulator. Create the ResultKeeper before the simulation starts.
+    :param kwargs: Functions f(x, v) to store at every step, e.g. ps.gen.GEN.speed. Kept in store[name].
+    """
     def __init__(self, sim, **kwargs):
         self.t = []
         self.x = []
+        self.v = []
         self.sim = sim
         self.store = defaultdict(list)
         self.spec = dict(**kwargs)
 
+        # The events, and what they change in the model as it is now, so that calculate can replay them
+        self.events = copy.deepcopy(sim.events)
+        self._event_state = sim.ps._save_event_state()
+        self._n_events = []  # Number of events applied at each step
+
     def update(self, sim):
         self.t.append(sim.sol.t)
         self.x.append(sim.sol.x.copy())
-        # self.store
+        self.v.append(sim.sol.v.copy())
+        self._n_events.append(sim.events._next)
         for key, val in self.spec.items():
             self.store[key].append(val(sim.sol.x, sim.sol.v).copy())
-        
+
+    def calculate(self, fun):
+        """Calculate a function of the states and algebraic variables at every stored step, after the simulation.
+
+        The events of the Simulator are replayed, so that e.g. the current of a line is zero while it is disconnected.
+        Changes made in other ways during the simulation (set_input, or ps.apply_event in an interface function) are
+        not replayed. The model is left as it was before the call.
+
+        :param fun: Function f(x, v), e.g. ps.gen.GEN.speed or ps.lines.Line.p_from.
+        :return: Array with one row per stored step and one column per unit.
+        """
+        ps = self.sim.ps
+        state_now = ps._save_event_state()
+        applied = self.events._next
+        result = []
+        try:
+            ps._restore_event_state(self._event_state)
+            for x, v, n_events in zip(self.x, self.v, self._n_events):
+                for i in range(applied, n_events):
+                    _, category, mdl_key, unit, action = self.events.events[i]
+                    ps.apply_event(category, mdl_key, unit, action, **self.events.kwargs[i])
+                applied = n_events
+                result.append(fun(x, v))
+        finally:
+            ps._restore_event_state(state_now)
+        return np.array(result)
+
     def get_dataframe(self):
         df = pd.DataFrame(columns=self.sim.ps.state_desc, data=self.x, index=self.t)
         return df

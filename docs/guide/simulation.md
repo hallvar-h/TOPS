@@ -60,6 +60,11 @@ sim.interface_functions["results"] = res.update
 by time, with a `(unit, state)` column for each state, for example
 `("G1", "speed")`.
 
+`ResultKeeper` also stores the algebraic variables (`res.v`), so other
+outputs can be calculated after the run with `res.calculate(f)`, for example
+`res.calculate(ps.gen.GEN.p_e)`. Events are taken into account, see
+[Events](events.md#results-calculated-after-the-run).
+
 ## Changing inputs during the simulation
 
 Model inputs that aren't connected to another model can be set at any time
