@@ -80,6 +80,7 @@ late.
 | `lines` | `Line` | `disconnect`, `connect` | Removes the line from the network or puts it back. |
 | `trafos` | `Trafo`, `DynTrafo` | `disconnect`, `connect` | Removes the transformer from the network or puts it back. |
 | `switches` | `Switch` | `open`, `close` | Opens or closes the switch. |
+| `gov` | `TGOV1`, `HYGOV`, `IEESGO` | `set_reference` | Sets the power reference, `set_reference(P_m=...)`: the mechanical power, in p.u. of the generator's rating, that the governor gives in steady state at rated speed. At other speeds its droop moves the power away from the reference. |
 
 Applying an event twice in a row, such as disconnecting a line that is
 already open, has no effect.

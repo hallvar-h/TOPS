@@ -5,11 +5,51 @@ from tops.dyn_models.blocks import (
     PIRegulator2Lims, Backlash,
 )
 from tops.dyn_models.utils import auto_init
+from tops.events import ModelEvents
+
+
+class GovEvents(ModelEvents):
+    actions = ('set_reference',)
+
+    def set_reference(self, gov_name, P_m):
+        """Set the power reference of a governor: the mechanical power that it gives in steady state at rated speed.
+        At other speeds, its droop moves the power away from the reference.
+
+        :param gov_name: Name of the governor.
+        :param P_m: Mechanical power in p.u. of the generator's rating (machine base).
+        :return: No effects on the network.
+        """
+        try:
+            value = float(P_m)
+        except (TypeError, ValueError):
+            value = np.nan
+        if not np.isfinite(value):
+            raise ValueError(f'P_m must be a finite number, got {P_m!r}.')
+        self.mdl.set_reference(self._unit_idx(gov_name), value)
+        return []
 
 
 class GOV:
+    events_class = GovEvents
+
     def input_list(self):
         return ['input', 'P_n_gen', 'bias']
+
+    def reference_bias(self, P_m, idx=slice(None)):
+        """The bias input that gives a mechanical power in steady state at rated speed.
+
+        :param P_m: Mechanical power in p.u. of the generator's rating (machine base).
+        :param idx: Indices of the units.
+        """
+        raise NotImplementedError(f'{type(self).__name__} has no power reference.')
+
+    def set_reference(self, idx, P_m):
+        """Set the power reference of units (see ``GovEvents.set_reference``).
+
+        :param idx: Indices of the units.
+        :param P_m: Mechanical power in p.u. of the generator's rating (machine base).
+        """
+        self.set_input('bias', self.reference_bias(P_m, idx), idx)
 
     def output_list(self):
         return ['output']
@@ -62,6 +102,9 @@ class TGOV1(GOV, DAEModel):
 
         self.output = lambda x, v: self.lead_lag.output(x, v) - self.damping_gain.output(x, v)
 
+    def reference_bias(self, P_m, idx=slice(None)):
+        return self.par['R'][idx]*P_m
+
     def init_from_connections(self, x0, v0, output_0):
         self._input_values['bias'] = self.droop.initialize(
             x0, v0, self.time_constant_lim.initialize(
@@ -105,6 +148,10 @@ class HYGOV(GOV, DAEModel):
         self.gain_A_t.input = lambda x, v: (self.q(x, v) - p['q_nl'])*self.h(x, v)
         self.output = self.gain_A_t.output
     
+    def reference_bias(self, P_m, idx=slice(None)):
+        p = self.par
+        return p['R'][idx]*(P_m/p['A_t'][idx] + p['q_nl'][idx])
+
     def init_from_connections(self, x0, v0, output_0):
         p = self.par
         q_p = self.gain_A_t.initialize(x0, v0, output_0['output'])
@@ -150,5 +197,11 @@ class IEESGO(GOV, DAEModel):
         P_n = p['P_N']
         self.output = lambda x, v: output_sum(x, v)*(P_n/self.P_n_gen(x, v) + 1*(P_n==0))
     
+    def reference_bias(self, P_m, idx=slice(None)):
+        P_N = self.par['P_N'][idx]
+        scale = np.where(P_N == 0, 1.0, self._P_n_gen_0[idx]/np.where(P_N == 0, 1.0, P_N))
+        return P_m*scale
+
     def init_from_connections(self, x0, v0, output_0):
         auto_init(self, x0, v0, output_0['output'], free_inputs=['bias'])
+        self._P_n_gen_0 = np.array(self.P_n_gen(x0, v0), dtype=float)*np.ones(self.n_units)
