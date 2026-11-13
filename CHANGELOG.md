@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/hallvar-h/TOPS/compare/v0.7.0...v0.8.0) (2026-11-13)
+
+
+### Features
+
+* add governor set_reference event for TGOV1, HYGOV and IEESGO ([d52dd9e](https://github.com/hallvar-h/TOPS/commit/d52dd9e084c2bb1a481f7f63f98fe80ae030f3d4))
+* add governor set_reference event for TGOV1, HYGOV and IEESGO ([b01e9db](https://github.com/hallvar-h/TOPS/commit/b01e9dbc1984e44b23badd6f96a81249e0c45bc0))
+
 ## [0.7.0](https://github.com/hallvar-h/TOPS/compare/v0.6.1...v0.7.0) (2026-11-12)
 
 
