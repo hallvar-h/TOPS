@@ -1,10 +1,54 @@
 import numpy as np
-from tops.dyn_models.utils import DAEModel
+from tops.dyn_models.utils import DAEModel, read_connected
+from tops.events import ModelEvents, AdmittanceChange
 import tops.utility_functions as dps_uf
 
+
+class GenEvents(ModelEvents):
+    actions = ('connect', 'disconnect')
+
+    def connect(self, gen_name):
+        """Connect a generator to its bus. It is kept in step with the bus while disconnected, so it connects without
+        a large transient, at the mechanical power its governor gives at that moment.
+
+        :param gen_name: Name of the generator.
+        :return: The change in the admittance matrix.
+        """
+        idx = self._unit_idx(gen_name)
+        if self.mdl.connected[idx]:
+            return []
+        self.mdl.connected[idx] = True
+        return [self.mdl.admittance_change(idx, sign=1)]
+
+    def disconnect(self, gen_name):
+        """Disconnect a generator from its bus. It then runs at no load, with its exciter, and a synchronizer keeps its
+        speed and angle in step with the bus (see ``GEN``).
+
+        :param gen_name: Name of the generator.
+        :return: The change in the admittance matrix.
+        """
+        idx = self._unit_idx(gen_name)
+        if not self.mdl.connected[idx]:
+            return []
+        self.mdl.connected[idx] = False
+        return [self.mdl.admittance_change(idx, sign=-1)]
+
+
 class GEN(DAEModel):
+    """Synchronous machine (sixth order).
+
+    A generator can be out of service: from the start, with the optional ``connected`` column, or after a
+    ``disconnect`` event. It then gives no current, its terminal voltage is its own open-circuit voltage (so that its
+    exciter keeps regulating it), and its mechanical power is ignored: a synchronizer, a critically damped second-order
+    loop with natural frequency ``sync_omega`` (rad/s, default 2), drives its speed and angle to those of the bus
+    voltage, so that it can be connected again at any time.
+    """
+    events_class = GenEvents
+    sync_omega = 2.0
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.connected = read_connected(self.par)
 
         for req_attr, default in zip(['PF_n', 'N_par', 'R', 'X_l'], [1, 1, 0, 0]):
             if not req_attr in self.par.dtype.names:
@@ -26,7 +70,9 @@ class GEN(DAEModel):
         return {'terminal': self.par['bus']}
 
     def load_flow_pv(self):
-        return self.bus_idx['terminal'], -self.par['P']*self.par['N_par'], self.par['V']
+        # Generators out of service are left out of the load flow
+        on = self.connected
+        return self.bus_idx['terminal'][on], -self.par['P'][on]*self.par['N_par'][on], self.par['V'][on]
 
     def init_from_load_flow(self, x_0, v_0, S):
 
@@ -43,8 +89,15 @@ class GEN(DAEModel):
 
         p = self.par
 
+        # Generators out of service are not in the load flow: they start at no load, in step with their bus, with their
+        # open-circuit voltage at their voltage setpoint
+        S_all = np.zeros(self.n_units, dtype=complex)
+        S_all[self.connected] = S
+        S = S_all
+
         s_pu = S/p['S_n']/p['N_par']
         v_g = v_0[self.bus_idx['terminal']]
+        v_g = np.where(self.connected, v_g, p['V']*np.exp(1j*np.angle(v_g)))
         I_g = np.conj(s_pu/v_g)
 
         e_q_tmp = v_g + 1j * p['X_q'] * I_g
@@ -87,8 +140,15 @@ class GEN(DAEModel):
 
         impedance_pu_gen = 1j * self.par['X_d_st']  # self.par['R'] + 1j * (self.par['X_d_st'] + self.par['X_l']?)
         impedance = impedance_pu_gen * self.par['V_n'] ** 2 / self.par['S_n'] / z_n
-        Y = self.par['N_par'] / impedance
-        return Y, (idx_bus,)*2
+        self.admittance = self.par['N_par'] / impedance  # Kept for generators out of service, so that connect can stamp it
+        return self.admittance*self.connected, (idx_bus,)*2
+
+    def admittance_change(self, gen_idx, sign):
+        """Change in the reduced admittance matrix when connecting (sign=1) or disconnecting (sign=-1) a generator."""
+        idx = self.bus_idx_red['terminal'][gen_idx]
+        if idx < 0:
+            raise ValueError(f'The bus of generator {self.par["name"][gen_idx]} is not in the reduced system.')
+        return AdmittanceChange(np.array([sign*self.admittance[gen_idx]]), np.array([idx]), np.array([idx]))
 
     def state_list(self):
         return ['speed', 'angle', 'e_q_t', 'e_d_t', 'e_q_st', 'e_d_st']
@@ -111,7 +171,7 @@ class GEN(DAEModel):
         i_n = self.sys_par['s_n']/(np.sqrt(3) * self.sys_par['bus_v_n'])
 
         # System p.u. base
-        I_inj = i_inj*I_n/i_n[self.bus_idx_red['terminal']]
+        I_inj = i_inj*I_n/i_n[self.bus_idx_red['terminal']]*self.connected
 
         return self.bus_idx_red['terminal'], I_inj
 
@@ -133,6 +193,15 @@ class GEN(DAEModel):
         dX['e_q_st'][:] = 1 / (p['T_d0_st']) * (X['e_q_t'] - X['e_q_st'] - self.i_d(x, v) * (p['X_d_t'] - p['X_d_st']))
         dX['e_d_st'][:] = 1 / (p['T_q0_st']) * (X['e_d_t'] - X['e_d_st'] + self.i_q(x, v) * (p['X_q_t'] - p['X_q_st']))
 
+        # Generators out of service: the synchronizer keeps them in step with their bus
+        off = ~self.connected
+        if off.any():
+            w_n = 2*np.pi*self.sys_par['f_n']
+            angle_bus = np.angle(v[self.bus_idx_red['terminal']]) - np.angle(X['e_q_st'] - 1j*X['e_d_st'])
+            error = np.angle(np.exp(1j*(angle_bus - X['angle'])))[off]
+            dX['speed'][off] = self.sync_omega**2/w_n*error
+            dX['angle'][off] = w_n*X['speed'][off] + 2*self.sync_omega*error
+
     def d(self, x, v):
         return np.exp(1j * (self.local_view(x)['angle'] - np.pi / 2))
 
@@ -140,10 +209,11 @@ class GEN(DAEModel):
         return np.exp(1j * self.local_view(x)['angle'])
 
     def v_t(self, x, v):
-        return v[self.bus_idx_red['terminal']]
+        # A generator out of service has its open-circuit voltage at its terminal
+        return np.where(self.connected, v[self.bus_idx_red['terminal']], self.e_st(x, v))
 
     def v_t_abs(self, x, v):
-        return np.abs(v[self.bus_idx_red['terminal']])
+        return np.abs(self.v_t(x, v))
 
     def v_setp(self, x, v):
         return self.par['V']

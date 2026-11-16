@@ -81,6 +81,7 @@ late.
 | `trafos` | `Trafo`, `DynTrafo` | `disconnect`, `connect` | Removes the transformer from the network or puts it back. |
 | `switches` | `Switch` | `open`, `close` | Opens or closes the switch. |
 | `gov` | `TGOV1`, `HYGOV`, `IEESGO` | `set_reference` | Sets the power reference, `set_reference(P_m=...)`: the mechanical power, in p.u. of the generator's rating, that the governor gives in steady state at rated speed. At other speeds its droop moves the power away from the reference. |
+| `gen` | `GEN` | `disconnect`, `connect` | Takes the generator off its bus or puts it back. While disconnected it gives no current and runs at no load with its exciter, and a synchronizer keeps its speed and angle in step with the bus, so it can be connected at any time. It then gives the mechanical power its governor gives at that moment: set the governor's reference (`set_reference`) to about 0 before connecting, and raise it afterwards. |
 
 Applying an event twice in a row, such as disconnecting a line that is
 already open, has no effect.
@@ -89,8 +90,8 @@ Opening a switch at one end of a line is not the same as disconnecting
 the line: the line stays energised from its other end and keeps its
 charging (`B`).
 
-A line or transformer can also start out of service, with the optional
-`connected` column of its model table, see
+A line, transformer or generator can also start out of service, with the
+optional `connected` column of its model table, see
 [Model format](model-format.md#units-and-conventions). It can be put in
 service later with a `connect` event.
 
