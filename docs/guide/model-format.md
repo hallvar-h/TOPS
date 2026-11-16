@@ -120,6 +120,14 @@ example `tops.dyn_models.avr.SEXS`. If you pass a
   `connected` set to `False` starts out of service and can be connected by
   an [event](events.md). The load flow raises a `ValueError` if the
   branches out of service cut buses off from the slack bus.
+- **Generators out of service.** The `GEN` table also accepts a
+  `connected` column. A generator with `connected` set to `False` is left
+  out of the load flow (its `P` and `V` are not used there; its bus is a PQ
+  bus unless another generator is on it) and starts at no load, in step
+  with its bus and excited to its voltage setpoint `V`. It can be connected
+  by an [event](events.md). If no generator at the `slack_bus` is in
+  service, the load flow warns and uses the bus of the in-service generator
+  with the largest `P` instead.
 - **Switches** connect two buses with the columns `name`, `from_bus` and
   `to_bus`. The optional column `closed` (1 or 0, default 1) gives the
   initial state. A closed switch is a series admittance of 1e5 pu on the

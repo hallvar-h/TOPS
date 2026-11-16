@@ -162,6 +162,14 @@ class PowerSystemModel:
             self.slack_bus = self.buses[sl_idx]['name']
         else:
             sl_idx = dps_uf.lookup_strings(self.slack_bus, self.buses['name'])
+            # Generators out of service are not PV units. If none is left at the slack bus, use the default slack bus.
+            pv_bus_idx = np.concatenate([mdl.load_flow_pv()[0] for mdl in pv_mdls])
+            if sl_idx not in pv_bus_idx:
+                new_slack_idx = pf.default_slack_bus_idx(pv_mdls)
+                warnings.warn(f'No generator in service at the slack bus {self.slack_bus}, '
+                              f'using bus {self.buses[new_slack_idx]["name"]} instead.', UserWarning)
+                sl_idx = new_slack_idx
+                self.slack_bus = self.buses[sl_idx]['name']
 
         self._check_islands(sl_idx)
 
@@ -171,7 +179,11 @@ class PowerSystemModel:
         self.v0 = self.v_0
         self.s_0 = result.s
         if result.slack_unit is not None:
-            self.slack_unit = result.slack_unit
+            mdl, unit_idx = result.slack_unit
+            if hasattr(mdl, 'connected'):
+                # load_flow_pv() leaves out units out of service: give the index in the model's full table
+                unit_idx = np.flatnonzero(mdl.connected)[unit_idx]
+            self.slack_unit = (mdl, unit_idx)
         self.load_flow_soln = result.unit_injections
 
         if result.converged:
