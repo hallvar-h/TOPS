@@ -428,6 +428,41 @@ class PowerSystemModel:
         live = sp.diags(self._live)
         return live @ y_bus @ live + sp.diags(1 - self._live)
 
+    def _y_bus_key(self, pin):
+        """What the admittance matrix is made of when no model has variable admittances: the arrays of y_bus_red and
+        y_bus_red_mod, and the pinned dead buses. None if a matrix is not in CSR or CSC format."""
+        key = []
+        for y in (self.y_bus_red, self.y_bus_red_mod):
+            if not (sp.issparse(y) and y.format in ('csr', 'csc')):
+                return None
+            # As bytes (copies), so that keys are compared quickly, and are not changed with the matrix
+            key += [y.shape, y.format] + [(a.dtype.str, a.tobytes()) for a in (y.data, y.indices, y.indptr)]
+        return key + [self._dead_idx.tobytes() if pin else None]
+
+    def _constant_y_bus_lu(self, pin):
+        """LU factorisation of the admittance matrix, or None if it depends on the states (variable admittances), is
+        singular, or is of an unexpected type. The factorisation is reused until the matrix changes: after an event,
+        or when y_bus_red_mod is changed by the user, also in place (e.g. ps.y_bus_red_mod[i, i] = 1e6).
+        Such changes are found by comparing the matrices with a copy, which is fast compared to factorising."""
+        if self.mdl_instructions['dyn_var_adm']:
+            return None
+        key = self._y_bus_key(pin)
+        if key is None:
+            return None
+        cached_key, lu = getattr(self, '_y_bus_lu_cache', (None, None))
+        if key == cached_key:
+            return lu
+
+        y_bus = self.y_bus_red + self.y_bus_red_mod
+        if pin:
+            y_bus = self._pin_dead_buses(y_bus)
+        try:
+            lu = sp_linalg.splu(sp.csc_matrix(y_bus))
+        except RuntimeError:  # Singular: solved with spsolve, which warns as before
+            lu = None
+        self._y_bus_lu_cache = (key, lu)
+        return lu
+
     def solve_algebraic(self, t, x, v_0=None):
         '''
         Solves algebraic equations given states
@@ -440,12 +475,19 @@ class PowerSystemModel:
             bus_idx_red, i_inj_mdl = mdl.current_injections(x, None)
             np.add.at(i_inj, bus_idx_red, i_inj_mdl)
 
-        y_var = self._y_var(x)
         if self.algebraic_equations_are_linear:
-            y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
-            if self.pin_dead_buses and len(self._dead_buses_now(x)):
-                y_bus, i_inj = self._pin_dead_buses(y_bus), i_inj*self._live
+            pin = self.pin_dead_buses and len(self._dead_buses_now(x)) > 0
+            if pin:
+                i_inj = i_inj*self._live
+            lu = self._constant_y_bus_lu(pin)
+            if lu is not None:
+                return lu.solve(i_inj)
+            y_bus = self.y_bus_red + self._y_var(x) + self.y_bus_red_mod
+            if pin:
+                y_bus = self._pin_dead_buses(y_bus)
             return sp_linalg.spsolve(y_bus, i_inj)
+
+        y_var = self._y_var(x)
 
         y_bus = self.y_bus_red + y_var + self.y_bus_red_mod
         s_inj = np.zeros(self.n_bus_red, dtype=complex)
