@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.0](https://github.com/hallvar-h/TOPS/compare/v0.8.0...v0.9.0) (2026-11-16)
+
+
+### Features
+
+* add generator connect and disconnect events ([e8d339e](https://github.com/hallvar-h/TOPS/commit/e8d339e3ed35d1be4307dc30d571c42f50ebe77f))
+* add generator connect and disconnect events ([a496d2c](https://github.com/hallvar-h/TOPS/commit/a496d2ccdb3f40271193da70f3f26a98763570c5))
+
+
+### Performance Improvements
+
+* reuse the factorised admittance matrix in solve_algebraic ([0d41b8a](https://github.com/hallvar-h/TOPS/commit/0d41b8a601eedb899b3c18ce7a9b2dba5aec77de))
+* reuse the factorised admittance matrix in solve_algebraic ([58496ee](https://github.com/hallvar-h/TOPS/commit/58496ee7ec017e78719fff80b80809e2a892eedd))
+
 ## [0.8.0](https://github.com/hallvar-h/TOPS/compare/v0.7.0...v0.8.0) (2026-11-13)
 
 
