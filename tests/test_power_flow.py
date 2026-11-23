@@ -35,3 +35,15 @@ def test_slack_unit_is_largest_generator_at_slack_bus(p_g4, slack_name):
     ps.power_flow()
     mdl, unit_idx = ps.slack_unit
     assert mdl.par['name'][unit_idx] == slack_name
+
+
+def test_reactive_power_at_a_bus_is_shared_by_rating():
+    # Move G4 to B3, next to G3 (900 MVA), with a third of its rating
+    model = model_data.load()
+    set_gen(model, 'G4', bus='B3', S_n=300)
+    ps = dps.PowerSystemModel(model=model)
+    ps.power_flow()
+    gen = ps.gen['GEN']
+    q = dict(zip(gen.par['name'], ps.load_flow_soln[gen].imag))
+    assert q['G3'] != pytest.approx(0)
+    assert q['G4'] == pytest.approx(q['G3'] / 3)

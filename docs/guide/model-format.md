@@ -128,6 +128,10 @@ example `tops.dyn_models.avr.SEXS`. If you pass a
   by an [event](events.md). If no generator at the `slack_bus` is in
   service, the load flow warns and uses the bus of the in-service generator
   with the largest `P` instead.
+- **Several generators at one bus.** The load flow shares the reactive power
+  at a bus between its generators in proportion to their ratings
+  (`S_n·N_par`), so a 5 MVA unit next to a 300 MVA unit takes 1/61 of the
+  Mvar.
 - **Switches** connect two buses with the columns `name`, `from_bus` and
   `to_bus`. The optional column `closed` (1 or 0, default 1) gives the
   initial state. A closed switch is a series admittance of 1e5 pu on the

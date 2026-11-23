@@ -74,6 +74,11 @@ class GEN(DAEModel):
         on = self.connected
         return self.bus_idx['terminal'][on], -self.par['P'][on]*self.par['N_par'][on], self.par['V'][on]
 
+    def load_flow_share(self):
+        # Reactive power at a bus is shared between generators in proportion to their ratings
+        on = self.connected
+        return self.par['S_n'][on]*self.par['N_par'][on]
+
     def init_from_load_flow(self, x_0, v_0, S):
 
         self.V_n = self.sys_par['bus_v_n'][self.bus_idx_red['terminal']]

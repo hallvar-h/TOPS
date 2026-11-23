@@ -26,6 +26,18 @@ def default_slack_bus_idx(pv_mdls):
     return bus_idx[np.argmax(p_gen)]
 
 
+def load_flow_share(mdl):
+    """Weights of the PV units of a model in the sharing of the reactive power at their buses.
+
+    :param mdl: A model with ``load_flow_pv()``.
+    :return: One weight per unit, in the order of ``load_flow_pv()``: ``mdl.load_flow_share()`` if the model has
+        it, else 1 for every unit (equal shares).
+    """
+    if hasattr(mdl, 'load_flow_share'):
+        return np.asarray(mdl.load_flow_share(), dtype=float)
+    return np.ones(len(mdl.load_flow_pv()[0]))
+
+
 def solve_power_flow(y_bus, pq_mdls, pv_mdls, s_n, sl_idx, tol, max_it):
     """Solve the power flow.
 
@@ -68,18 +80,19 @@ def solve_power_flow(y_bus, pq_mdls, pv_mdls, s_n, sl_idx, tol, max_it):
 
     v_sol, s_sol, converged = newton_rhapson_power_flow(y_bus, v_pv, p_pv + p_pq, q_pq, bus_type, tol, max_it)
 
-    # Reactive power at each PV bus is shared equally between the units at that bus
-    pv_units_per_bus = np.zeros(n_bus, dtype=int)
+    # Reactive power at each PV bus is shared between the units at that bus in proportion to their weights
+    # (load_flow_share(), e.g. their ratings; equal shares for models without one)
+    weight_per_bus = np.zeros(n_bus)
     for mdl in pv_mdls:
-        np.add.at(pv_units_per_bus, mdl.load_flow_pv()[0], 1)
+        np.add.at(weight_per_bus, mdl.load_flow_pv()[0], load_flow_share(mdl))
 
     q_bus = s_sol.imag + q_pq
-    q_per_pv_unit = np.divide(q_bus, pv_units_per_bus, out=np.zeros_like(q_bus), where=pv_units_per_bus != 0)
+    q_per_weight = np.divide(q_bus, weight_per_bus, out=np.zeros_like(q_bus), where=weight_per_bus != 0)
 
     unit_injections = {}
     for mdl in pv_mdls:
         bus_idx, p_setp, v = mdl.load_flow_pv()
-        q = q_per_pv_unit[bus_idx]
+        q = q_per_weight[bus_idx] * load_flow_share(mdl)
         p = -p_setp / s_n
         if slack_unit is not None and slack_unit[0] is mdl:
             # The slack unit takes the power balance at the slack bus
