@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.10.0](https://github.com/hallvar-h/TOPS/compare/v0.9.0...v0.10.0) (2026-11-24)
+
+
+### Features
+
+* share reactive power at a bus between generators by rating ([8cb3623](https://github.com/hallvar-h/TOPS/commit/8cb3623a74e9d00438608547a7155aa2c2c9b039))
+* share reactive power at a bus between generators by rating ([d5c9771](https://github.com/hallvar-h/TOPS/commit/d5c97712d0d647d9318beba7ba7a30763ecc9925))
+
+
+### Bug Fixes
+
+* **vsc:** measure P and Q at the terminal instead of from the current references ([4761c5c](https://github.com/hallvar-h/TOPS/commit/4761c5ca767e530fc16d08d8497c2ffdf561a570))
+* **vsc:** measure P and Q at the terminal instead of from the current references ([2fdc32e](https://github.com/hallvar-h/TOPS/commit/2fdc32e8c9b5fc09e0373e45c1da97908ac54d25))
+
 ## [0.9.0](https://github.com/hallvar-h/TOPS/compare/v0.8.0...v0.9.0) (2026-11-16)
 
 
